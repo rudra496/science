@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive 3D Science Lab</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="stars"></canvas>
+    
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo" onclick="goHome()">
+                <span class="logo-icon">⚛️</span>
+                <span class="logo-text">Science Lab 3D</span>
+            </div>
+            <nav class="nav" id="nav">
+                <button class="nav-item active" data-page="home">🏠 Home</button>
+                <button class="nav-item" data-page="elements">⚛️ Elements</button>
+                <button class="nav-item" data-page="solar">🪐 Solar</button>
+                <button class="nav-item" data-page="dna">🧬 DNA</button>
+                <button class="nav-item" data-page="cell">🔬 Cell</button>
+                <button class="nav-item" data-page="physics">💡 Physics</button>
+                <button class="nav-item" data-page="robot">🤖 Robot</button>
+                <button class="nav-item" data-page="game">🎮 Game</button>
+            </nav>
+            <button class="menu-btn" id="menuBtn">☰</button>
+        </div>
+    </header>
+
+    <div class="mobile-nav" id="mobileNav">
+        <button class="mobile-close" id="mobileClose">✕</button>
+        <button class="mobile-item active" data-page="home">🏠 Home</button>
+        <button class="mobile-item" data-page="elements">⚛️ Elements</button>
+        <button class="mobile-item" data-page="solar">🪐 Solar System</button>
+        <button class="mobile-item" data-page="dna">🧬 DNA/RNA</button>
+        <button class="mobile-item" data-page="cell">🔬 Cell Biology</button>
+        <button class="mobile-item" data-page="physics">💡 Physics Lab</button>
+        <button class="mobile-item" data-page="robot">🤖 Robotics</button>
+        <button class="mobile-item" data-page="game">🎮 Game</button>
+    </div>
+    <div class="overlay" id="overlay"></div>
+
+    <main class="main">
+        <!-- HOME -->
+        <section class="page active" id="home">
+            <div class="hero">
+                <h1 class="hero-title">Explore Science in 3D</h1>
+                <p class="hero-desc">Interactive simulations for chemistry, biology, physics, and more</p>
+                <div class="hero-btns">
+                    <button class="btn btn-primary" onclick="showPage('elements')">Explore Elements</button>
+                    <button class="btn btn-secondary" onclick="showPage('physics')">Physics Lab</button>
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat">
+                    <span class="stat-num">118</span>
+                    <span class="stat-label">Elements</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-num">8</span>
+                    <span class="stat-label">Planets</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-num">8</span>
+                    <span class="stat-label">Experiments</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-num">100%</span>
+                    <span class="stat-label">Interactive</span>
+                </div>
+            </div>
+
+            <div class="features">
+                <div class="feature" onclick="showPage('elements')">
+                    <span class="feat-icon">⚛️</span>
+                    <h3>Periodic Table</h3>
+                    <p>All 118 elements with 3D visualization</p>
+                </div>
+                <div class="feature" onclick="showPage('solar')">
+                    <span class="feat-icon">🪐</span>
+                    <h3>Solar System</h3>
+                    <p>Realistic planetary orbits</p>
+                </div>
+                <div class="feature" onclick="showPage('dna')">
+                    <span class="feat-icon">🧬</span>
+                    <h3>DNA/RNA</h3>
+                    <p>Double helix animations</p>
+                </div>
+                <div class="feature" onclick="showPage('cell')">
+                    <span class="feat-icon">🔬</span>
+                    <h3>Cell Biology</h3>
+                    <p>Cells, bacteria, viruses</p>
+                </div>
+                <div class="feature" onclick="showPage('physics')">
+                    <span class="feat-icon">💡</span>
+                    <h3>Physics Lab</h3>
+                    <p>Interactive experiments</p>
+                </div>
+                <div class="feature" onclick="showPage('robot')">
+                    <span class="feat-icon">🤖</span>
+                    <h3>Robotics</h3>
+                    <p>6-DOF robot arm</p>
+                </div>
+                <div class="feature" onclick="showPage('game')">
+                    <span class="feat-icon">🎮</span>
+                    <h3>Space Game</h3>
+                    <p>3D space shooter</p>
+                </div>
+            </div>
+
+            <footer class="footer">
+                <p>Built with Three.js • Made for science education</p>
+                <p>© 2024 Science Lab 3D</p>
+            </footer>
+        </section>
+
+        <!-- ELEMENTS -->
+        <section class="page" id="elements">
+            <div class="scene-wrap">
+                <div class="scene" id="elementsScene"></div>
+            </div>
+            <div class="panel panel-left">
+                <div class="panel-section">
+                    <h3>🔍 Search</h3>
+                    <input type="text" id="elementSearch" placeholder="Search element...">
+                </div>
+                <div class="panel-section">
+                    <h3>📂 Categories</h3>
+                    <div class="cats" id="cats">
+                        <button class="cat active" data-cat="all">All</button>
+                        <button class="cat" data-cat="alkali">Alkali</button>
+                        <button class="cat" data-cat="alkaline">Alkaline</button>
+                        <button class="cat" data-cat="transition">Transition</button>
+                        <button class="cat" data-cat="post">Post-Trans</button>
+                        <button class="cat" data-cat="metalloid">Metalloid</button>
+                        <button class="cat" data-cat="nonmetal">Nonmetal</button>
+                        <button class="cat" data-cat="halogen">Halogen</button>
+                        <button class="cat" data-cat="noble">Noble Gas</button>
+                        <button class="cat" data-cat="lanthanide">Lanthanide</button>
+                        <button class="cat" data-cat="actinide">Actinide</button>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3>⚙️ Settings</h3>
+                    <label>Rotation: <input type="range" id="elemRotate" min="0" max="2" step="0.1" value="0.5"></label>
+                </div>
+            </div>
+            <div class="info-box" id="elemInfo" style="display:none">
+                <button class="close-btn" onclick="closeInfo('elemInfo')">✕</button>
+                <div id="elemInfoContent"></div>
+            </div>
+            <button class="back-btn" onclick="goHome()">← Back</button>
+        </section>
+
+        <!-- SOLAR -->
+        <section class="page" id="solar">
+            <div class="scene-wrap">
+                <div class="scene" id="solarScene"></div>
+            </div>
+            <div class="panel panel-left">
+                <div class="panel-section">
+                    <h3>🎮 Controls</h3>
+                    <button class="ctrl" id="solarPlay">⏸ Pause</button>
+                    <button class="ctrl" id="solarReset">🔄 Reset</button>
+                </div>
+                <div class="panel-section">
+                    <h3>⚙️ Settings</h3>
+                    <label>Speed: <input type="range" id="solarSpeed" min="0" max="5" value="1"></label>
+                    <label>Scale: <input type="range" id="solarScale" min="0.5" max="2" step="0.1" value="1"></label>
+                </div>
+                <div class="panel-section">
+                    <h3>👁️ View</h3>
+                    <label><input type="checkbox" id="showOrbits" checked> Orbits</label>
+                    <label><input type="checkbox" id="showLabels" checked> Labels</label>
+                </div>
+            </div>
+            <div class="info-box" id="solarInfo" style="display:none">
+                <button class="close-btn" onclick="closeInfo('solarInfo')">✕</button>
+                <div id="solarInfoContent"></div>
+            </div>
+            <button class="back-btn" onclick="goHome()">← Back</button>
+        </section>
+
+        <!-- DNA -->
+        <section class="page" id="dna">
+            <div class="scene-wrap">
+                <div class="scene" id="dnaScene"></div>
+            </div>
+            <div class="panel panel-left">
+                <div class="panel-section">
+                    <h3>🧬 Mode</h3>
+                    <button class="mode active" data-mode="dna">DNA</button>
+                    <button class="mode" data-mode="rna">RNA</button>
+                </div>
+                <div class="panel-section">
+                    <h3>🎬 Animation</h3>
+                    <button class="anim active" data-anim="rotate">Rotate</button>
+                    <button class="anim" data-anim="replicate">Replication</button>
+                    <button class="anim" data-anim="transcribe">Transcription</button>
+                </div>
+                <div class="panel-section">
+                    <h3>⚙️ Settings</h3>
+                    <label>Speed: <input type="range" id="dnaSpeed" min="0" max="3" step="0.1" value="1"></label>
+                    <label>Turns: <input type="range" id="dnaTurns" min="1" max="4" value="2"></label>
+                </div>
+                <div class="panel-section">
+                    <h3>🎨 Bases</h3>
+                    <div class="legend">
+                        <span style="color:#ff6b6b">●</span> Adenine
+                        <span style="color:#4ecdc4">●</span> Thymine
+                        <span style="color:#45b7d1">●</span> Guanine
+                        <span style="color:#ffa726">●</span> Cytosine
+                        <span style="color:#ab47bc">●</span> Uracil
+                    </div>
+                </div>
+            </div>
+            <div class="status-msg" id="dnaStatus" style="display:none"></div>
+            <button class="back-btn" onclick="goHome()">← Back</button>
+        </section>
+
+        <!-- CELL -->
+        <section class="page" id="cell">
+            <div class="scene-wrap">
+                <div class="scene" id="cellScene"></div>
+            </div>
+            <div class="panel panel-left">
+                <div class="panel-section">
+                    <h3>🔬 Type</h3>
+                    <button class="ctype active" data-type="animal">Animal</button>
+                    <button class="ctype" data-type="plant">Plant</button>
+                    <button class="ctype" data-type="bacteria">Bacteria</button>
+                    <button class="ctype" data-type="virus">Virus</button>
+                </div>
+                <div class="panel-section">
+                    <h3>🎬 Animation</h3>
+                    <button class="canim active" data-anim="rotate">Rotate</button>
+                    <button class="canim" data-anim="mitosis">Mitosis</button>
+                    <button class="canim" data-anim="explode">Explode</button>
+                </div>
+                <div class="panel-section">
+                    <h3>⚙️ Settings</h3>
+                    <label>Speed: <input type="range" id="cellSpeed" min="0" max="2" step="0.1" value="0.5"></label>
+                </div>
+            </div>
+            <div class="info-box" id="cellInfo" style="display:none">
+                <button class="close-btn" onclick="closeInfo('cellInfo')">✕</button>
+                <div id="cellInfoContent"></div>
+            </div>
+            <button class="back-btn" onclick="goHome()">← Back</button>
+        </section>
+
+        <!-- PHYSICS -->
+        <section class="page" id="physics">
+            <div class="scene-wrap">
+                <div class="scene" id="physicsScene"></div>
+            </div>
+            <div class="panel panel-left">
+                <div class="panel-section">
+                    <h3>⚗️ Experiments</h3>
+                    <button class="exp active" data-exp="slit">Double Slit</button>
+                    <button class="exp" data-exp="rutherford">Rutherford</button>
+                    <button class="exp" data-exp="pendulum">Pendulum</button>
+                    <button class="exp" data-exp="wave">Wave</button>
+                    <button class="exp" data-exp="gravity">Gravity</button>
+                    <button class="exp" data-exp="optics">Optics</button>
+                </div>
+                <div class="panel-section">
+                    <h3>🎮 Control</h3>
+                    <button class="ctrl" id="physPlay">⏸ Pause</button>
+                    <button class="ctrl" id="physReset">🔄 Reset</button>
+                </div>
+                <div class="panel-section">
+                    <h3>⚙️ Settings</h3>
+                    <label>Speed: <input type="range" id="physSpeed" min="0.1" max="3" step="0.1" value="1"></label>
+                </div>
+            </div>
+            <div class="info-box" id="physInfo" style="display:none">
+                <button class="close-btn" onclick="closeInfo('physInfo')">✕</button>
+                <div id="physInfoContent"></div>
+            </div>
+            <button class="back-btn" onclick="goHome()">← Back</button>
+        </section>
+
+        <!-- ROBOT -->
+        <section class="page" id="robot">
+            <div class="scene-wrap">
+                <div class="scene" id="robotScene"></div>
+            </div>
+            <div class="panel panel-left">
+                <div class="panel-section">
+                    <h3>🤖 Component</h3>
+                    <button class="comp active" data-comp="arm">Arm</button>
+                    <button class="comp" data-comp="motor">Motors</button>
+                    <button class="comp" data-comp="sensor">Sensors</button>
+                    <button class="comp" data-comp="board">Boards</button>
+                </div>
+                <div class="panel-section" id="armControls">
+                    <h3>🦾 Joints</h3>
+                    <label>Base: <input type="range" id="baseRot" min="-180" max="180" value="0"><span id="baseVal">0°</span></label>
+                    <label>Shoulder: <input type="range" id="shoulderRot" min="-90" max="90" value="0"><span id="shoulderVal">0°</span></label>
+                    <label>Elbow: <input type="range" id="elbowRot" min="-120" max="120" value="0"><span id="elbowVal">0°</span></label>
+                    <label>Wrist: <input type="range" id="wristRot" min="-90" max="90" value="0"><span id="wristVal">0°</span></label>
+                    <label>Gripper: <input type="range" id="gripRot" min="0" max="100" value="50"><span id="gripVal">50%</span></label>
+                </div>
+                <div class="panel-section">
+                    <button class="ctrl active" id="autoDemo">▶ Auto Demo</button>
+                    <button class="ctrl" id="resetArm">🔄 Reset</button>
+                </div>
+            </div>
+            <div class="info-box" id="robotInfo" style="display:none">
+                <button class="close-btn" onclick="closeInfo('robotInfo')">✕</button>
+                <div id="robotInfoContent"></div>
+            </div>
+            <button class="back-btn" onclick="goHome()">← Back</button>
+        </section>
+
+        <!-- GAME -->
+        <section class="page" id="game">
+            <div class="scene-wrap">
+                <div class="scene" id="gameScene"></div>
+            </div>
+            <div class="game-hud">
+                <div>SCORE: <span id="score">0</span></div>
+                <div>LIVES: <span id="lives">❤️❤️❤️</span></div>
+                <div>WAVE: <span id="wave">1</span></div>
+            </div>
+            <div class="panel panel-left">
+                <div class="panel-section">
+                    <h3>🎮 Controls</h3>
+                    <p style="font-size:12px;color:#aaa">WASD or Arrow keys to move<br>SPACE to shoot</p>
+                </div>
+                <div class="panel-section">
+                    <h3>Difficulty</h3>
+                    <select id="difficulty">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+                <div class="panel-section">
+                    <button class="ctrl" id="startGame">▶ Start</button>
+                    <button class="ctrl" id="restartGame">🔄 Restart</button>
+                </div>
+            </div>
+            <div class="game-over" id="gameOver" style="display:none">
+                <h2>GAME OVER</h2>
+                <p>Score: <span id="finalScore">0</span></p>
+                <button class="btn btn-primary" onclick="restartGame()">Play Again</button>
+            </div>
+            <button class="back-btn" onclick="goHome()">← Back</button>
+        </section>
+    </main>
+
+    <div class="toast" id="toast"></div>
+    <script src="script.js"></script>
+</body>
+</html>
