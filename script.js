@@ -1711,15 +1711,26 @@ function initRobot() {
             body.rotation.x = Math.PI / 2;
             group.add(body);
             
-            // Shaft
-            const shaft = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.12, 0.12, 0.6, 16),
-                new THREE.MeshStandardMaterial({ color: 0x888888 })
-            );
-            shaft.rotation.x = Math.PI / 2;
-            shaft.position.z = 0.9;
-            shaft.userData = { isShaft: true, rpm: m.rpm };
-            group.add(shaft);
+            // Shaft with visible marker for rotation
+const shaftGroup = new THREE.Group();
+const shaft = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.12, 0.12, 0.6, 16),
+    new THREE.MeshStandardMaterial({ color: 0x888888 })
+);
+shaftGroup.add(shaft);
+
+// Add a visible marker on shaft so rotation is visible
+const marker = new THREE.Mesh(
+    new THREE.BoxGeometry(0.35, 0.04, 0.04),
+    new THREE.MeshStandardMaterial({ color: 0xff4444 })
+);
+marker.position.set(0.2, 0, 0);
+shaftGroup.add(marker);
+
+shaftGroup.rotation.x = Math.PI / 2;
+shaftGroup.position.z = 0.9;
+shaftGroup.userData = { isShaft: true, rpm: m.rpm };
+group.add(shaftGroup);
             
             // Mounting flange
             const flange = new THREE.Mesh(
@@ -2003,14 +2014,15 @@ function initRobot() {
         }
         
         if(component === 'motor') {
-            robotGroup.children.forEach(g => {
-                g.children.forEach(c => {
-                    if(c.userData && c.userData.isShaft) {
-                        c.rotation.z += c.userData.rpm * 0.05;
-                    }
-                });
-            });
-        }
+    robotGroup.children.forEach(g => {
+        g.children.forEach(c => {
+            if(c.userData && c.userData.isShaft) {
+                // Rotate around the shaft's long axis (Y after the X rotation)
+                c.rotation.y += c.userData.rpm * 0.08;
+            }
+        });
+    });
+}
         
         if(component === 'sensor') {
             robotGroup.children.forEach((g, i) => {
