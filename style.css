@@ -319,12 +319,22 @@ body {
 }
 
 /* Footer */
-.footer {
-    text-align: center;
-    padding: 30px;
-    border-top: 1px solid var(--border);
+.footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.footer-links a {
     color: var(--text2);
-    font-size: 13px;
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.2s;
+}
+
+.footer-links a:hover {
+    color: var(--accent);
 }
 
 /* Scene */
