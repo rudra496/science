@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Interactive 3D Science & Simulation Lab</title>
+    <meta name="description" content="Explore chemistry, biology, astronomy, DNA/RNA, physics, and robotics through immersive 3D visualizations. Interactive periodic table, solar system, cell biology, and more!">
+    <meta name="keywords" content="science, education, chemistry, biology, astronomy, robotics, periodic table, solar system, DNA, 3D visualization, interactive learning, elements, planets, cells, physics experiments">
+    <meta name="author" content="Rudra Sarker">
+    <meta name="theme-color" content="#0f172a">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Interactive 3D Science & Simulation Lab">
+    <meta property="og:description" content="Explore science through immersive 3D visualizations">
+    <meta property="og:type" content="website">
+    
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+</head>
+<body>
+    <!-- Particle Background -->
+    <canvas id="particleCanvas"></canvas>
+    
+    <!-- Header -->
+    <header class="header" id="header">
+        <div class="container header-content">
+            <div class="logo" onclick="navigateTo('home')">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="2"/>
+                        <circle cx="12" cy="12" r="6" stroke-dasharray="3 3"/>
+                        <circle cx="12" cy="12" r="10" stroke-dasharray="2 4"/>
+                        <line x1="12" y1="2" x2="12" y2="4"/>
+                        <line x1="12" y1="20" x2="12" y2="22"/>
+                        <line x1="2" y1="12" x2="4" y2="12"/>
+                        <line x1="20" y1="12" x2="22" y2="12"/>
+                    </svg>
+                </div>
+                <span class="logo-text">Science Lab 3D</span>
+            </div>
+            
+            <nav class="nav-desktop" id="navDesktop">
+                <button class="nav-btn active" data-section="home">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Home</span>
+                </button>
+                <button class="nav-btn" data-section="periodic-table">
+                    <span class="nav-icon">⚛️</span>
+                    <span class="nav-label">Elements</span>
+                </button>
+                <button class="nav-btn" data-section="solar-system">
+                    <span class="nav-icon">🪐</span>
+                    <span class="nav-label">Solar System</span>
+                </button>
+                <button class="nav-btn" data-section="dna-rna">
+                    <span class="nav-icon">🧬</span>
+                    <span class="nav-label">DNA/RNA</span>
+                </button>
+                <button class="nav-btn" data-section="biology">
+                    <span class="nav-icon">🔬</span>
+                    <span class="nav-label">Biology</span>
+                </button>
+                <button class="nav-btn" data-section="physics">
+                    <span class="nav-icon">💡</span>
+                    <span class="nav-label">Physics</span>
+                </button>
+                <button class="nav-btn" data-section="robotics">
+                    <span class="nav-icon">🤖</span>
+                    <span class="nav-label">Robotics</span>
+                </button>
+                <button class="nav-btn" data-section="games">
+                    <span class="nav-icon">🎮</span>
+                    <span class="nav-label">Games</span>
+                </button>
+            </nav>
+            
+            <button class="menu-toggle" id="menuToggle" onclick="toggleMobileMenu()">
+                <span class="hamburger"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <span class="mobile-menu-title">Navigation</span>
+            <button class="mobile-close" onclick="toggleMobileMenu()">✕</button>
+        </div>
+        <nav class="mobile-nav" id="mobileNav">
+            <button class="mobile-nav-btn active" data-section="home">
+                <span class="nav-icon">🏠</span> Home
+            </button>
+            <button class="mobile-nav-btn" data-section="periodic-table">
+                <span class="nav-icon">⚛️</span> Periodic Table
+            </button>
+            <button class="mobile-nav-btn" data-section="solar-system">
+                <span class="nav-icon">🪐</span> Solar System
+            </button>
+            <button class="mobile-nav-btn" data-section="dna-rna">
+                <span class="nav-icon">🧬</span> DNA/RNA
+            </button>
+            <button class="mobile-nav-btn" data-section="biology">
+                <span class="nav-icon">🔬</span> Cell Biology
+            </button>
+            <button class="mobile-nav-btn" data-section="physics">
+                <span class="nav-icon">💡</span> Physics Lab
+            </button>
+            <button class="mobile-nav-btn" data-section="robotics">
+                <span class="nav-icon">🤖</span> Robotics
+            </button>
+            <button class="mobile-nav-btn" data-section="games">
+                <span class="nav-icon">🎮</span> Space Game
+            </button>
+        </nav>
+        <div class="mobile-menu-footer">
+            <p>Made with ❤️ for science education</p>
+        </div>
+    </div>
+    <div class="mobile-menu-overlay" id="mobileOverlay" onclick="toggleMobileMenu()"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        
+        <!-- ==================== HOME SECTION ==================== -->
+        <section id="home" class="section active">
+            <!-- Hero -->
+            <div class="hero">
+                <div class="hero-bg">
+                    <div class="hero-gradient-1"></div>
+                    <div class="hero-gradient-2"></div>
+                    <div class="hero-gradient-3"></div>
+                    <div class="hero-grid"></div>
+                </div>
+                <div class="container hero-content">
+                    <div class="hero-badge animate-slide-down">
+                        <span class="badge-icon">🚀</span>
+                        <span>Interactive 3D Science Platform</span>
+                    </div>
+                    <h1 class="hero-title animate-slide-up">
+                        Explore Science
+                        <br>
+                        <span class="hero-title-gradient">Like Never Before</span>
+                    </h1>
+                    <p class="hero-subtitle animate-fade-in">
+                        Discover chemistry, biology, physics, and robotics through immersive 3D simulations
+                        and exciting interactive experiments. Perfect for students, educators, and curious minds.
+                    </p>
+                    <div class="hero-buttons animate-slide-up-delay">
+                        <button class="btn btn-primary btn-glow" onclick="navigateTo('physics')">
+                            <span class="btn-icon">💡</span>
+                            Physics Lab
+                        </button>
+                        <button class="btn btn-secondary btn-glow" onclick="navigateTo('dna-rna')">
+                            <span class="btn-icon">🧬</span>
+                            DNA/RNA Lab
+                        </button>
+                        <button class="btn btn-accent btn-glow" onclick="navigateTo('games')">
+                            <span class="btn-icon">🎮</span>
+                            Play Game
+                        </button>
+                    </div>
+                </div>
+                <div class="hero-scroll-indicator">
+                    <div class="scroll-mouse">
+                        <div class="scroll-wheel"></div>
+                    </div>
+                    <span>Scroll to explore</span>
+                </div>
+            </div>
+
+            <!-- Stats Section -->
+            <section class="stats-section">
+                <div class="container">
+                    <div class="stats-grid">
+                        <div class="stat-card animate-pop" style="--delay: 0">
+                            <div class="stat-icon">⚛️</div>
+                            <div class="stat-value" data-count="118">0</div>
+                            <div class="stat-label">Elements</div>
+                        </div>
+                        <div class="stat-card animate-pop" style="--delay: 1">
+                            <div class="stat-icon">🌍</div>
+                            <div class="stat-value" data-count="8">0</div>
+                            <div class="stat-label">Planets</div>
+                        </div>
+                        <div class="stat-card animate-pop" style="--delay: 2">
+                            <div class="stat-icon">🔬</div>
+                            <div class="stat-value" data-count="6">0</div>
+                            <div class="stat-label">Experiments</div>
+                        </div>
+                        <div class="stat-card animate-pop" style="--delay: 3">
+                            <div class="stat-icon">⚡</div>
+                            <div class="stat-value">100<span>%</span></div>
+                            <div class="stat-label">Interactive</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Features Section -->
+            <section class="features-section">
+                <div class="container">
+                    <div class="section-header">
+                        <h2 class="section-title animate-slide-up">Explore & Learn</h2>
+                        <p class="section-subtitle animate-fade-in">
+                            Seven powerful modules designed for interactive learning and exploration.
+                        </p>
+                    </div>
+                    
+                    <div class="features-grid">
+                        <!-- Periodic Table -->
+                        <div class="feature-card animate-pop" onclick="navigateTo('periodic-table')" style="--accent: #ff6b6b; --delay: 0">
+                            <div class="feature-glow"></div>
+                            <div class="feature-icon">⚛️</div>
+                            <h3>3D Periodic Table</h3>
+                            <p>Explore all 118 elements with interactive 3D atomic models, electron shells, and detailed properties.</p>
+                            <div class="feature-tags">
+                                <span class="tag">118 Elements</span>
+                                <span class="tag">3D Atoms</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Solar System -->
+                        <div class="feature-card animate-pop" onclick="navigateTo('solar-system')" style="--accent: #4dabf7; --delay: 1">
+                            <div class="feature-glow"></div>
+                            <div class="feature-icon">🪐</div>
+                            <h3>Solar System Explorer</h3>
+                            <p>Journey through space with realistic planetary orbits, moons, rings, and cosmic visuals.</p>
+                            <div class="feature-tags">
+                                <span class="tag">8 Planets</span>
+                                <span class="tag">Moons</span>
+                            </div>
+                        </div>
+                        
+                        <!-- DNA/RNA -->
+                        <div class="feature-card animate-pop" onclick="navigateTo('dna-rna')" style="--accent: #a855f7; --delay: 2">
+                            <div class="feature-glow"></div>
+                            <div class="feature-icon">🧬</div>
+                            <h3>DNA & RNA Visualizer</h3>
+                            <p>Watch the double helix come alive with replication, transcription, and protein synthesis animations.</p>
+                            <div class="feature-tags">
+                                <span class="tag">Double Helix</span>
+                                <span class="tag">Replication</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Biology -->
+                        <div class="feature-card animate-pop" onclick="navigateTo('biology')" style="--accent: #22c55e; --delay: 3">
+                            <div class="feature-glow"></div>
+                            <div class="feature-icon">🔬</div>
+                            <h3>Cell Biology Lab</h3>
+                            <p>Explore animal & plant cells, bacteria, viruses, with detailed organelles and mitosis animation.</p>
+                            <div class="feature-tags">
+                                <span class="tag">Cell Types</span>
+                                <span class="tag">Mitosis</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Physics -->
+                        <div class="feature-card animate-pop" onclick="navigateTo('physics')" style="--accent: #eab308; --delay: 4">
+                            <div class="feature-glow"></div>
+                            <div class="feature-icon">💡</div>
+                            <h3>Physics Lab</h3>
+                            <p>Young's double slit, Rutherford scattering, Newton's laws, waves, optics & more experiments!</p>
+                            <div class="feature-tags">
+                                <span class="tag">6+ Experiments</span>
+                                <span class="tag">Interactive</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Robotics -->
+                        <div class="feature-card animate-pop" onclick="navigateTo('robotics')" style="--accent: #f59e0b; --delay: 5">
+                            <div class="feature-glow"></div>
+                            <div class="feature-icon">🤖</div>
+                            <h3>Robotics Academy</h3>
+                            <p>Learn about motors, sensors, controllers, and see a working 6-DOF robotic arm in action.</p>
+                            <div class="feature-tags">
+                                <span class="tag">6-DOF Arm</span>
+                                <span class="tag">Components</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Games -->
+                        <div class="feature-card animate-pop" onclick="navigateTo('games')" style="--accent: #ec4899; --delay: 6">
+                            <div class="feature-glow"></div>
+                            <div class="feature-icon">🎮</div>
+                            <h3>Space Survival Game</h3>
+                            <p>An intense 3D space combat experience. Destroy enemies, collect power-ups, and survive!</p>
+                            <div class="feature-tags">
+                                <span class="tag">3D Combat</span>
+                                <span class="tag">Power-ups</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CTA Section -->
+            <section class="cta-section">
+                <div class="container">
+                    <div class="cta-content">
+                        <h2 class="animate-slide-up">Ready to Explore?</h2>
+                        <p class="animate-fade-in">
+                            Dive into the world of science with our interactive 3D simulations.
+                            Perfect for students, teachers, and curious minds of all ages.
+                        </p>
+                        <div class="cta-buttons animate-slide-up-delay">
+                            <button class="btn btn-primary btn-glow btn-large" onclick="navigateTo('periodic-table')">
+                                <span class="btn-icon">⚛️</span>
+                                Start Exploring
+                            </button>
+                            <button class="btn btn-outline btn-large" onclick="navigateTo('solar-system')">
+                                <span class="btn-icon">🪐</span>
+                                Solar System
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </section>
+
+        <!-- ==================== PERIODIC TABLE SECTION ==================== -->
+        <section id="periodic-table" class="section section-3d">
+            <div class="scene-container" id="periodic-table-canvas"></div>
+            
+            <div class="scene-panel scene-controls-left" id="periodic-table-controls">
+                <div class="panel-section">
+                    <h3 class="panel-title">🔍 Search Elements</h3>
+                    <input type="text" class="search-input" id="elementSearch" placeholder="Name, symbol, or number...">
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">📂 Categories</h3>
+                    <div class="category-grid" id="categoryFilters">
+                        <button class="category-btn active" data-category="all">All</button>
+                        <button class="category-btn" data-category="alkali-metal">Alkali</button>
+                        <button class="category-btn" data-category="alkaline-earth">Alkaline</button>
+                        <button class="category-btn" data-category="transition-metal">Transition</button>
+                        <button class="category-btn" data-category="post-transition">Post-Trans</button>
+                        <button class="category-btn" data-category="metalloid">Metalloid</button>
+                        <button class="category-btn" data-category="nonmetal">Nonmetal</button>
+                        <button class="category-btn" data-category="halogen">Halogen</button>
+                        <button class="category-btn" data-category="noble-gas">Noble Gas</button>
+                        <button class="category-btn" data-category="lanthanide">Lanthanide</button>
+                        <button class="category-btn" data-category="actinide">Actinide</button>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">⚙️ Settings</h3>
+                    <div class="setting-row">
+                        <label>Rotation Speed</label>
+                        <input type="range" class="slider" id="ptRotationSpeed" min="0" max="2" step="0.1" value="0.5">
+                    </div>
+                    <div class="setting-row">
+                        <label>Show Atoms</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="showAtoms" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="back-btn" onclick="navigateTo('home')">
+                <span>←</span> Back to Home
+            </button>
+        </section>
+
+        <!-- ==================== SOLAR SYSTEM SECTION ==================== -->
+        <section id="solar-system" class="section section-3d">
+            <div class="scene-container" id="solar-system-canvas"></div>
+            
+            <div class="scene-panel scene-controls-left" id="solar-system-controls">
+                <div class="panel-section">
+                    <h3 class="panel-title">🎮 Controls</h3>
+                    <div class="control-buttons">
+                        <button class="ctrl-btn" id="ssPlayPause">
+                            <span class="ctrl-icon">⏸️</span> Pause
+                        </button>
+                        <button class="ctrl-btn" id="ssReset">
+                            <span class="ctrl-icon">🔄</span> Reset
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">⚙️ Settings</h3>
+                    <div class="setting-row">
+                        <label>Orbit Speed</label>
+                        <input type="range" class="slider" id="orbitSpeed" min="0" max="5" step="0.1" value="1">
+                    </div>
+                    <div class="setting-row">
+                        <label>Planet Scale</label>
+                        <input type="range" class="slider" id="planetScale" min="0.5" max="3" step="0.1" value="1">
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">👁️ View</h3>
+                    <div class="toggle-buttons">
+                        <button class="toggle-btn active" id="showOrbits">Orbits</button>
+                        <button class="toggle-btn active" id="showLabels">Labels</button>
+                        <button class="toggle-btn active" id="showMoons">Moons</button>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">🪐 Quick Select</h3>
+                    <div class="planet-selector" id="planetSelector"></div>
+                </div>
+            </div>
+            
+            <div class="info-panel" id="solar-info-panel" style="display: none;">
+                <button class="info-close" onclick="closeInfoPanel('solar')">✕</button>
+                <h4 id="solar-info-title">Planet Info</h4>
+                <div id="solar-info-content"></div>
+            </div>
+            
+            <button class="back-btn" onclick="navigateTo('home')">
+                <span>←</span> Back to Home
+            </button>
+        </section>
+
+        <!-- ==================== DNA/RNA SECTION ==================== -->
+        <section id="dna-rna" class="section section-3d">
+            <div class="scene-container" id="dna-rna-canvas"></div>
+            
+            <div class="scene-panel scene-controls-left" id="dna-rna-controls">
+                <div class="panel-section">
+                    <h3 class="panel-title">🧬 Mode</h3>
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" data-mode="dna">DNA</button>
+                        <button class="tab-btn" data-mode="rna">RNA</button>
+                        <button class="tab-btn" data-mode="compare">Compare</button>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">🎬 Animation</h3>
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" data-animation="rotate">Rotate</button>
+                        <button class="tab-btn" data-animation="replicate">Replication</button>
+                        <button class="tab-btn" data-animation="transcribe">Transcription</button>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">⚙️ Settings</h3>
+                    <div class="setting-row">
+                        <label>Rotation Speed</label>
+                        <input type="range" class="slider" id="dnaSpeed" min="0" max="3" step="0.1" value="1">
+                    </div>
+                    <div class="setting-row">
+                        <label>Helix Turns</label>
+                        <input type="range" class="slider" id="dnaTurns" min="1" max="5" step="1" value="2">
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">🎨 Base Colors</h3>
+                    <div class="legend-grid">
+                        <div class="legend-item"><span class="legend-color" style="background: #ff6b6b"></span> Adenine (A)</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #4ecdc4"></span> Thymine (T)</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #45b7d1"></span> Guanine (G)</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #ffa726"></span> Cytosine (C)</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #ab47bc"></span> Uracil (U)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="back-btn" onclick="navigateTo('home')">
+                <span>←</span> Back to Home
+            </button>
+        </section>
+
+        <!-- ==================== BIOLOGY SECTION ==================== -->
+        <section id="biology" class="section section-3d">
+            <div class="scene-container" id="biology-canvas"></div>
+            
+            <div class="scene-panel scene-controls-left" id="biology-controls">
+                <div class="panel-section">
+                    <h3 class="panel-title">🔬 Cell Type</h3>
+                    <div class="tab-buttons vertical">
+                        <button class="tab-btn active" data-cell="animal">🦠 Animal Cell</button>
+                        <button class="tab-btn" data-cell="plant">🌿 Plant Cell</button>
+                        <button class="tab-btn" data-cell="bacteria">🔴 Bacteria</button>
+                        <button class="tab-btn" data-cell="virus">🦠 Virus</button>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">🎬 Animation</h3>
+                    <div class="tab-buttons vertical">
+                        <button class="tab-btn active" data-anim="rotate">🔄 Rotate</button>
+                        <button class="tab-btn" data-anim="mitosis">➗ Mitosis</button>
+                        <button class="tab-btn" data-anim="explode">💥 Explode View</button>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">⚙️ Settings</h3>
+                    <div class="setting-row">
+                        <label>Rotation Speed</label>
+                        <input type="range" class="slider" id="bioSpeed" min="0" max="2" step="0.1" value="0.5">
+                    </div>
+                    <div class="setting-row">
+                        <label>Zoom Level</label>
+                        <input type="range" class="slider" id="bioZoom" min="5" max="30" step="1" value="15">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-panel" id="bio-info-panel" style="display: none;">
+                <button class="info-close" onclick="closeInfoPanel('bio')">✕</button>
+                <h4 id="bio-info-title">Organelle Info</h4>
+                <div id="bio-info-content"></div>
+            </div>
+            
+            <button class="back-btn" onclick="navigateTo('home')">
+                <span>←</span> Back to Home
+            </button>
+        </section>
+
+        <!-- ==================== PHYSICS SECTION ==================== -->
+        <section id="physics" class="section section-3d">
+            <div class="scene-container" id="physics-canvas"></div>
+            
+            <div class="scene-panel scene-controls-left" id="physics-controls">
+                <div class="panel-section">
+                    <h3 class="panel-title">⚗️ Experiments</h3>
+                    <div class="tab-buttons vertical">
+                        <button class="tab-btn active" data-exp="double-slit">🔆 Double Slit</button>
+                        <button class="tab-btn" data-exp="rutherford">⚛️ Rutherford</button>
+                        <button class="tab-btn" data-exp="pendulum">🎯 Pendulum</button>
+                        <button class="tab-btn" data-exp="wave">🌊 Wave Motion</button>
+                        <button class="tab-btn" data-exp="gravity">🌍 Gravity</button>
+                        <button class="tab-btn" data-exp="optics">💎 Optics</button>
+                    </div>
+                </div>
+                <div class="panel-section" id="physics-settings">
+                    <h3 class="panel-title">⚙️ Settings</h3>
+                    <div class="setting-row">
+                        <label>Simulation Speed</label>
+                        <input type="range" class="slider" id="physicsSpeed" min="0.1" max="3" step="0.1" value="1">
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">🎮 Controls</h3>
+                    <div class="control-buttons">
+                        <button class="ctrl-btn" id="physPlayPause">
+                            <span class="ctrl-icon">⏸️</span> Pause
+                        </button>
+                        <button class="ctrl-btn" id="physReset">
+                            <span class="ctrl-icon">🔄</span> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-panel" id="phys-info-panel" style="display: none;">
+                <button class="info-close" onclick="closeInfoPanel('phys')">✕</button>
+                <h4 id="phys-info-title">Experiment Info</h4>
+                <div id="phys-info-content"></div>
+            </div>
+            
+            <button class="back-btn" onclick="navigateTo('home')">
+                <span>←</span> Back to Home
+            </button>
+        </section>
+
+        <!-- ==================== ROBOTICS SECTION ==================== -->
+        <section id="robotics" class="section section-3d">
+            <div class="scene-container" id="robotics-canvas"></div>
+            
+            <div class="scene-panel scene-controls-left" id="robotics-controls">
+                <div class="panel-section">
+                    <h3 class="panel-title">🤖 Component</h3>
+                    <div class="tab-buttons vertical">
+                        <button class="tab-btn active" data-component="arm">🦾 Robotic Arm</button>
+                        <button class="tab-btn" data-component="motor">⚙️ Motors</button>
+                        <button class="tab-btn" data-component="sensor">📡 Sensors</button>
+                        <button class="tab-btn" data-component="controller">💻 Controllers</button>
+                    </div>
+                </div>
+                <div class="panel-section" id="robot-arm-controls">
+                    <h3 class="panel-title">🦾 Joint Controls</h3>
+                    <div class="setting-row">
+                        <label>Base Rotation</label>
+                        <input type="range" class="slider" id="baseRotation" min="-180" max="180" value="0">
+                        <span class="slider-value" id="baseValue">0°</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>Shoulder</label>
+                        <input type="range" class="slider" id="shoulderRotation" min="-90" max="90" value="0">
+                        <span class="slider-value" id="shoulderValue">0°</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>Elbow</label>
+                        <input type="range" class="slider" id="elbowRotation" min="-120" max="120" value="0">
+                        <span class="slider-value" id="elbowValue">0°</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>Wrist</label>
+                        <input type="range" class="slider" id="wristRotation" min="-90" max="90" value="0">
+                        <span class="slider-value" id="wristValue">0°</span>
+                    </div>
+                    <div class="setting-row">
+                        <label>Gripper</label>
+                        <input type="range" class="slider" id="gripperOpen" min="0" max="100" value="50">
+                        <span class="slider-value" id="gripperValue">50%</span>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">🎮 Actions</h3>
+                    <div class="control-buttons">
+                        <button class="ctrl-btn active" id="autoDemo">▶️ Auto Demo</button>
+                        <button class="ctrl-btn" id="resetArm">🔄 Reset</button>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="back-btn" onclick="navigateTo('home')">
+                <span>←</span> Back to Home
+            </button>
+        </section>
+
+        <!-- ==================== GAMES SECTION ==================== -->
+        <section id="games" class="section section-3d">
+            <div class="scene-container" id="games-canvas"></div>
+            
+            <div class="game-hud" id="game-hud">
+                <div class="hud-item">
+                    <span class="hud-label">SCORE</span>
+                    <span class="hud-value" id="gameScore">0</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">LIVES</span>
+                    <span class="hud-value" id="gameLives">❤️❤️❤️</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">WAVE</span>
+                    <span class="hud-value" id="gameWave">1</span>
+                </div>
+            </div>
+            
+            <div class="scene-panel scene-controls-left" id="games-controls">
+                <div class="panel-section">
+                    <h3 class="panel-title">🎮 Controls</h3>
+                    <div class="game-controls-grid">
+                        <div class="d-pad">
+                            <button class="d-btn d-up" id="btnUp">↑</button>
+                            <button class="d-btn d-left" id="btnLeft">←</button>
+                            <button class="d-btn d-right" id="btnRight">→</button>
+                            <button class="d-btn d-down" id="btnDown">↓</button>
+                        </div>
+                        <button class="fire-btn" id="btnFire">🔥 FIRE</button>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">⚙️ Settings</h3>
+                    <div class="setting-row">
+                        <label>Difficulty</label>
+                        <select class="select-input" id="gameDifficulty">
+                            <option value="easy">Easy</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">🎯 Actions</h3>
+                    <div class="control-buttons">
+                        <button class="ctrl-btn" id="gameStart">▶️ Start</button>
+                        <button class="ctrl-btn" id="gameRestart">🔄 Restart</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="game-over-screen" id="gameOverScreen" style="display: none;">
+                <div class="game-over-content">
+                    <h2>GAME OVER</h2>
+                    <p>Final Score: <span id="finalScore">0</span></p>
+                    <button class="btn btn-primary" onclick="restartGame()">Play Again</button>
+                </div>
+            </div>
+            
+            <button class="back-btn" onclick="navigateTo('home')">
+                <span>←</span> Back to Home
+            </button>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-content">
+            <div class="footer-brand">
+                <div class="footer-logo">
+                    <div class="logo-icon">⚛️</div>
+                    <span>Science Lab 3D</span>
+                </div>
+                <p class="footer-tagline">Built with Three.js • Interactive 3D Science Platform</p>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/rudra496" target="_blank" rel="noopener">
+                    <span class="link-icon">📦</span> GitHub
+                </a>
+                <a href="https://linkedin.com/in/rudrasarker" target="_blank" rel="noopener">
+                    <span class="link-icon">💼</span> LinkedIn
+                </a>
+                <a href="mailto:rudrasarker125@gmail.com">
+                    <span class="link-icon">📧</span> Email
+                </a>
+                <a href="https://rudra496.github.io/site" target="_blank" rel="noopener">
+                    <span class="link-icon">🌐</span> Portfolio
+                </a>
+            </div>
+            <div class="footer-bottom">
+                <p>Made with ❤️ for science education by <strong>Rudra Sarker</strong></p>
+                <p class="copyright">© 2024 Science Lab 3D. MIT License.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Element Detail Modal -->
+    <div class="modal" id="elementModal">
+        <div class="modal-content" id="elementModalContent">
+            <button class="modal-close" onclick="closeModal('elementModal')">✕</button>
+            <div class="modal-body" id="elementModalBody"></div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Loading 3D Scene...</p>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Main Script -->
+    <script src="script.js"></script>
+</body>
+</html>
