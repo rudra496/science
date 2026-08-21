@@ -1953,65 +1953,88 @@ function buildNeuron3D(group) {
 }
 
 // --------------------------------------------------------------------------
-// 4. BACTERIA CELL (Prokaryotic Bacillus with 3-Layer Envelope & Nucleoid)
+// 4. BACTERIA CELL (Prokaryotic Bacillus: Centered, 3-Layer Envelope & Axial Motor)
 // --------------------------------------------------------------------------
 function buildBacteria3D(group) {
     const bactGroup = new THREE.Group();
+    bactGroup.position.set(-0.75, 0, 0); // Center entire assembly (capsule + flagellum) at origin
 
-    // 180° Open Longitudinal Cutaway Capsule (Rod-Shaped Bacillus)
-    // Layer 1: Outer Glycocalyx Capsule (Pink/Magenta)
-    const capGeo = new THREE.CylinderGeometry(2.2, 2.2, 7.5, 32, 1, false, 0, Math.PI * 1.4);
+    const capLength = 6.0;
+    const capRadius = 2.0;
+    const cutAngle = Math.PI * 1.35; // 240° cutaway opening directly toward viewer (+Z)
+
+    // Layer 1: Outer Glycocalyx Capsule (Magenta / Pink)
+    const capGeo = new THREE.CylinderGeometry(capRadius, capRadius, capLength, 32, 1, false, Math.PI * 0.32, cutAngle);
     const capMat = new THREE.MeshStandardMaterial({
         color: 0xdb2777,
         roughness: 0.3,
         side: THREE.DoubleSide,
         transparent: true,
-        opacity: 0.6,
+        opacity: 0.65,
         depthWrite: false
     });
     const capMesh = new THREE.Mesh(capGeo, capMat);
     capMesh.rotation.z = Math.PI / 2;
+    capMesh.position.set(-2.0, 0, 0);
     bactGroup.add(capMesh);
 
-    // Hemispherical End Caps
-    const endCapL = new THREE.Mesh(new THREE.SphereGeometry(2.2, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xbe185d, side: THREE.DoubleSide }));
-    endCapL.position.x = -3.75;
-    endCapL.rotation.z = Math.PI / 2;
-    bactGroup.add(endCapL);
+    // Anterior Hemispherical Dome (Left Pole, X = -5.0)
+    const domeL = new THREE.Mesh(
+        new THREE.SphereGeometry(capRadius, 24, 24, 0, Math.PI * 2, 0, Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: 0xbe185d, side: THREE.DoubleSide })
+    );
+    domeL.position.set(-5.0, 0, 0);
+    domeL.rotation.z = Math.PI / 2;
+    bactGroup.add(domeL);
 
-    const endCapR = new THREE.Mesh(new THREE.SphereGeometry(2.2, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xbe185d, side: THREE.DoubleSide }));
-    endCapR.position.x = 3.75;
-    endCapR.rotation.z = -Math.PI / 2;
-    bactGroup.add(endCapR);
+    // Posterior Hemispherical Dome (Right Pole, X = 1.0)
+    const domeR = new THREE.Mesh(
+        new THREE.SphereGeometry(capRadius, 24, 24, 0, Math.PI * 2, 0, Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: 0xbe185d, side: THREE.DoubleSide })
+    );
+    domeR.position.set(1.0, 0, 0);
+    domeR.rotation.z = -Math.PI / 2;
+    bactGroup.add(domeR);
 
-    // Layer 2: Inner Peptidoglycan Cell Wall (Amber Rim)
-    const wallGeo = new THREE.CylinderGeometry(2.0, 2.0, 7.3, 32, 1, true, 0, Math.PI * 1.4);
+    // Layer 2: Middle Peptidoglycan Cell Wall (Amber Rim)
+    const wallGeo = new THREE.CylinderGeometry(capRadius * 0.92, capRadius * 0.92, capLength * 0.98, 32, 1, true, Math.PI * 0.32, cutAngle);
     const wallMesh = new THREE.Mesh(wallGeo, new THREE.MeshStandardMaterial({ color: 0xf59e0b, side: THREE.DoubleSide }));
     wallMesh.rotation.z = Math.PI / 2;
+    wallMesh.position.set(-2.0, 0, 0);
     bactGroup.add(wallMesh);
 
-    // Tangled Neon-Blue Circular Nucleoid DNA (Supercoiled Chromosome without membrane)
+    // Layer 3: Inner Plasma Membrane (Cyan Layer)
+    const memGeo = new THREE.CylinderGeometry(capRadius * 0.84, capRadius * 0.84, capLength * 0.96, 32, 1, true, Math.PI * 0.32, cutAngle);
+    const memMesh = new THREE.Mesh(memGeo, new THREE.MeshStandardMaterial({ color: 0x06b6d4, side: THREE.DoubleSide }));
+    memMesh.rotation.z = Math.PI / 2;
+    memMesh.position.set(-2.0, 0, 0);
+    bactGroup.add(memMesh);
+
+    // Tangled Neon-Cyan Circular Nucleoid DNA (Supercoiled Chromosome inside lumen)
     const nucGroup = new THREE.Group();
+    nucGroup.position.set(-2.0, 0, 0);
     nucGroup.userData = { organelleKey: 'nucleoid' };
 
-    const nucGeo = new THREE.TorusKnotGeometry(1.3, 0.3, 128, 16, 2, 3);
+    const nucGeo = new THREE.TorusKnotGeometry(1.0, 0.22, 128, 16, 2, 3);
     const nucMat = new THREE.MeshStandardMaterial({
         color: 0x00f0ff,
         emissive: 0x00f0ff,
-        emissiveIntensity: 0.65,
+        emissiveIntensity: 0.7,
         roughness: 0.2
     });
-    nucGroup.add(new THREE.Mesh(nucGeo, nucMat));
+    const nucMesh = new THREE.Mesh(nucGeo, nucMat);
+    nucMesh.rotation.y = Math.PI / 2;
+    nucGroup.add(nucMesh);
     bactGroup.add(nucGroup);
     cellOrganelles.push(nucGroup);
 
-    // Circular Plasmid DNA Rings (Extrachromosomal DNA)
+    // 3 Golden Circular Plasmid DNA Rings
     for (let p = 0; p < 3; p++) {
         const plasmid = new THREE.Mesh(
-            new THREE.TorusGeometry(0.45, 0.07, 8, 24),
-            new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xffaa00, emissiveIntensity: 0.5 })
+            new THREE.TorusGeometry(0.38, 0.06, 8, 24),
+            new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xffaa00, emissiveIntensity: 0.55 })
         );
-        plasmid.position.set(-2.2 + p * 2.2, 0.9, (Math.random() - 0.5) * 1.5);
+        plasmid.position.set(-3.8 + p * 1.8, 0.6, (Math.random() - 0.5) * 1.0);
         plasmid.rotation.set(Math.random(), Math.random(), 0);
         plasmid.userData = { organelleKey: 'plasmid' };
         bactGroup.add(plasmid);
@@ -2020,36 +2043,60 @@ function buildBacteria3D(group) {
 
     // 70S Cytoplasmic Ribosomes
     for (let r = 0; r < 50; r++) {
-        const ribo = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
-        ribo.position.set((Math.random() - 0.5) * 6.0, (Math.random() - 0.5) * 3.0, (Math.random() - 0.5) * 2.0);
+        const ribo = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
+        ribo.position.set(-4.5 + Math.random() * 5.0, (Math.random() - 0.5) * 2.2, (Math.random() - 0.5) * 1.5);
         bactGroup.add(ribo);
     }
 
-    // Long Spinning Helical Flagellum with Basal Rotary Hook
-    const flagGroup = new THREE.Group();
-    flagGroup.name = 'bactFlagellum';
-    flagGroup.userData = { organelleKey: 'flagellum' };
-    flagGroup.position.set(3.75, 0, 0);
+    // Stationary Basal Rotary Motor Hook (Embedded in Posterior Pole at X = 1.0)
+    const basalCollar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.4, 0.4, 0.5, 16),
+        new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8, roughness: 0.3 })
+    );
+    basalCollar.position.set(1.0, 0, 0);
+    basalCollar.rotation.z = Math.PI / 2;
+    bactGroup.add(basalCollar);
 
-    const hookMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.9, 12), new THREE.MeshStandardMaterial({ color: 0x64748b }));
-    hookMesh.rotation.z = Math.PI / 2;
-    flagGroup.add(hookMesh);
+    const curvedHook = new THREE.Mesh(
+        new THREE.TorusGeometry(0.35, 0.12, 8, 16, Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.6 })
+    );
+    curvedHook.position.set(1.25, 0.2, 0);
+    curvedHook.rotation.z = -Math.PI / 4;
+    bactGroup.add(curvedHook);
 
+    // Spinning Helical Flagellar Filament (Axially Centered Group at Hook Tip X = 1.5)
+    const flagFilamentGroup = new THREE.Group();
+    flagFilamentGroup.name = 'bactFlagellum';
+    flagFilamentGroup.userData = { organelleKey: 'flagellum' };
+    flagFilamentGroup.position.set(1.5, 0, 0); // Origin is exact pivot on X-axis
+
+    // Generate Smooth Helical Corkscrew Curve along X-axis
     const flagPts = [];
-    for (let t = 0; t <= 15; t += 0.3) {
-        flagPts.push(new THREE.Vector3(0.5 + t * 0.7, Math.sin(t * 1.4) * 0.95, Math.cos(t * 1.4) * 0.95));
+    for (let t = 0; t <= 18; t += 0.25) {
+        flagPts.push(new THREE.Vector3(
+            t * 0.35,                          // Extends linearly along X-axis
+            Math.sin(t * 1.2) * 0.75,          // Helical Y wave
+            Math.cos(t * 1.2) * 0.75           // Helical Z wave
+        ));
     }
     const flagCurve = new THREE.CatmullRomCurve3(flagPts);
-    const flagTube = new THREE.Mesh(new THREE.TubeGeometry(flagCurve, 64, 0.15, 8, false), new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3 }));
-    flagGroup.add(flagTube);
-    bactGroup.add(flagGroup);
-    cellOrganelles.push(flagGroup);
+    const flagTube = new THREE.Mesh(
+        new THREE.TubeGeometry(flagCurve, 80, 0.13, 8, false),
+        new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3, emissive: 0xd97706, emissiveIntensity: 0.2 })
+    );
+    flagFilamentGroup.add(flagTube);
+    bactGroup.add(flagFilamentGroup);
+    cellOrganelles.push(flagFilamentGroup);
 
-    // Radiating Pili / Fimbriae Hair Bristles
-    for (let f = 0; f < 40; f++) {
-        const pilus = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.8, 6), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-        const angle = (f / 40) * Math.PI * 2;
-        pilus.position.set((Math.random() - 0.5) * 6.0, Math.cos(angle) * 2.3, Math.sin(angle) * 2.3);
+    // Radiating Pili / Fimbriae Hair Bristles (On the outer rear shell)
+    for (let f = 0; f < 35; f++) {
+        const pilus = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.035, 0.035, 1.6, 6),
+            new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 })
+        );
+        const angle = Math.PI * 0.8 + (f / 35) * Math.PI * 1.4; // Distributed on the closed rear shell
+        pilus.position.set(-4.5 + Math.random() * 5.0, Math.cos(angle) * 2.1, Math.sin(angle) * 2.1);
         pilus.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, Math.cos(angle), Math.sin(angle)));
         bactGroup.add(pilus);
     }
