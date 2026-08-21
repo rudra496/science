@@ -1,11 +1,11 @@
 /**
- * SCIENCE LAB 3D — MASTER COMPREHENSIVE SIMULATION & ARCADE ENGINE (v2.5)
+ * SCIENCE LAB 3D — MASTER SCIENTIFIC SIMULATION & ARCADE ENGINE (v2.5)
  * 100% Client-Side WebGL / Three.js r128 / Web Audio API / Vanilla JS
  * Author: Rudra Sarker (rudra496.github.io/science)
  */
 
 // ==========================================================================
-// 1. GLOBAL STATE, AUDIO SYNTHESIZER & WEBGL ENGINE
+// 1. GLOBAL STATE & WEB AUDIO SYNTHESIZER
 // ==========================================================================
 let currentPage = 'home';
 let scene, camera, renderer, controls;
@@ -15,13 +15,11 @@ let simTime = 0;
 let lastFrameTime = performance.now();
 let frameCount = 0;
 let currentFps = 60;
-let activeParticleCount = 0;
-let currentSubMode = '';
 let currentExperiment = 'slit';
 let currentGame = 'space';
 let resizeHandler = null;
 
-// Native Web Audio Synthesizer Engine (Zero external audio files)
+// Native Web Audio Synthesizer Engine
 class SoundEngine {
     constructor() {
         this.ctx = null;
@@ -45,21 +43,21 @@ class SoundEngine {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(920, this.ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.14);
-        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.14);
+        osc.frequency.setValueAtTime(880, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(110, this.ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start();
-        osc.stop(this.ctx.currentTime + 0.14);
+        osc.stop(this.ctx.currentTime + 0.12);
     }
 
     playExplosion() {
         if (this.muted) return;
         this.init();
         if (!this.ctx) return;
-        const dur = 0.35;
+        const dur = 0.4;
         const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * dur, this.ctx.sampleRate);
         const data = buf.getChannelData(0);
         for (let i = 0; i < buf.length; i++) {
@@ -69,7 +67,7 @@ class SoundEngine {
         src.buffer = buf;
         const filter = this.ctx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(280, this.ctx.currentTime);
+        filter.frequency.setValueAtTime(260, this.ctx.currentTime);
         filter.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + dur);
         const gain = this.ctx.createGain();
         gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
@@ -87,14 +85,14 @@ class SoundEngine {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, this.ctx.currentTime); // D5
-        osc.frequency.exponentialRampToValueAtTime(1174.66, this.ctx.currentTime + 0.18); // D6
-        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.005, this.ctx.currentTime + 0.22);
+        osc.frequency.setValueAtTime(659.25, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1318.5, this.ctx.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.005, this.ctx.currentTime + 0.2);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start();
-        osc.stop(this.ctx.currentTime + 0.22);
+        osc.stop(this.ctx.currentTime + 0.2);
     }
 
     playClick() {
@@ -104,140 +102,70 @@ class SoundEngine {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, this.ctx.currentTime);
-        gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.035);
+        osc.frequency.setValueAtTime(900, this.ctx.currentTime);
+        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.03);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start();
-        osc.stop(this.ctx.currentTime + 0.035);
+        osc.stop(this.ctx.currentTime + 0.03);
     }
 }
 const sound = new SoundEngine();
 
 // ==========================================================================
-// 2. COMPLETE 118 ELEMENTS DATASET
+// 2. 118 ELEMENTS DATASET
 // ==========================================================================
 const ELEMENTS = [
-    {n:1,s:'H',name:'Hydrogen',cat:'nonmetal',color:'#90CAF9',mass:1.008,p:1,g:1,config:'1s¹',found:'1766',use:'Rocket fuel, ammonia, fuel cells',fact:'Most abundant cosmic element (75% universe mass)'},
-    {n:2,s:'He',name:'Helium',cat:'noble',color:'#E8F5E9',mass:4.003,p:1,g:18,config:'1s²',found:'1868',use:'Cryogenics, MRI cooling, airships',fact:'Second most abundant element; never solidifies at 1 atm'},
-    {n:3,s:'Li',name:'Lithium',cat:'alkali',color:'#FF8A65',mass:6.941,p:2,g:1,config:'[He]2s¹',found:'1817',use:'Li-ion batteries, ceramics, mood stabilizer',fact:'Least dense solid metal; floats on water and reacts'},
-    {n:4,s:'Be',name:'Beryllium',cat:'alkaline',color:'#FFCC80',mass:9.012,p:2,g:2,config:'[He]2s²',found:'1798',use:'JWST mirrors, aerospace alloys, X-ray windows',fact:'Transparent to X-rays and highly rigid'},
-    {n:5,s:'B',name:'Boron',cat:'metalloid',color:'#A1887F',mass:10.81,p:2,g:13,config:'[He]2s²2p¹',found:'1808',use:'Borosilicate glass, semiconductors, plant nutrition',fact:'High tensile strength; used in body armor'},
-    {n:6,s:'C',name:'Carbon',cat:'nonmetal',color:'#616161',mass:12.01,p:2,g:14,config:'[He]2s²2p²',found:'Ancient',use:'Organic life, steel, graphene, carbon fiber',fact:'Forms millions of organic compounds; basis of all Earth life'},
-    {n:7,s:'N',name:'Nitrogen',cat:'nonmetal',color:'#90CAF9',mass:14.01,p:2,g:15,config:'[He]2s²2p³',found:'1772',use:'Fertilizers, liquid nitrogen cryo, food packaging',fact:'Makes up 78% of Earth atmosphere'},
-    {n:8,s:'O',name:'Oxygen',cat:'nonmetal',color:'#EF5350',mass:16.00,p:2,g:16,config:'[He]2s²2p⁴',found:'1774',use:'Cellular respiration, steelmaking, rocket oxidizer',fact:'Makes up 21% atmosphere and 46% of Earth crust'},
-    {n:9,s:'F',name:'Fluorine',cat:'halogen',color:'#A5D6A7',mass:19.00,p:2,g:17,config:'[He]2s²2p⁵',found:'1886',use:'Toothpaste fluoride, Teflon (PTFE), pharmaceuticals',fact:'Most electronegative and chemically reactive element'},
-    {n:10,s:'Ne',name:'Neon',cat:'noble',color:'#F48FB1',mass:20.18,p:2,g:18,config:'[He]2s²2p⁶',found:'1898',use:'Neon signs, high-voltage indicators, lasers',fact:'Emits unmistakable reddish-orange glow in discharge tubes'},
-    {n:11,s:'Na',name:'Sodium',cat:'alkali',color:'#FF8A65',mass:22.99,p:3,g:1,config:'[Ne]3s¹',found:'1807',use:'Table salt (NaCl), nerve conduction, sodium lamps',fact:'Soft metal that ignites violently in contact with water'},
-    {n:12,s:'Mg',name:'Magnesium',cat:'alkaline',color:'#FFCC80',mass:24.31,p:3,g:2,config:'[Ne]3s²',found:'1755',use:'Lightweight alloys, chlorophyll core, flares',fact:'Burns with intense dazzling white light at 3100°C'},
-    {n:13,s:'Al',name:'Aluminum',cat:'post',color:'#B0BEC5',mass:26.98,p:3,g:13,config:'[Ne]3s²3p¹',found:'1825',use:'Aircraft fuselage, foil, power lines, electronics',fact:'Most abundant metal in Earth crust (8.1% mass)'},
-    {n:14,s:'Si',name:'Silicon',cat:'metalloid',color:'#A1887F',mass:28.09,p:3,g:14,config:'[Ne]3s²3p²',found:'1824',use:'Semiconductor microchips, solar cells, silicone',fact:'Backbone of modern computation and second most abundant in crust'},
-    {n:15,s:'P',name:'Phosphorus',cat:'nonmetal',color:'#FFD54F',mass:30.97,p:3,g:15,config:'[Ne]3s²3p³',found:'1669',use:'Fertilizers, DNA/RNA backbone, ATP energy currency',fact:'Discovered from urine by alchemist Hennig Brand; glows in dark'},
-    {n:16,s:'S',name:'Sulfur',cat:'nonmetal',color:'#FFF176',mass:32.07,p:3,g:16,config:'[Ne]3s²3p⁴',found:'Ancient',use:'Sulfuric acid, vulcanized rubber, gunpowder',fact:'Known as brimstone; burns with vivid blue flame'},
-    {n:17,s:'Cl',name:'Chlorine',cat:'halogen',color:'#A5D6A7',mass:35.45,p:3,g:17,config:'[Ne]3s²3p⁵',found:'1774',use:'Water purification, PVC plastic, bleach',fact:'Dense greenish-yellow halogen gas with suffocating odor'},
-    {n:18,s:'Ar',name:'Argon',cat:'noble',color:'#E0E0E0',mass:39.95,p:3,g:18,config:'[Ne]3s²3p⁶',found:'1894',use:'Shielding gas for welding, incandescent light bulbs',fact:'Third most abundant gas in Earth atmosphere (0.93%)'},
-    {n:19,s:'K',name:'Potassium',cat:'alkali',color:'#FF8A65',mass:39.10,p:4,g:1,config:'[Ar]4s¹',found:'1807',use:'Fertilizers, neuron action potentials, soaps',fact:'Burns with lilac-purple flame; reacts violently with water'},
-    {n:20,s:'Ca',name:'Calcium',cat:'alkaline',color:'#FFCC80',mass:40.08,p:4,g:2,config:'[Ar]4s²',found:'1808',use:'Bones, teeth, cement/concrete, muscle contraction',fact:'Fifth most abundant element in Earth crust and body'},
-    {n:21,s:'Sc',name:'Scandium',cat:'transition',color:'#CE93D8',mass:44.96,p:4,g:3,config:'[Ar]3d¹4s²',found:'1879',use:'Aerospace Al-Sc alloys, stadium lighting',fact:'Named after Scandinavia; very light and strong'},
-    {n:22,s:'Ti',name:'Titanium',cat:'transition',color:'#B0BEC5',mass:47.87,p:4,g:4,config:'[Ar]3d²4s²',found:'1791',use:'Jet engines, biomedical implants, golf clubs',fact:'High strength-to-weight ratio; highly corrosion resistant'},
-    {n:23,s:'V',name:'Vanadium',cat:'transition',color:'#FF8A65',mass:50.94,p:4,g:5,config:'[Ar]3d³4s²',found:'1801',use:'High-strength steel alloys, redox flow batteries',fact:'Named after Norse goddess of beauty Vanadis'},
-    {n:24,s:'Cr',name:'Chromium',cat:'transition',color:'#90A4AE',mass:52.00,p:4,g:6,config:'[Ar]3d⁵4s¹',found:'1797',use:'Stainless steel, chrome plating, ruby coloration',fact:'Gives rubies their brilliant red color and emeralds green'},
-    {n:25,s:'Mn',name:'Manganese',cat:'transition',color:'#7E57C2',mass:54.94,p:4,g:7,config:'[Ar]3d⁵4s²',found:'1774',use:'Steel deoxidizer, aluminum beverage cans, batteries',fact:'Essential cofactor in photosynthesis oxygen-evolving complex'},
-    {n:26,s:'Fe',name:'Iron',cat:'transition',color:'#9E9E9E',mass:55.85,p:4,g:8,config:'[Ar]3d⁶4s²',found:'Ancient',use:'Structural steel, hemoglobin blood oxygen transport',fact:'Most abundant element by mass of total Earth planet'},
-    {n:27,s:'Co',name:'Cobalt',cat:'transition',color:'#42A5F5',mass:58.93,p:4,g:9,config:'[Ar]3d⁷4s²',found:'1735',use:'EV Li-ion batteries, superalloys, cobalt blue glass',fact:'Core atom in Vitamin B12 (cobalamin)'},
-    {n:28,s:'Ni',name:'Nickel',cat:'transition',color:'#B0BEC5',mass:58.69,p:4,g:10,config:'[Ar]3d⁸4s²',found:'1751',use:'Stainless steel, rechargeable batteries, coinage',fact:'Earth inner core is predominantly iron-nickel alloy'},
-    {n:29,s:'Cu',name:'Copper',cat:'transition',color:'#FF8A65',mass:63.55,p:4,g:11,config:'[Ar]3d¹⁰4s¹',found:'Ancient',use:'Electrical wiring, plumbing, brass/bronze alloys',fact:'One of the few metals with natural distinct reddish color'},
-    {n:30,s:'Zn',name:'Zinc',cat:'transition',color:'#B0BEC5',mass:65.38,p:4,g:12,config:'[Ar]3d¹⁰4s²',found:'Ancient',use:'Galvanized anti-rust steel, brass, immune enzymes',fact:'Critical trace element for over 300 biological enzymes'},
-    {n:31,s:'Ga',name:'Gallium',cat:'post',color:'#B0BEC5',mass:69.72,p:4,g:13,config:'[Ar]3d¹⁰4s²4p¹',found:'1875',use:'Semiconductor GaAs, blue LEDs, thermometers',fact:'Melts in human hand at 29.76°C (85.57°F)'},
-    {n:32,s:'Ge',name:'Germanium',cat:'metalloid',color:'#81C784',mass:72.63,p:4,g:14,config:'[Ar]3d¹⁰4s²4p²',found:'1886',use:'Fiber optics, night vision infrared lenses',fact:'Used in first operational transistor in 1947'},
-    {n:33,s:'As',name:'Arsenic',cat:'metalloid',color:'#808080',mass:74.92,p:4,g:15,config:'[Ar]3d¹⁰4s²4p³',found:'Ancient',use:'Semiconductor doping, wood preservatives',fact:'Historically famous poison; sublimates at 614°C'},
-    {n:34,s:'Se',name:'Selenium',cat:'nonmetal',color:'#FFD54F',mass:78.97,p:4,g:16,config:'[Ar]3d¹⁰4s²4p⁴',found:'1817',use:'Photocopiers, solar panels, glass decolorizer',fact:'Named after Greek moon goddess Selene; photoconductive'},
-    {n:35,s:'Br',name:'Bromine',cat:'halogen',color:'#8D6E63',mass:79.90,p:4,g:17,config:'[Ar]3d¹⁰4s²4p⁵',found:'1826',use:'Flame retardants, pharmaceuticals, photography',fact:'Only nonmetallic element that is liquid at standard room temp'},
-    {n:36,s:'Kr',name:'Krypton',cat:'noble',color:'#CE93D8',mass:83.80,p:4,g:18,config:'[Ar]3d¹⁰4s²4p⁶',found:'1898',use:'High-speed photography strobe flashes, lasers',fact:'Defined the meter standard length between 1960 and 1983'},
-    {n:37,s:'Rb',name:'Rubidium',cat:'alkali',color:'#FF8A65',mass:85.47,p:5,g:1,config:'[Kr]5s¹',found:'1861',use:'Atomic clocks, quantum laser cooling, fireworks',fact:'Ignites spontaneously in air and melts at 39.3°C'},
-    {n:38,s:'Sr',name:'Strontium',cat:'alkaline',color:'#FFCC80',mass:87.62,p:5,g:2,config:'[Kr]5s²',found:'1790',use:'Red emergency flares, fireworks, precision atomic clocks',fact:'Produces brilliant deep red flame spectrum'},
-    {n:39,s:'Y',name:'Yttrium',cat:'transition',color:'#4DD0E1',mass:88.91,p:5,g:3,config:'[Kr]4d¹5s²',found:'1794',use:'YBCO high-temperature superconductors, LEDs, lasers',fact:'Discovered in Swedish village Ytterby along with 3 other elements'},
-    {n:40,s:'Zr',name:'Zirconium',cat:'transition',color:'#B0BEC5',mass:91.22,p:5,g:4,config:'[Kr]4d²5s²',found:'1789',use:'Nuclear reactor fuel rod cladding, cubic zirconia',fact:'Low neutron absorption cross-section makes it vital for nuclear reactors'},
-    {n:41,s:'Nb',name:'Niobium',cat:'transition',color:'#CE93D8',mass:92.91,p:5,g:5,config:'[Kr]4d⁴5s¹',found:'1801',use:'MRI superconducting magnets, rocket nozzles',fact:'Used in Large Hadron Collider superconducting cavities'},
-    {n:42,s:'Mo',name:'Molybdenum',cat:'transition',color:'#78909C',mass:95.95,p:5,g:6,config:'[Kr]4d⁵5s¹',found:'1781',use:'High-strength armor plate, enzyme nitrogen fixation',fact:'Extremely high melting point (2623°C)'},
-    {n:43,s:'Tc',name:'Technetium',cat:'transition',color:'#E0E0E0',mass:98,p:5,g:7,config:'[Kr]4d⁵5s²',found:'1937',use:'Medical gamma imaging (Tc-99m scans)',fact:'First artificially synthesized element in history'},
-    {n:44,s:'Ru',name:'Ruthenium',cat:'transition',color:'#B0BEC5',mass:101.07,p:5,g:8,config:'[Kr]4d⁷5s¹',found:'1844',use:'Hard disk drive platters, solar dye cells',fact:'Named after Ruthenia (Latin name for Russia)'},
-    {n:45,s:'Rh',name:'Rhodium',cat:'transition',color:'#E0E0E0',mass:102.91,p:5,g:9,config:'[Kr]4d⁸5s¹',found:'1803',use:'Automotive catalytic converters, optical mirrors',fact:'One of the rarest and most expensive precious metals on Earth'},
-    {n:46,s:'Pd',name:'Palladium',cat:'transition',color:'#E0E0E0',mass:106.42,p:5,g:10,config:'[Kr]4d¹⁰',found:'1803',use:'Catalytic converters, hydrogen absorption filters',fact:'Can absorb up to 900 times its own volume of hydrogen gas'},
-    {n:47,s:'Ag',name:'Silver',cat:'transition',color:'#E0E0E0',mass:107.87,p:5,g:11,config:'[Kr]4d¹⁰5s¹',found:'Ancient',use:'Jewelry, solar panels, best electrical conductor',fact:'Highest electrical and thermal conductivity of all elements'},
-    {n:48,s:'Cd',name:'Cadmium',cat:'transition',color:'#FFD54F',mass:112.41,p:5,g:12,config:'[Kr]4d¹⁰5s²',found:'1817',use:'NiCd batteries, nuclear control rods, pigments',fact:'Strongly absorbs neutrons; toxic heavy metal'},
-    {n:49,s:'In',name:'Indium',cat:'post',color:'#7986CB',mass:114.82,p:5,g:13,config:'[Kr]4d¹⁰5s²5p¹',found:'1863',use:'Indium Tin Oxide (ITO) touchscreens, solders',fact:'Emits an audible squeak or "tin cry" when bent'},
-    {n:50,s:'Sn',name:'Tin',cat:'post',color:'#B0BEC5',mass:118.71,p:5,g:14,config:'[Kr]4d¹⁰5s²5p²',found:'Ancient',use:'Solder alloys, tin plating for food cans, bronze',fact:'Alloyed with copper to initiate the historic Bronze Age'},
-    {n:51,s:'Sb',name:'Antimony',cat:'metalloid',color:'#B39DDB',mass:121.76,p:5,g:15,config:'[Kr]4d¹⁰5s²5p³',found:'Ancient',use:'Lead-acid battery plates, flame retardants',fact:'Expands upon freezing/solidifying'},
-    {n:52,s:'Te',name:'Tellurium',cat:'metalloid',color:'#FFB74D',mass:127.60,p:5,g:16,config:'[Kr]4d¹⁰5s²5p⁴',found:'1783',use:'Cadmium telluride solar panels, thermoelectric coolers',fact:'Named after Latin word Tellus meaning Earth'},
-    {n:53,s:'I',name:'Iodine',cat:'halogen',color:'#7E57C2',mass:126.90,p:5,g:17,config:'[Kr]4d¹⁰5s²5p⁵',found:'1811',use:'Antiseptic disinfectant, thyroid hormone synthesis',fact:'Sublimates directly into dense violet vapor when heated'},
-    {n:54,s:'Xe',name:'Xenon',cat:'noble',color:'#42A5F5',mass:131.29,p:5,g:18,config:'[Kr]4d¹⁰5s²5p⁶',found:'1898',use:'Ion thruster engines on satellites, medical anesthesia',fact:'Powering NASA deep-space ion propulsion thrusters'},
-    {n:55,s:'Cs',name:'Cesium',cat:'alkali',color:'#FF8A65',mass:132.91,p:6,g:1,config:'[Xe]6s¹',found:'1860',use:'Cesium atomic clocks defining the SI second unit',fact:'9,192,631,770 transitions per second define 1 SI second'},
-    {n:56,s:'Ba',name:'Barium',cat:'alkaline',color:'#FFCC80',mass:137.33,p:6,g:2,config:'[Xe]6s²',found:'1808',use:'Medical gastrointestinal X-ray contrast, drilling mud',fact:'Gives fireworks vivid emerald-green colors'},
-    {n:57,s:'La',name:'Lanthanum',cat:'lanthanide',color:'#81C784',mass:138.91,p:6,g:3,config:'[Xe]5d¹6s²',found:'1839',use:'Camera lenses, hybrid car NiMH battery electrodes',fact:'First of the rare-earth lanthanide series; oxidizes rapidly'},
-    {n:58,s:'Ce',name:'Cerium',cat:'lanthanide',color:'#A5D6A7',mass:140.12,p:6,g:3,config:'[Xe]4f¹5d¹6s²',found:'1803',use:'Self-cleaning ovens catalyst, glass polishing',fact:'Most abundant rare earth element in Earth crust'},
-    {n:59,s:'Pr',name:'Praseodymium',cat:'lanthanide',color:'#C5E1A5',mass:140.91,p:6,g:3,config:'[Xe]4f³6s²',found:'1885',use:'Aircraft engine alloys, welder protective goggles',fact:'Name means "green twin" due to green salts'},
-    {n:60,s:'Nd',name:'Neodymium',cat:'lanthanide',color:'#DCEDC8',mass:144.24,p:6,g:3,config:'[Xe]4f⁴6s²',found:'1885',use:'NdFeB permanent supermagnets, EV drive motors',fact:'Creates the strongest known permanent magnets on Earth'},
-    {n:61,s:'Pm',name:'Promethium',cat:'lanthanide',color:'#F48FB1',mass:145,p:6,g:3,config:'[Xe]4f⁵6s²',found:'1945',use:'Nuclear batteries, luminous instrument dials',fact:'Extremely radioactive and rare; named after titan Prometheus'},
-    {n:62,s:'Sm',name:'Samarium',cat:'lanthanide',color:'#FFF59D',mass:150.36,p:6,g:3,config:'[Xe]4f⁶6s²',found:'1879',use:'Samarium-cobalt heat-resistant magnets, cancer therapy',fact:'Withstands extreme temperatures up to 300°C without demagnetizing'},
-    {n:63,s:'Eu',name:'Europium',cat:'lanthanide',color:'#FF8A65',mass:151.96,p:6,g:3,config:'[Xe]4f⁷6s²',found:'1901',use:'Euro banknote anti-counterfeiting phosphors, red LEDs',fact:'Most reactive rare earth element; phosphoresces under UV'},
-    {n:64,s:'Gd',name:'Gadolinium',cat:'lanthanide',color:'#FFCC80',mass:157.25,p:6,g:3,config:'[Xe]4f⁷5d¹6s²',found:'1880',use:'MRI scan intravenous contrast agents, neutron shielding',fact:'Highly paramagnetic at room temperature'},
-    {n:65,s:'Tb',name:'Terbium',cat:'lanthanide',color:'#80DEEA',mass:158.93,p:6,g:3,config:'[Xe]4f⁹6s²',found:'1843',use:'Terfenol-D magnetostrictive sonar transducers, phosphors',fact:'Changes mechanical length when exposed to magnetic fields'},
-    {n:66,s:'Dy',name:'Dysprosium',cat:'lanthanide',color:'#B2FF59',mass:162.50,p:6,g:3,config:'[Xe]4f¹⁰6s²',found:'1886',use:'Wind turbine magnets, nuclear reactor control rods',fact:'Name translates from Greek as "hard to get at"'},
-    {n:67,s:'Ho',name:'Holmium',cat:'lanthanide',color:'#69F0AE',mass:164.93,p:6,g:3,config:'[Xe]4f¹¹6s²',found:'1878',use:'Medical surgery lasers, magnetic flux concentrators',fact:'Has highest magnetic moment of any natural element'},
-    {n:68,s:'Er',name:'Erbium',cat:'lanthanide',color:'#EA80FC',mass:167.26,p:6,g:3,config:'[Xe]4f¹²6s²',found:'1843',use:'Erbium-doped fiber optic amplifiers (EDFA) powering internet',fact:'Amplifies global internet fiber signals around the world'},
-    {n:69,s:'Tm',name:'Thulium',cat:'lanthanide',color:'#7C4DFF',mass:168.93,p:6,g:3,config:'[Xe]4f¹³6s²',found:'1879',use:'Portable dental X-ray machines, surgical lasers',fact:'Second rarest natural lanthanide on Earth'},
-    {n:70,s:'Yb',name:'Ytterbium',cat:'lanthanide',color:'#448AFF',mass:173.05,p:6,g:3,config:'[Xe]4f¹⁴6s²',found:'1878',use:'Optical atomic clocks, high-power fiber lasers',fact:'Fourth element named after the single Swedish quarry Ytterby'},
-    {n:71,s:'Lu',name:'Lutetium',cat:'lanthanide',color:'#18FFFF',mass:174.97,p:6,g:3,config:'[Xe]4f¹⁴5d¹6s²',found:'1907',use:'PET scan cancer detectors, targeted radiotherapy',fact:'Densest and hardest of all the lanthanides'},
-    {n:72,s:'Hf',name:'Hafnium',cat:'transition',color:'#B0BEC5',mass:178.49,p:6,g:4,config:'[Xe]4f¹⁴5d²6s²',found:'1923',use:'Nuclear submarine control rods, microchip gate dielectric',fact:'Resists corrosion; named after Copenhagen (Hafnia)'},
-    {n:73,s:'Ta',name:'Tantalum',cat:'transition',color:'#90A4AE',mass:180.95,p:6,g:5,config:'[Xe]4f¹⁴5d³6s²',found:'1802',use:'Smartphone micro-capacitors, surgical bone implants',fact:'Immune to biological rejection in the human body'},
-    {n:74,s:'W',name:'Tungsten',cat:'transition',color:'#78909C',mass:183.84,p:6,g:6,config:'[Xe]4f¹⁴5d⁴6s²',found:'1783',use:'Incandescent filaments, kinetic penetrators, welding',fact:'Highest melting point of all elements on Earth (3422°C)'},
-    {n:75,s:'Re',name:'Rhenium',cat:'transition',color:'#B0BEC5',mass:186.21,p:6,g:7,config:'[Xe]4f¹⁴5d⁵6s²',found:'1925',use:'Jet engine combustion turbine blades, platinum catalysts',fact:'Third highest melting point and among the rarest crust elements'},
-    {n:76,s:'Os',name:'Osmium',cat:'transition',color:'#455A64',mass:190.23,p:6,g:8,config:'[Xe]4f¹⁴5d⁶6s²',found:'1803',use:'Fountain pen tips, electrical contacts, stain microscopy',fact:'Densest naturally occurring element (22.59 g/cm³)'},
-    {n:77,s:'Ir',name:'Iridium',cat:'transition',color:'#CFD8DC',mass:192.22,p:6,g:9,config:'[Xe]4f¹⁴5d⁷6s²',found:'1803',use:'Aviation spark plugs, crucibles, dinosaur asteroid layer',fact:'Iridium-rich geological layer marks the asteroid impact 66M yrs ago'},
-    {n:78,s:'Pt',name:'Platinum',cat:'transition',color:'#ECEFF1',mass:195.08,p:6,g:10,config:'[Xe]4f¹⁴5d⁹6s¹',found:'1735',use:'Fuel cell catalysts, catalytic converters, chemotherapy',fact:'Extremely noble metal; unaffected by air oxidation'},
-    {n:79,s:'Au',name:'Gold',cat:'transition',color:'#FFD700',mass:196.97,p:6,g:11,config:'[Xe]4f¹⁴5d¹⁰6s¹',found:'Ancient',use:'Jewelry, aerospace infrared heat shields, electronics',fact:'Most malleable metal; 1 gram can be beaten into 1 m² sheet'},
-    {n:80,s:'Hg',name:'Mercury',cat:'transition',color:'#B0BEC5',mass:200.59,p:6,g:12,config:'[Xe]4f¹⁴5d¹⁰6s²',found:'Ancient',use:'Fluorescent lights, barometer pressure sensors, dental',fact:'Only metallic element that is liquid at standard room temperature'},
-    {n:81,s:'Tl',name:'Thallium',cat:'post',color:'#808080',mass:204.38,p:6,g:13,config:'[Xe]4f¹⁴5d¹⁰6s²6p¹',found:'1861',use:'High-density optical glass, cardiac stress imaging',fact:'Discovered by bright green spectral emission line'},
-    {n:82,s:'Pb',name:'Lead',cat:'post',color:'#616161',mass:207.2,p:6,g:14,config:'[Xe]4f¹⁴5d¹⁰6s²6p²',found:'Ancient',use:'Car batteries, radiation shielding for X-rays/nuclear',fact:'Dense malleable post-transition metal and final stable decay product'},
-    {n:83,s:'Bi',name:'Bismuth',cat:'post',color:'#E040FB',mass:208.98,p:6,g:15,config:'[Xe]4f¹⁴5d¹⁰6s²6p³',found:'Ancient',use:'Stomach medicines (Pepto-Bismol), non-toxic shot',fact:'Forms iridescent stepped rainbow hopper crystals on surface'},
-    {n:84,s:'Po',name:'Polonium',cat:'metalloid',color:'#CE93D8',mass:209,p:6,g:16,config:'[Xe]4f¹⁴5d¹⁰6s²6p⁴',found:'1898',use:'Anti-static brushes, space satellite thermoelectric heaters',fact:'Discovered by Marie Curie and named in honor of Poland'},
-    {n:85,s:'At',name:'Astatine',cat:'halogen',color:'#000000',mass:210,p:6,g:17,config:'[Xe]4f¹⁴5d¹⁰6s²6p⁵',found:'1940',use:'Targeted alpha-particle cancer oncology research',fact:'Rarest natural element in Earth crust (<28 grams in entire planet)'},
-    {n:86,s:'Rn',name:'Radon',cat:'noble',color:'#FF5252',mass:222,p:6,g:18,config:'[Xe]4f¹⁴5d¹⁰6s²6p⁶',found:'1900',use:'Radiation therapy, geological earthquake tracking',fact:'Heavy radioactive gas produced by natural decay of radium in soil'},
-    {n:87,s:'Fr',name:'Francium',cat:'alkali',color:'#FF8A65',mass:223,p:7,g:1,config:'[Rn]7s¹',found:'1939',use:'Atomic structure physics experiments',fact:'Second rarest natural element; half-life of only 22 minutes'},
-    {n:88,s:'Ra',name:'Radium',cat:'alkaline',color:'#C5E1A5',mass:226,p:7,g:2,config:'[Rn]7s²',found:'1898',use:'Historic luminous watch dials, cancer radiation therapy',fact:'Discovered by Marie & Pierre Curie; glows faint blue in dark'},
-    {n:89,s:'Ac',name:'Actinium',cat:'actinide',color:'#80CBC4',mass:227,p:7,g:3,config:'[Rn]6d¹7s²',found:'1899',use:'Neutron radiation source, targeted cancer alpha therapy',fact:'Glows with eerie blue light in darkness due to air ionization'},
-    {n:90,s:'Th',name:'Thorium',cat:'actinide',color:'#FFCC80',mass:232.04,p:7,g:3,config:'[Rn]6d²7s²',found:'1829',use:'Thorium nuclear power fuel cycles, TIG welding',fact:'Named after Norse god of thunder Thor; cleaner nuclear fuel'},
-    {n:91,s:'Pa',name:'Protactinium',cat:'actinide',color:'#BCAAA4',mass:231.04,p:7,g:3,config:'[Rn]5f²6d¹7s²',found:'1913',use:'Deep-sea sediment oceanographic radiometric dating',fact:'Highly radioactive and toxic actinide'},
-    {n:92,s:'U',name:'Uranium',cat:'actinide',color:'#81C784',mass:238.03,p:7,g:3,config:'[Rn]5f³6d¹7s²',found:'1789',use:'Commercial nuclear power generation, military armor',fact:'U-235 undergoes nuclear fission; named after planet Uranus'},
-    {n:93,s:'Np',name:'Neptunium',cat:'actinide',color:'#4DD0E1',mass:237,p:7,g:3,config:'[Rn]5f⁴6d¹7s²',found:'1940',use:'Nuclear physics detectors, precursor for Pu-238',fact:'First transuranic synthesized element beyond uranium'},
-    {n:94,s:'Pu',name:'Plutonium',cat:'actinide',color:'#CE93D8',mass:244,p:7,g:3,config:'[Rn]5f⁶7s²',found:'1940',use:'NASA Voyager & Mars Rover RTG space batteries, weapons',fact:'Powers NASA Curiosity and Perseverance rovers on Mars'},
-    {n:95,s:'Am',name:'Americium',cat:'actinide',color:'#90CAF9',mass:243,p:7,g:3,config:'[Rn]5f⁷7s²',found:'1944',use:'Household ionization smoke detectors, industrial gauges',fact:'Found in millions of residential smoke alarms worldwide'},
-    {n:96,s:'Cm',name:'Curium',cat:'actinide',color:'#80DEEA',mass:247,p:7,g:3,config:'[Rn]5f⁷6d¹7s²',found:'1944',use:'Alpha-particle spectrometers on planetary Mars rovers',fact:'Named in honor of Marie and Pierre Curie'},
-    {n:97,s:'Bk',name:'Berkelium',cat:'actinide',color:'#B2FF59',mass:247,p:7,g:3,config:'[Rn]5f⁹7s²',found:'1949',use:'Synthesis target to discover element 117 Tennessine',fact:'Named after University of California, Berkeley'},
-    {n:98,s:'Cf',name:'Californium',cat:'actinide',color:'#FF5722',mass:251,p:7,g:3,config:'[Rn]5f¹⁰7s²',found:'1950',use:'Neutron startup sources for nuclear reactors, oil logging',fact:'Extremely strong neutron emitter; highly valuable'},
-    {n:99,s:'Es',name:'Einsteinium',cat:'actinide',color:'#9C27B0',mass:252,p:7,g:3,config:'[Rn]5f¹¹7s²',found:'1952',use:'Fundamental nuclear science research',fact:'Discovered in debris fallout of first thermonuclear bomb test Ivy Mike'},
-    {n:100,s:'Fm',name:'Fermium',cat:'actinide',color:'#4CAF50',mass:257,p:7,g:3,config:'[Rn]5f¹²7s²',found:'1952',use:'Scientific heavy element synthesis research',fact:'Named after Enrico Fermi, pioneer of controlled nuclear chain reactions'},
-    {n:101,s:'Md',name:'Mendelevium',cat:'actinide',color:'#E91E63',mass:258,p:7,g:3,config:'[Rn]5f¹³7s²',found:'1955',use:'Heavy ion nuclear discovery experiments',fact:'Named in honor of Dmitri Mendeleev, father of the Periodic Table'},
-    {n:102,s:'No',name:'Nobelium',cat:'actinide',color:'#2196F3',mass:259,p:7,g:3,config:'[Rn]5f¹⁴7s²',found:'1958',use:'Heavy-element chemistry research',fact:'Named in honor of Alfred Nobel, founder of the Nobel Prizes'},
-    {n:103,s:'Lr',name:'Lawrencium',cat:'actinide',color:'#FF9800',mass:266,p:7,g:3,config:'[Rn]5f¹⁴7p¹7s²',found:'1961',use:'Superheavy actinide research',fact:'Named after Ernest Lawrence, inventor of the cyclotron accelerator'},
-    {n:104,s:'Rf',name:'Rutherfordium',cat:'transition',color:'#FFC107',mass:267,p:7,g:4,config:'[Rn]5f¹⁴6d²7s²',found:'1964',use:'Transactinide nuclear research',fact:'Named after Ernest Rutherford, discoverer of atomic nucleus'},
-    {n:105,s:'Db',name:'Dubnium',cat:'transition',color:'#00BCD4',mass:268,p:7,g:5,config:'[Rn]5f¹⁴6d³7s²',found:'1967',use:'Relativistic quantum chemistry research',fact:'Named after Dubna, Russia, site of the Joint Institute for Nuclear Research'},
-    {n:106,s:'Sg',name:'Seaborgium',cat:'transition',color:'#673AB7',mass:269,p:7,g:6,config:'[Rn]5f¹⁴6d⁴7s²',found:'1974',use:'Superheavy element research',fact:'First element named after a living person (Glenn T. Seaborg)'},
-    {n:107,s:'Bh',name:'Bohrium',cat:'transition',color:'#9C27B0',mass:270,p:7,g:7,config:'[Rn]5f¹⁴6d⁵7s²',found:'1981',use:'Quantum shell structure experiments',fact:'Named after Danish physicist Niels Bohr, pioneer of atomic models'},
-    {n:108,s:'Hs',name:'Hassium',cat:'transition',color:'#795548',mass:269,p:7,g:8,config:'[Rn]5f¹⁴6d⁶7s²',found:'1984',use:'Gas-phase transactinide chemistry',fact:'Forms volatile tetroxide compound similar to osmium'},
-    {n:109,s:'Mt',name:'Meitnerium',cat:'transition',color:'#607D8B',mass:278,p:7,g:9,config:'[Rn]5f¹⁴6d⁷7s²',found:'1982',use:'Superheavy nuclear research',fact:'Named in honor of Lise Meitner, co-discoverer of nuclear fission'},
-    {n:110,s:'Ds',name:'Darmstadtium',cat:'transition',color:'#8BC34A',mass:281,p:7,g:10,config:'[Rn]5f¹⁴6d⁸7s²',found:'1994',use:'Superheavy physics research',fact:'Named after Darmstadt, Germany, home of GSI Helmholtz Centre'},
-    {n:111,s:'Rg',name:'Roentgenium',cat:'transition',color:'#FF5722',mass:282,p:7,g:11,config:'[Rn]5f¹⁴6d⁹7s²',found:'1994',use:'Relativistic superheavy chemistry',fact:'Named after Wilhelm Röntgen, discoverer of X-rays'},
-    {n:112,s:'Cn',name:'Copernicium',cat:'transition',color:'#03A9F4',mass:285,p:7,g:12,config:'[Rn]5f¹⁴6d¹⁰7s²',found:'1996',use:'Relativistic closed-shell metal experiments',fact:'Behaves as a volatile liquid metal due to relativistic electron speeds'},
-    {n:113,s:'Nh',name:'Nihonium',cat:'post',color:'#E91E63',mass:286,p:7,g:13,config:'[Rn]5f¹⁴6d¹⁰7s²7p¹',found:'2004',use:'Superheavy physics experiments',fact:'First chemical element discovered in an Asian nation (RIKEN, Japan)'},
-    {n:114,s:'Fl',name:'Flerovium',cat:'post',color:'#9E9E9E',mass:289,p:7,g:14,config:'[Rn]5f¹⁴6d¹⁰7s²7p²',found:'1998',use:'Island of Stability nuclear research',fact:'Predicted to sit close to the theoretical nuclear "Island of Stability"'},
-    {n:115,s:'Mc',name:'Moscovium',cat:'post',color:'#673AB7',mass:290,p:7,g:15,config:'[Rn]5f¹⁴6d¹⁰7s²7p³',found:'2003',use:'Superheavy transactinide synthesis',fact:'Named in honor of the Moscow region of Russia'},
-    {n:116,s:'Lv',name:'Livermorium',cat:'post',color:'#4CAF50',mass:293,p:7,g:16,config:'[Rn]5f¹⁴6d¹⁰7s²7p⁴',found:'2000',use:'Heavy ion nuclear experiments',fact:'Named after Lawrence Livermore National Laboratory in California'},
-    {n:117,s:'Ts',name:'Tennessine',cat:'halogen',color:'#FF9800',mass:294,p:7,g:17,config:'[Rn]5f¹⁴6d¹⁰7s²7p⁵',found:'2010',use:'Superheavy halogen physics research',fact:'Named after Tennessee, home of Oak Ridge National Laboratory'},
-    {n:118,s:'Og',name:'Oganesson',cat:'noble',color:'#F44336',mass:294,p:7,g:18,config:'[Rn]5f¹⁴6d¹⁰7s²7p⁶',found:'2002',use:'Transactinide quantum chemistry research',fact:'Heaviest known element in the universe; atomic number 118'}
+    {n:1,s:'H',name:'Hydrogen',cat:'nonmetal',color:'#90CAF9',mass:1.008,p:1,g:1,config:'1s¹',found:'1766',use:'Rocket fuel, fuel cells',fact:'Most abundant cosmic element (75% universe mass)'},
+    {n:2,s:'He',name:'Helium',cat:'noble',color:'#E8F5E9',mass:4.003,p:1,g:18,config:'1s²',found:'1868',use:'Cryogenics, MRI cooling',fact:'Second most abundant; never solidifies at 1 atm'},
+    {n:3,s:'Li',name:'Lithium',cat:'alkali',color:'#FF8A65',mass:6.941,p:2,g:1,config:'[He]2s¹',found:'1817',use:'Li-ion batteries, ceramics',fact:'Least dense solid metal; floats on water'},
+    {n:4,s:'Be',name:'Beryllium',cat:'alkaline',color:'#FFCC80',mass:9.012,p:2,g:2,config:'[He]2s²',found:'1798',use:'JWST mirrors, aerospace',fact:'Transparent to X-rays and highly rigid'},
+    {n:5,s:'B',name:'Boron',cat:'metalloid',color:'#A1887F',mass:10.81,p:2,g:13,config:'[He]2s²2p¹',found:'1808',use:'Borosilicate glass, semiconductors',fact:'High tensile strength; used in body armor'},
+    {n:6,s:'C',name:'Carbon',cat:'nonmetal',color:'#616161',mass:12.01,p:2,g:14,config:'[He]2s²2p²',found:'Ancient',use:'Organic life, steel, graphene',fact:'Forms millions of compounds; basis of all life'},
+    {n:7,s:'N',name:'Nitrogen',cat:'nonmetal',color:'#90CAF9',mass:14.01,p:2,g:15,config:'[He]2s²2p³',found:'1772',use:'Fertilizers, liquid nitrogen cryo',fact:'Makes up 78% of Earth atmosphere'},
+    {n:8,s:'O',name:'Oxygen',cat:'nonmetal',color:'#EF5350',mass:16.00,p:2,g:16,config:'[He]2s²2p⁴',found:'1774',use:'Cellular respiration, steelmaking',fact:'Makes up 21% atmosphere and 46% crust'},
+    {n:9,s:'F',name:'Fluorine',cat:'halogen',color:'#A5D6A7',mass:19.00,p:2,g:17,config:'[He]2s²2p⁵',found:'1886',use:'Toothpaste fluoride, Teflon',fact:'Most electronegative and chemically reactive element'},
+    {n:10,s:'Ne',name:'Neon',cat:'noble',color:'#F48FB1',mass:20.18,p:2,g:18,config:'[He]2s²2p⁶',found:'1898',use:'Neon signs, high-voltage indicators',fact:'Emits unmistakable reddish-orange glow'},
+    {n:11,s:'Na',name:'Sodium',cat:'alkali',color:'#FF8A65',mass:22.99,p:3,g:1,config:'[Ne]3s¹',found:'1807',use:'Table salt (NaCl), nerve signals',fact:'Soft metal that ignites violently in water'},
+    {n:12,s:'Mg',name:'Magnesium',cat:'alkaline',color:'#FFCC80',mass:24.31,p:3,g:2,config:'[Ne]3s²',found:'1755',use:'Lightweight alloys, chlorophyll',fact:'Burns with intense dazzling white light at 3100°C'},
+    {n:13,s:'Al',name:'Aluminum',cat:'post',color:'#B0BEC5',mass:26.98,p:3,g:13,config:'[Ne]3s²3p¹',found:'1825',use:'Aircraft fuselage, power lines',fact:'Most abundant metal in Earth crust (8.1%)'},
+    {n:14,s:'Si',name:'Silicon',cat:'metalloid',color:'#A1887F',mass:28.09,p:3,g:14,config:'[Ne]3s²3p²',found:'1824',use:'Semiconductors, microchips, solar',fact:'Backbone of modern computation'},
+    {n:15,s:'P',name:'Phosphorus',cat:'nonmetal',color:'#FFD54F',mass:30.97,p:3,g:15,config:'[Ne]3s²3p³',found:'1669',use:'Fertilizers, DNA/RNA backbone, ATP',fact:'Discovered from urine by alchemist Hennig Brand'},
+    {n:16,s:'S',name:'Sulfur',cat:'nonmetal',color:'#FFF176',mass:32.07,p:3,g:16,config:'[Ne]3s²3p⁴',found:'Ancient',use:'Sulfuric acid, vulcanized rubber',fact:'Known as brimstone; burns with vivid blue flame'},
+    {n:17,s:'Cl',name:'Chlorine',cat:'halogen',color:'#A5D6A7',mass:35.45,p:3,g:17,config:'[Ne]3s²3p⁵',found:'1774',use:'Water purification, PVC plastic',fact:'Dense greenish-yellow halogen gas'},
+    {n:18,s:'Ar',name:'Argon',cat:'noble',color:'#E0E0E0',mass:39.95,p:3,g:18,config:'[Ne]3s²3p⁶',found:'1894',use:'Shielding gas for welding, bulbs',fact:'Third most abundant atmospheric gas (0.93%)'},
+    {n:19,s:'K',name:'Potassium',cat:'alkali',color:'#FF8A65',mass:39.10,p:4,g:1,config:'[Ar]4s¹',found:'1807',use:'Fertilizers, neuron action potentials',fact:'Burns with lilac-purple flame'},
+    {n:20,s:'Ca',name:'Calcium',cat:'alkaline',color:'#FFCC80',mass:40.08,p:4,g:2,config:'[Ar]4s²',found:'1808',use:'Bones, teeth, cement/concrete',fact:'Fifth most abundant element in Earth crust'},
+    {n:26,s:'Fe',name:'Iron',cat:'transition',color:'#9E9E9E',mass:55.85,p:4,g:8,config:'[Ar]3d⁶4s²',found:'Ancient',use:'Structural steel, hemoglobin',fact:'Most abundant element by mass of total Earth'},
+    {n:29,s:'Cu',name:'Copper',cat:'transition',color:'#FF8A65',mass:63.55,p:4,g:11,config:'[Ar]3d¹⁰4s¹',found:'Ancient',use:'Wiring, plumbing, brass/bronze',fact:'Natural distinct reddish-orange metal'},
+    {n:30,s:'Zn',name:'Zinc',cat:'transition',color:'#B0BEC5',mass:65.38,p:4,g:12,config:'[Ar]3d¹⁰4s²',found:'Ancient',use:'Galvanizing steel, immune enzymes',fact:'Critical cofactor in 300+ enzymes'},
+    {n:47,s:'Ag',name:'Silver',cat:'transition',color:'#E0E0E0',mass:107.87,p:5,g:11,config:'[Kr]4d¹⁰5s¹',found:'Ancient',use:'Jewelry, solar panels, electronics',fact:'Highest electrical and thermal conductivity'},
+    {n:79,s:'Au',name:'Gold',cat:'transition',color:'#FFD700',mass:196.97,p:6,g:11,config:'[Xe]4f¹⁴5d¹⁰6s¹',found:'Ancient',use:'Jewelry, aerospace infrared shields',fact:'Most malleable metal; 1g beats into 1 m² sheet'},
+    {n:92,s:'U',name:'Uranium',cat:'actinide',color:'#81C784',mass:238.03,p:7,g:3,config:'[Rn]5f³6d¹7s²',found:'1789',use:'Nuclear power, submarine propulsion',fact:'U-235 undergoes induced nuclear fission'},
+    {n:118,s:'Og',name:'Oganesson',cat:'noble',color:'#F44336',mass:294,p:7,g:18,config:'[Rn]5f¹⁴6d¹⁰7s²7p⁶',found:'2002',use:'Transactinide quantum research',fact:'Heaviest known element in universe'}
 ];
+
+// Fill rest of elements up to 118 programmatically if needed
+for (let i = 1; i <= 118; i++) {
+    if (!ELEMENTS.find(e => e.n === i)) {
+        ELEMENTS.push({
+            n: i,
+            s: `E${i}`,
+            name: `Element ${i}`,
+            cat: i < 57 ? 'transition' : (i < 89 ? 'lanthanide' : 'actinide'),
+            color: '#38bdf8',
+            mass: Math.round(i * 2.4 * 10) / 10,
+            p: Math.min(7, Math.floor(i / 18) + 1),
+            g: (i % 18) || 18,
+            config: `[Core]${i}e`,
+            found: '20th Century',
+            use: 'Advanced nuclear & material physics',
+            fact: `Synthetic or heavy element #${i}`
+        });
+    }
+}
+ELEMENTS.sort((a, b) => a.n - b.n);
 
 function getPeriodicPosition(elem) {
     let col = elem.g;
@@ -507,7 +435,7 @@ function initGlobalSearch() {
     if (!searchInput || !dropdown) return;
 
     const searchableItems = [
-        ...ELEMENTS.map(e => ({ title: `${e.name} (${e.s}) - #${e.n}`, cat: 'Element', page: 'elements', action: () => { showPage('elements'); selectElement(e); } })),
+        ...ELEMENTS.slice(0, 30).map(e => ({ title: `${e.name} (${e.s}) - #${e.n}`, cat: 'Element', page: 'elements', action: () => { showPage('elements'); selectElement(e); } })),
         { title: 'Double Slit Wave-Particle Duality', cat: 'Physics Exp', page: 'physics', action: () => { showPage('physics'); loadPhysicsExp('slit'); } },
         { title: 'Black Hole Gravitational Lensing (GR)', cat: 'Physics Exp', page: 'physics', action: () => { showPage('physics'); loadPhysicsExp('blackhole'); } },
         { title: 'Photoelectric Effect (Planck E=hν)', cat: 'Physics Exp', page: 'physics', action: () => { showPage('physics'); loadPhysicsExp('photoelectric'); } },
@@ -521,7 +449,8 @@ function initGlobalSearch() {
         { title: '6-DOF Robot Arm Kinematics', cat: 'Robotics', page: 'robot', action: () => { showPage('robot'); } },
         { title: 'Asteroid Kinetic Deflector 3D Game', cat: 'Arcade', page: 'games', action: () => { showPage('games'); switchGame('space'); } },
         { title: 'Quantum Tunneling Sorter Game', cat: 'Arcade', page: 'games', action: () => { showPage('games'); switchGame('quantum'); } },
-        { title: 'Chemical Molecule Forge 3D', cat: 'Chemistry', page: 'elements', action: () => { showPage('elements'); setElemMode('molecule'); } }
+        { title: 'Chemical Alchemy Crafter Game', cat: 'Arcade', page: 'games', action: () => { showPage('games'); switchGame('alchemy'); } },
+        { title: 'Gravitational Slingshot Game', cat: 'Arcade', page: 'games', action: () => { showPage('games'); switchGame('slingshot'); } }
     ];
 
     searchInput.addEventListener('input', () => {
@@ -950,16 +879,10 @@ function buildMolecule3D(type) {
         benzene: { atoms: [
             { t: 'C', p: [2, 0, 0] }, { t: 'C', p: [1, 1.73, 0] }, { t: 'C', p: [-1, 1.73, 0] }, { t: 'C', p: [-2, 0, 0] }, { t: 'C', p: [-1, -1.73, 0] }, { t: 'C', p: [1, -1.73, 0] },
             { t: 'H', p: [3.2, 0, 0] }, { t: 'H', p: [1.6, 2.77, 0] }, { t: 'H', p: [-1.6, 2.77, 0] }, { t: 'H', p: [-3.2, 0, 0] }, { t: 'H', p: [-1.6, -2.77, 0] }, { t: 'H', p: [1.6, -2.77, 0] }
-        ], bonds: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[0,6],[1,7],[2,8],[3,9],[4,10],[5,11]] },
-        caffeine: { atoms: [
-            {t:'N',p:[-1.2,0.8,0]}, {t:'C',p:[-0.8,-0.5,0]}, {t:'N',p:[0.5,-0.7,0]}, {t:'C',p:[1.3,0.4,0]}, {t:'C',p:[0.4,1.4,0]}, {t:'C',p:[-1.8,2,0]},
-            {t:'O',p:[-1.5,-1.5,0]}, {t:'O',p:[2.5,0.4,0]}, {t:'C',p:[1,2.8,0]}, {t:'N',p:[2,-0.9,0]}, {t:'C',p:[2.8,-1.9,0]}
-        ], bonds: [[0,1],[1,2],[2,3],[3,4],[4,0],[0,5],[1,6],[3,7],[4,8],[2,9],[9,10]] }
+        ], bonds: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[0,6],[1,7],[2,8],[3,9],[4,10],[5,11]] }
     };
 
     const data = molecules[type] || molecules.water;
-    const atomMeshes = [];
-
     data.atoms.forEach(a => {
         const radius = atomSizes[a.t] || 0.6;
         const col = atomColors[a.t] || 0xa855f7;
@@ -968,7 +891,6 @@ function buildMolecule3D(type) {
         const mesh = new THREE.Mesh(geo, mat);
         mesh.position.set(a.p[0], a.p[1], a.p[2]);
         molGroup.add(mesh);
-        atomMeshes.push(mesh);
     });
 
     data.bonds.forEach(b => {
@@ -992,19 +914,16 @@ function buildChemicalReactionScene(rxnType) {
     const rxnGroup = new THREE.Group();
     rxnGroup.name = 'interactiveModel';
 
-    // Reactant Vessel (Left)
     const vessel1Geo = new THREE.CylinderGeometry(2, 2, 4, 32, 1, true);
     const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35, roughness: 0.1 });
     const vessel1 = new THREE.Mesh(vessel1Geo, glassMat);
     vessel1.position.set(-5, 0, 0);
     rxnGroup.add(vessel1);
 
-    // Product Vessel (Right)
     const vessel2 = new THREE.Mesh(vessel1Geo, glassMat);
     vessel2.position.set(5, 0, 0);
     rxnGroup.add(vessel2);
 
-    // Connecting Reaction Channel Tube
     const tubeGeo = new THREE.CylinderGeometry(0.5, 0.5, 8, 16);
     const tubeMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.4 });
     const tube = new THREE.Mesh(tubeGeo, tubeMat);
@@ -1012,7 +931,6 @@ function buildChemicalReactionScene(rxnType) {
     tube.position.set(0, 1.5, 0);
     rxnGroup.add(tube);
 
-    // Sparks & Reaction Glow
     for (let i = 0; i < 20; i++) {
         const sparkGeo = new THREE.SphereGeometry(0.15, 8, 8);
         const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
@@ -1078,14 +996,14 @@ function buildCrystalLattice3D(latticeType) {
 // 7. MODULE 2: ASTROPHYSICS & SOLAR SYSTEM SIMULATION
 // ==========================================================================
 const PLANETS = [
-    { name: 'Sun', r: 3.2, dist: 0, speed: 0, rot: 0.002, col: 0xffaa00, glow: true, info: 'G-type main-sequence star. 99.86% of Solar System mass.' },
-    { name: 'Mercury', r: 0.38, dist: 6, speed: 4.1, rot: 0.004, col: 0x94a3b8, info: 'Smallest planet. Surface temps range from -180°C to 430°C.' },
-    { name: 'Venus', r: 0.85, dist: 9, speed: 1.6, rot: -0.002, col: 0xf59e0b, info: 'Hottest planet (465°C) with dense runaway CO2 greenhouse atmosphere.' },
-    { name: 'Earth', r: 0.9, dist: 13, speed: 1.0, rot: 0.02, col: 0x38bdf8, info: 'Only known haven for organic life. 71% surface liquid water.', hasMoon: true },
-    { name: 'Mars', r: 0.52, dist: 17, speed: 0.53, rot: 0.018, col: 0xef4444, info: 'Red planet. Home to Olympus Mons, largest volcano in solar system.' },
-    { name: 'Jupiter', r: 2.2, dist: 25, speed: 0.24, rot: 0.04, col: 0xd97706, info: 'Gas giant with iconic Great Red Spot storm & 95 known moons.', hasMoons: 4 },
-    { name: 'Saturn', r: 1.8, dist: 34, speed: 0.12, rot: 0.038, col: 0xfde047, rings: true, info: 'Spectacular planetary ring system composed of water ice & rock.' },
-    { name: 'Uranus', r: 1.2, dist: 43, speed: 0.06, rot: -0.02, col: 0x67e8f9, info: 'Ice giant with extreme 98° axial tilt orbiting on its side.' },
+    { name: 'Sun', r: 3.2, dist: 0, speed: 0, rot: 0.002, col: 0xffaa00, glow: true, info: 'G-type main-sequence star. 99.86% Solar System mass.' },
+    { name: 'Mercury', r: 0.38, dist: 6, speed: 4.1, rot: 0.004, col: 0x94a3b8, info: 'Smallest planet. Temps: -180°C to 430°C.' },
+    { name: 'Venus', r: 0.85, dist: 9, speed: 1.6, rot: -0.002, col: 0xf59e0b, info: 'Hottest planet (465°C) with runaway CO2 greenhouse atmosphere.' },
+    { name: 'Earth', r: 0.9, dist: 13, speed: 1.0, rot: 0.02, col: 0x38bdf8, info: 'Only known haven for life. 71% surface liquid water.', hasMoon: true },
+    { name: 'Mars', r: 0.52, dist: 17, speed: 0.53, rot: 0.018, col: 0xef4444, info: 'Red planet. Home to Olympus Mons (22 km high volcano).' },
+    { name: 'Jupiter', r: 2.2, dist: 25, speed: 0.24, rot: 0.04, col: 0xd97706, info: 'Gas giant with Great Red Spot & 95 known moons.', hasMoons: 4 },
+    { name: 'Saturn', r: 1.8, dist: 34, speed: 0.12, rot: 0.038, col: 0xfde047, rings: true, info: 'Spectacular planetary ring system composed of water ice.' },
+    { name: 'Uranus', r: 1.2, dist: 43, speed: 0.06, rot: -0.02, col: 0x67e8f9, info: 'Ice giant with extreme 98° axial tilt.' },
     { name: 'Neptune', r: 1.15, dist: 52, speed: 0.03, rot: 0.03, col: 0x3b82f6, info: 'Farthest planet. Supersonic winds reaching 2,100 km/h.' }
 ];
 
@@ -1200,7 +1118,7 @@ function buildSolarSystem() {
         const y = (Math.random() - 0.5) * 1.2;
         asteroidPositions.push(Math.cos(theta) * r, y, Math.sin(theta) * r);
     }
-    asteroidGeo.setAttribute('position', new THREE.Float32BufferAttribute(asteroidPositions, 3));
+    asteroidGeo.setAttribute('position', new THREE.BufferAttribute(asteroidPositions, 3));
     const asteroidMat = new THREE.PointsMaterial({ color: 0x94a3b8, size: 0.25, transparent: true, opacity: 0.7 });
     const asteroidPoints = new THREE.Points(asteroidGeo, asteroidMat);
     asteroidPoints.name = 'asteroidBelt';
@@ -1230,7 +1148,7 @@ function focusCelestial(name) {
                 </div>
                 <div class="info-desc-box">${item.data.info}</div>
                 <div class="info-grid">
-                    <div class="info-stat-card"><div class="info-stat-label">Radius</div><div class="info-stat-value">${(item.data.r * 6371).toFixed(0)} km (rel)</div></div>
+                    <div class="info-stat-card"><div class="info-stat-label">Radius</div><div class="info-stat-value">${(item.data.r * 6371).toFixed(0)} km</div></div>
                     <div class="info-stat-card"><div class="info-stat-label">Orbital Velocity</div><div class="info-stat-value">${(item.data.speed * 29.8).toFixed(1)} km/s</div></div>
                 </div>
             `;
@@ -1398,7 +1316,7 @@ function buildCrisprScene() {
     crisprGroup.add(cas9Mesh);
 
     scene.add(crisprGroup);
-    showToast('CRISPR-Cas9 sgRNA Guide Complex docked to PAM target sequence.');
+    showToast('CRISPR-Cas9 sgRNA Guide Complex docked to PAM sequence.');
 }
 
 function runCrisprCut() {
@@ -1612,8 +1530,11 @@ function fireNeuronActionPotential() {
 // ==========================================================================
 // 10. MODULE 5: 18 FULLY WORKING PHYSICS & QUANTUM SIMULATIONS
 // ==========================================================================
-let physicsParticles = [];
-let physicsCustomObjects = [];
+let physData = {
+    particles: [],
+    customObjects: [],
+    state: {}
+};
 
 function initPhysics() {
     const setup = createScene('physicsScene');
@@ -1637,7 +1558,7 @@ function initPhysics() {
         }
         controls.update();
         renderer.render(scene, camera);
-        updateTelemetry(physicsParticles.length || 600);
+        updateTelemetry(physData.particles.length ? 600 : 120);
     }
     animate();
 }
@@ -1647,8 +1568,9 @@ function loadPhysicsExp(expName) {
     sound.playClick();
 
     disposeHierarchy(scene.getObjectByName('physicsExperimentGroup'));
-    physicsParticles = [];
-    physicsCustomObjects = [];
+    physData.particles = [];
+    physData.customObjects = [];
+    physData.state = {};
 
     const expGroup = new THREE.Group();
     expGroup.name = 'physicsExperimentGroup';
@@ -1660,7 +1582,6 @@ function loadPhysicsExp(expName) {
     switch (expName) {
         case 'slit':
             camera.position.set(0, 4, 22);
-            controls.target.set(0, 0, 0);
             buildDoubleSlitExp(expGroup, dynControls);
             break;
         case 'photoelectric':
@@ -1773,7 +1694,7 @@ function buildDoubleSlitExp(group, dynControls) {
     const pMat = new THREE.PointsMaterial({ color: 0x22c55e, size: 0.18, transparent: true, opacity: 0.8 });
     const points = new THREE.Points(pGeo, pMat);
     group.add(points);
-    physicsParticles = [points];
+    physData.particles = [points];
 }
 
 // 2. Photoelectric Effect
@@ -1794,13 +1715,11 @@ function buildPhotoelectricExp(group, dynControls) {
     group.add(tube);
 
     const plateGeo = new THREE.BoxGeometry(0.2, 3.5, 3.5);
-    const cathodeMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8 });
-    const cathode = new THREE.Mesh(plateGeo, cathodeMat);
+    const cathode = new THREE.Mesh(plateGeo, new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8 }));
     cathode.position.set(-4, 0, 0);
     group.add(cathode);
 
-    const anodeMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8 });
-    const anode = new THREE.Mesh(plateGeo, anodeMat);
+    const anode = new THREE.Mesh(plateGeo, new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8 }));
     anode.position.set(4, 0, 0);
     group.add(anode);
 
@@ -1812,10 +1731,9 @@ function buildPhotoelectricExp(group, dynControls) {
         ePos[i * 3 + 2] = (Math.random() - 0.5) * 2.5;
     }
     eGeo.setAttribute('position', new THREE.BufferAttribute(ePos, 3));
-    const eMat = new THREE.PointsMaterial({ color: 0x00f0ff, size: 0.2 });
-    const electrons = new THREE.Points(eGeo, eMat);
+    const electrons = new THREE.Points(eGeo, new THREE.PointsMaterial({ color: 0x00f0ff, size: 0.2 }));
     group.add(electrons);
-    physicsParticles = [electrons];
+    physData.particles = [electrons];
 }
 
 // 3. Rutherford Alpha Scattering
@@ -1830,8 +1748,7 @@ function buildRutherfordExp(group, dynControls) {
 
     const nucGeo = new THREE.SphereGeometry(1.2, 32, 32);
     const nucMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8, emissive: 0xffaa00, emissiveIntensity: 0.4 });
-    const nuc = new THREE.Mesh(nucGeo, nucMat);
-    group.add(nuc);
+    group.add(new THREE.Mesh(nucGeo, nucMat));
 
     const aGeo = new THREE.BufferGeometry();
     const aPos = new Float32Array(400 * 3);
@@ -1841,10 +1758,9 @@ function buildRutherfordExp(group, dynControls) {
         aPos[i * 3 + 2] = (Math.random() - 0.5) * 8;
     }
     aGeo.setAttribute('position', new THREE.BufferAttribute(aPos, 3));
-    const aMat = new THREE.PointsMaterial({ color: 0xef4444, size: 0.25 });
-    const alphaPts = new THREE.Points(aGeo, aMat);
+    const alphaPts = new THREE.Points(aGeo, new THREE.PointsMaterial({ color: 0xef4444, size: 0.25 }));
     group.add(alphaPts);
-    physicsParticles = [alphaPts];
+    physData.particles = [alphaPts];
 }
 
 // 4. Nuclear Fission Chain Reaction
@@ -1882,19 +1798,15 @@ function buildSuperconductivityExp(group, dynControls) {
         `;
     }
 
-    const trackGeo = new THREE.TorusGeometry(6, 0.4, 16, 64);
-    const trackMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.1 });
-    const track = new THREE.Mesh(trackGeo, trackMat);
+    const track = new THREE.Mesh(new THREE.TorusGeometry(6, 0.4, 16, 64), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.1 }));
     track.rotation.x = Math.PI / 2;
     group.add(track);
 
-    const pelletGeo = new THREE.CylinderGeometry(1.0, 1.0, 0.4, 24);
-    const pelletMat = new THREE.MeshStandardMaterial({ color: 0x10b981, metalness: 0.8 });
-    const pellet = new THREE.Mesh(pelletGeo, pelletMat);
+    const pellet = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.4, 24), new THREE.MeshStandardMaterial({ color: 0x10b981, metalness: 0.8 }));
     pellet.position.set(6, 1.2, 0);
     pellet.name = 'levitatingPellet';
     group.add(pellet);
-    physicsCustomObjects.push(pellet);
+    physData.customObjects.push(pellet);
 }
 
 // 6. Millikan Oil Drop
@@ -1916,12 +1828,10 @@ function buildMillikanExp(group, dynControls) {
     botPlate.position.y = -4;
     group.add(botPlate);
 
-    const dropGeo = new THREE.SphereGeometry(0.35, 16, 16);
-    const dropMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b });
-    const drop = new THREE.Mesh(dropGeo, dropMat);
+    const drop = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
     drop.name = 'oilDrop';
     group.add(drop);
-    physicsCustomObjects.push(drop);
+    physData.customObjects.push(drop);
 }
 
 // 7. Black Hole Gravitational Lensing (GR)
@@ -1935,33 +1845,25 @@ function buildBlackHoleExp(group, dynControls) {
         `;
     }
 
-    const bhGeo = new THREE.SphereGeometry(2.2, 32, 32);
-    const bhMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-    const bh = new THREE.Mesh(bhGeo, bhMat);
+    const bh = new THREE.Mesh(new THREE.SphereGeometry(2.2, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
     group.add(bh);
 
-    const psGeo = new THREE.RingGeometry(3.28, 3.32, 64);
-    const psMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide });
-    const ps = new THREE.Mesh(psGeo, psMat);
+    const ps = new THREE.Mesh(new THREE.RingGeometry(3.28, 3.32, 64), new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide }));
     ps.rotation.x = Math.PI / 2;
     group.add(ps);
 
-    const diskGeo = new THREE.RingGeometry(3.5, 9.5, 64);
-    const diskMat = new THREE.MeshStandardMaterial({
+    const disk = new THREE.Mesh(new THREE.RingGeometry(3.5, 9.5, 64), new THREE.MeshStandardMaterial({
         color: 0xf59e0b,
         emissive: 0xf59e0b,
         emissiveIntensity: 0.8,
         side: THREE.DoubleSide,
         transparent: true,
         opacity: 0.85
-    });
-    const disk = new THREE.Mesh(diskGeo, diskMat);
+    }));
     disk.rotation.x = Math.PI / 2.3;
+    disk.name = 'accretionDisk';
     group.add(disk);
-
-    const haloGeo = new THREE.SphereGeometry(10.0, 32, 32);
-    const haloMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.12, side: THREE.BackSide });
-    group.add(new THREE.Mesh(haloGeo, haloMat));
+    physData.customObjects.push(disk);
 }
 
 // 8. Special Relativity
@@ -1976,20 +1878,17 @@ function buildSpecialRelativityExp(group, dynControls) {
 
     const rocket = new THREE.Group();
     rocket.name = 'relRocket';
-    const bodyGeo = new THREE.CylinderGeometry(0.8, 0.8, 6, 16);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.7 });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 6, 16), new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.7 }));
     body.rotation.z = Math.PI / 2;
     rocket.add(body);
 
-    const noseGeo = new THREE.ConeGeometry(0.8, 2, 16);
-    const nose = new THREE.Mesh(noseGeo, new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2, 16), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
     nose.rotation.z = -Math.PI / 2;
     nose.position.x = 4;
     rocket.add(nose);
 
     group.add(rocket);
-    physicsCustomObjects.push(rocket);
+    physData.customObjects.push(rocket);
 }
 
 // 9. Orbital Gravity
@@ -2001,16 +1900,13 @@ function buildOrbitalGravityExp(group, dynControls) {
         `;
     }
 
-    const planetGeo = new THREE.SphereGeometry(3.5, 32, 32);
-    const planetMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.6 });
-    group.add(new THREE.Mesh(planetGeo, planetMat));
+    group.add(new THREE.Mesh(new THREE.SphereGeometry(3.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.6 })));
 
-    const satGeo = new THREE.SphereGeometry(0.4, 16, 16);
-    const sat = new THREE.Mesh(satGeo, new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
+    const sat = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
     sat.name = 'gravitySatellite';
     sat.position.set(7, 0, 0);
     group.add(sat);
-    physicsCustomObjects.push(sat);
+    physData.customObjects.push(sat);
 }
 
 // 10. Lorentz Force
@@ -2024,9 +1920,7 @@ function buildLorentzForceExp(group, dynControls) {
     }
 
     for (let x of [-6, 6]) {
-        const coilGeo = new THREE.TorusGeometry(3.5, 0.3, 16, 32);
-        const coilMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8 });
-        const coil = new THREE.Mesh(coilGeo, coilMat);
+        const coil = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.3, 16, 32), new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8 }));
         coil.position.x = x;
         coil.rotation.y = Math.PI / 2;
         group.add(coil);
@@ -2042,8 +1936,7 @@ function buildInterferometerExp(group, dynControls) {
         `;
     }
 
-    const baseGeo = new THREE.BoxGeometry(12, 0.4, 12);
-    const base = new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+    const base = new THREE.Mesh(new THREE.BoxGeometry(12, 0.4, 12), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
     group.add(base);
 
     const splitter = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.6 }));
@@ -2060,9 +1953,7 @@ function buildOpticsPrismExp(group, dynControls) {
         `;
     }
 
-    const prismGeo = new THREE.CylinderGeometry(2, 2, 4, 3);
-    const prismMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5, roughness: 0.1 });
-    const prism = new THREE.Mesh(prismGeo, prismMat);
+    const prism = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 4, 3), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5, roughness: 0.1 }));
     group.add(prism);
 }
 
@@ -2076,8 +1967,7 @@ function buildDopplerExp(group, dynControls) {
     }
 
     for (let r = 1; r <= 8; r += 1.2) {
-        const ringGeo = new THREE.RingGeometry(r - 0.05, r + 0.05, 32);
-        const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide }));
+        const ring = new THREE.Mesh(new THREE.RingGeometry(r - 0.05, r + 0.05, 32), new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide }));
         ring.rotation.x = Math.PI / 2;
         ring.position.x = -r * 0.8;
         group.add(ring);
@@ -2094,16 +1984,21 @@ function buildDoublePendulumExp(group, dynControls) {
         `;
     }
 
-    const armMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8 });
-    const bobMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.4 });
-
-    const arm1 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4, 16), armMat);
+    const arm1 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4, 16), new THREE.MeshStandardMaterial({ color: 0x94a3b8 }));
     arm1.position.y = -2;
-    const bob1 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), bobMat);
-    bob1.position.y = -4;
-
+    arm1.name = 'pendArm1';
     group.add(arm1);
+
+    const bob1 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.4 }));
+    bob1.position.y = -4;
+    bob1.name = 'pendBob1';
     group.add(bob1);
+
+    physData.state.th1 = Math.PI / 2;
+    physData.state.th2 = Math.PI / 2;
+    physData.state.w1 = 0;
+    physData.state.w2 = 0;
+    physData.customObjects = [arm1, bob1];
 }
 
 // 15. Lorenz Attractor
@@ -2130,15 +2025,15 @@ function buildLorenzAttractorExp(group, dynControls) {
     }
 
     const curve = new THREE.CatmullRomCurve3(pts);
-    const tubeGeo = new THREE.TubeGeometry(curve, 1000, 0.25, 8, false);
-    const tubeMat = new THREE.MeshStandardMaterial({
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 1000, 0.25, 8, false), new THREE.MeshStandardMaterial({
         color: 0x00f0ff,
         emissive: 0x7209b7,
         emissiveIntensity: 0.6,
         roughness: 0.2
-    });
-    const tube = new THREE.Mesh(tubeGeo, tubeMat);
+    }));
+    tube.name = 'lorenzTube';
     group.add(tube);
+    physData.customObjects = [tube];
 }
 
 // 16. Fluid Vortex Shedding
@@ -2150,8 +2045,7 @@ function buildFluidVortexExp(group, dynControls) {
         `;
     }
 
-    const obsGeo = new THREE.CylinderGeometry(1.2, 1.2, 6, 32);
-    const obs = new THREE.Mesh(obsGeo, new THREE.MeshStandardMaterial({ color: 0x334155 }));
+    const obs = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 6, 32), new THREE.MeshStandardMaterial({ color: 0x334155 }));
     group.add(obs);
 
     const fGeo = new THREE.BufferGeometry();
@@ -2164,7 +2058,7 @@ function buildFluidVortexExp(group, dynControls) {
     fGeo.setAttribute('position', new THREE.BufferAttribute(fPos, 3));
     const fPts = new THREE.Points(fGeo, new THREE.PointsMaterial({ color: 0x38bdf8, size: 0.2 }));
     group.add(fPts);
-    physicsParticles = [fPts];
+    physData.particles = [fPts];
 }
 
 // 17. Thermodynamics
@@ -2176,9 +2070,8 @@ function buildThermodynamicsExp(group, dynControls) {
         `;
     }
 
-    const boxGeo = new THREE.BoxGeometry(8, 8, 8);
-    const boxMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.25, roughness: 0.1 });
-    group.add(new THREE.Mesh(boxGeo, boxMat));
+    const box = new THREE.Mesh(new THREE.BoxGeometry(8, 8, 8), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.25, roughness: 0.1 }));
+    group.add(box);
 
     const gGeo = new THREE.BufferGeometry();
     const gPos = new Float32Array(200 * 3);
@@ -2190,7 +2083,7 @@ function buildThermodynamicsExp(group, dynControls) {
     gGeo.setAttribute('position', new THREE.BufferAttribute(gPos, 3));
     const gPts = new THREE.Points(gGeo, new THREE.PointsMaterial({ color: 0xef4444, size: 0.35 }));
     group.add(gPts);
-    physicsParticles = [gPts];
+    physData.particles = [gPts];
 }
 
 // 18. Wave Motion
@@ -2208,17 +2101,19 @@ function buildWaveMotionExp(group, dynControls) {
     }
     const curve = new THREE.CatmullRomCurve3(pts);
     const waveTube = new THREE.Mesh(new THREE.TubeGeometry(curve, 100, 0.15, 8, false), new THREE.MeshStandardMaterial({ color: 0x00f0ff }));
+    waveTube.name = 'standingWaveTube';
     group.add(waveTube);
+    physData.customObjects = [waveTube];
 }
 
 function updatePhysicsSimulation(timeWarp) {
-    if (currentExperiment === 'slit' && physicsParticles[0]) {
-        const pos = physicsParticles[0].geometry.attributes.position.array;
+    if (currentExperiment === 'slit' && physData.particles[0]) {
+        const pos = physData.particles[0].geometry.attributes.position.array;
         for (let i = 0; i < pos.length; i += 3) {
             pos[i] += 0.2 * timeWarp;
             if (pos[i] > 8) pos[i] = -12;
         }
-        physicsParticles[0].geometry.attributes.position.needsUpdate = true;
+        physData.particles[0].geometry.attributes.position.needsUpdate = true;
     } else if (currentExperiment === 'superconduct') {
         const pellet = scene.getObjectByName('levitatingPellet');
         if (pellet) {
@@ -2230,6 +2125,57 @@ function updatePhysicsSimulation(timeWarp) {
         if (sat) {
             const a = simTime * 1.5;
             sat.position.set(Math.cos(a) * 7, 0, Math.sin(a) * 7);
+        }
+    } else if (currentExperiment === 'blackhole') {
+        const disk = scene.getObjectByName('accretionDisk');
+        if (disk) {
+            disk.rotation.z += 0.03 * timeWarp;
+        }
+    } else if (currentExperiment === 'double_pendulum') {
+        const arm1 = scene.getObjectByName('pendArm1');
+        const bob1 = scene.getObjectByName('pendBob1');
+        if (arm1 && bob1) {
+            const th = Math.sin(simTime * 3) * 0.8;
+            arm1.rotation.z = th;
+            bob1.position.set(Math.sin(th) * 4, -Math.cos(th) * 4, 0);
+        }
+    } else if (currentExperiment === 'lorenz') {
+        const tube = scene.getObjectByName('lorenzTube');
+        if (tube) {
+            tube.rotation.z += 0.005 * timeWarp;
+        }
+    } else if (currentExperiment === 'thermo' && physData.particles[0]) {
+        const pos = physData.particles[0].geometry.attributes.position.array;
+        for (let i = 0; i < pos.length; i += 3) {
+            pos[i] += (Math.random() - 0.5) * 0.3 * timeWarp;
+            pos[i + 1] += (Math.random() - 0.5) * 0.3 * timeWarp;
+            pos[i + 2] += (Math.random() - 0.5) * 0.3 * timeWarp;
+            if (Math.abs(pos[i]) > 3.8) pos[i] *= -0.9;
+            if (Math.abs(pos[i + 1]) > 3.8) pos[i + 1] *= -0.9;
+            if (Math.abs(pos[i + 2]) > 3.8) pos[i + 2] *= -0.9;
+        }
+        physData.particles[0].geometry.attributes.position.needsUpdate = true;
+    } else if (currentExperiment === 'fluid' && physData.particles[0]) {
+        const pos = physData.particles[0].geometry.attributes.position.array;
+        for (let i = 0; i < pos.length; i += 3) {
+            pos[i] += 0.25 * timeWarp;
+            if (pos[i] > 12) pos[i] = -12;
+            if (pos[i] > 0) {
+                pos[i + 1] += Math.sin(simTime * 4 + pos[i]) * 0.05 * timeWarp;
+            }
+        }
+        physData.particles[0].geometry.attributes.position.needsUpdate = true;
+    } else if (currentExperiment === 'relativity') {
+        const rocket = scene.getObjectByName('relRocket');
+        const velInput = document.getElementById('relVel');
+        if (rocket && velInput) {
+            const v = parseFloat(velInput.value);
+            const gamma = 1 / Math.sqrt(Math.max(0.01, 1 - v * v));
+            rocket.scale.x = 1 / gamma;
+            const gVal = document.getElementById('gammaVal');
+            if (gVal) gVal.textContent = gamma.toFixed(2);
+            const vVal = document.getElementById('relVelVal');
+            if (vVal) vVal.textContent = `${v.toFixed(2)} c`;
         }
     }
 }
@@ -2510,11 +2456,11 @@ function buildBoardsShowroom() {
 
 function applyPidPerturbation() {
     sound.playExplosion();
-    showToast('⚖️ Disturbance torque impulse applied to inverted pendulum! PID compensating.');
+    showToast('⚖️ Disturbance torque applied to inverted pendulum! PID loop stabilizing.');
 }
 
 // ==========================================================================
-// 12. MODULE 7: 3D SCIENCE ARCADE (4 INTERACTIVE GAMES)
+// 12. MODULE 7: 3D SCIENCE ARCADE (4 UNIQUE INTERACTIVE GAMES)
 // ==========================================================================
 let gameState = {
     running: false,
@@ -2522,10 +2468,15 @@ let gameState = {
     lives: 3,
     wave: 1,
     highScore: 0,
+    keys: {},
     player: null,
     lasers: [],
     enemies: [],
-    keys: {}
+    quantumBarrier: null,
+    alchemyTarget: null,
+    alchemyInventory: { H: 0, C: 0, O: 0, N: 0 },
+    slingshotProbe: null,
+    slingshotVel: { x: 0, z: 0 }
 };
 
 function initGames() {
@@ -2540,7 +2491,7 @@ function initGames() {
     scene.add(light);
 
     initGameInputHandlers();
-    buildSpaceFighter();
+    switchGame('space');
 
     gameState.highScore = parseInt(localStorage.getItem('sciLab_highScore') || '0');
     const hsEl = document.getElementById('highScore');
@@ -2562,7 +2513,7 @@ function initGameInputHandlers() {
         gameState.keys[e.code] = true;
         if (e.code === 'Space' && gameState.running) {
             e.preventDefault();
-            firePlayerLaser();
+            handleGameAction();
         }
     });
     window.addEventListener('keyup', (e) => {
@@ -2570,26 +2521,121 @@ function initGameInputHandlers() {
     });
 }
 
-function buildSpaceFighter() {
-    disposeHierarchy(scene.getObjectByName('playerShip'));
-    const ship = new THREE.Group();
-    ship.name = 'playerShip';
+function handleGameAction() {
+    if (currentGame === 'space') {
+        firePlayerLaser();
+    } else if (currentGame === 'quantum') {
+        fireQuantumWavepacket();
+    } else if (currentGame === 'alchemy') {
+        captureFallingAtom();
+    } else if (currentGame === 'slingshot') {
+        launchSlingshotProbe();
+    }
+}
 
-    const bodyGeo = new THREE.ConeGeometry(0.8, 2.5, 8);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, metalness: 0.8, roughness: 0.2 });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
+function switchGame(gType) {
+    currentGame = gType;
+    sound.playClick();
+
+    disposeHierarchy(scene.getObjectByName('gameWorldGroup'));
+    gameState.enemies = [];
+    gameState.lasers = [];
+    gameState.player = null;
+
+    const gameGroup = new THREE.Group();
+    gameGroup.name = 'gameWorldGroup';
+
+    const help = document.getElementById('gameHelpText');
+    const sel = document.getElementById('gameSelect');
+    if (sel && sel.value !== gType) sel.value = gType;
+
+    if (gType === 'space') {
+        if (help) help.innerHTML = 'WASD / Arrow Keys to fly starfighter.<br>SPACEBAR to fire plasma lasers.<br>Destroy kinetic asteroids before Earth impact!';
+        camera.position.set(0, 12, 18);
+        camera.lookAt(0, 0, -5);
+        buildSpaceFighter(gameGroup);
+    } else if (gType === 'quantum') {
+        if (help) help.innerHTML = 'A/D to position Particle Emitter.<br>SPACEBAR to fire Quantum Wavepacket.<br>Hit the tunnel resonance energy barrier to sort isotopes into detectors!';
+        camera.position.set(0, 16, 16);
+        camera.lookAt(0, 0, 0);
+        buildQuantumGameWorld(gameGroup);
+    } else if (gType === 'alchemy') {
+        if (help) help.innerHTML = 'A/D to move Chemical Ion Collector.<br>SPACEBAR to catch falling elements.<br>Assemble the requested molecular formula before reactor overload!';
+        camera.position.set(0, 14, 18);
+        camera.lookAt(0, 0, 0);
+        buildAlchemyGameWorld(gameGroup);
+    } else if (gType === 'slingshot') {
+        if (help) help.innerHTML = 'A/D to aim launch trajectory angle.<br>SPACEBAR to launch spacecraft probe.<br>Perform lunar gravity assist to reach Mars circular orbit!';
+        camera.position.set(0, 30, 20);
+        camera.lookAt(0, 0, 0);
+        buildSlingshotGameWorld(gameGroup);
+    }
+
+    scene.add(gameGroup);
+}
+
+function buildSpaceFighter(group) {
+    const ship = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2.5, 8), new THREE.MeshStandardMaterial({ color: 0x00f0ff, metalness: 0.8, roughness: 0.2 }));
     body.rotation.x = Math.PI / 2;
     ship.add(body);
 
-    const wingGeo = new THREE.BoxGeometry(3.5, 0.1, 1.2);
-    const wingMat = new THREE.MeshStandardMaterial({ color: 0x4361ee, roughness: 0.3 });
-    const wings = new THREE.Mesh(wingGeo, wingMat);
+    const wings = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.1, 1.2), new THREE.MeshStandardMaterial({ color: 0x4361ee, roughness: 0.3 }));
     wings.position.z = 0.5;
     ship.add(wings);
 
     ship.position.set(0, 0, 8);
-    scene.add(ship);
+    group.add(ship);
     gameState.player = ship;
+}
+
+function buildQuantumGameWorld(group) {
+    const emitter = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.2, 2.5, 16), new THREE.MeshStandardMaterial({ color: 0xa855f7 }));
+    emitter.rotation.x = Math.PI / 2;
+    emitter.position.set(0, 0, 8);
+    group.add(emitter);
+    gameState.player = emitter;
+
+    const barrier = new THREE.Mesh(new THREE.BoxGeometry(16, 2, 0.4), new THREE.MeshStandardMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.5 }));
+    barrier.position.set(0, 0, 0);
+    group.add(barrier);
+    gameState.quantumBarrier = barrier;
+
+    for (let x of [-6, -2, 2, 6]) {
+        const bin = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 3), new THREE.MeshStandardMaterial({ color: 0x10b981 }));
+        bin.position.set(x, 0, -8);
+        group.add(bin);
+    }
+}
+
+function buildAlchemyGameWorld(group) {
+    const collector = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.2, 0.8, 24), new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.6 }));
+    collector.position.set(0, 0, 7);
+    group.add(collector);
+    gameState.player = collector;
+    gameState.alchemyInventory = { H: 0, C: 0, O: 0, N: 0 };
+    gameState.alchemyTarget = { formula: 'H2O', req: { H: 2, O: 1 } };
+}
+
+function buildSlingshotGameWorld(group) {
+    const earth = new THREE.Mesh(new THREE.SphereGeometry(2.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0x38bdf8 }));
+    earth.position.set(-8, 0, 6);
+    group.add(earth);
+
+    const moon = new THREE.Mesh(new THREE.SphereGeometry(1.0, 24, 24), new THREE.MeshStandardMaterial({ color: 0xcbd5e1 }));
+    moon.position.set(0, 0, 0);
+    moon.name = 'slingshotMoon';
+    group.add(moon);
+
+    const mars = new THREE.Mesh(new THREE.SphereGeometry(1.8, 32, 32), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+    mars.position.set(8, 0, -8);
+    group.add(mars);
+
+    const probe = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffd700 }));
+    probe.position.set(-6, 0, 6);
+    group.add(probe);
+    gameState.slingshotProbe = probe;
+    gameState.player = probe;
 }
 
 function firePlayerLaser() {
@@ -2597,9 +2643,7 @@ function firePlayerLaser() {
     sound.playLaser();
 
     for (let x of [-1.2, 1.2]) {
-        const lGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.5, 8);
-        const lMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
-        const laser = new THREE.Mesh(lGeo, lMat);
+        const laser = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.5, 8), new THREE.MeshBasicMaterial({ color: 0x00f0ff }));
         laser.rotation.x = Math.PI / 2;
         laser.position.set(gameState.player.position.x + x, gameState.player.position.y, gameState.player.position.z - 1.2);
         scene.add(laser);
@@ -2607,14 +2651,42 @@ function firePlayerLaser() {
     }
 }
 
+function fireQuantumWavepacket() {
+    if (!gameState.player) return;
+    sound.playQuantumPing();
+    const packet = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 16), new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00f0ff, emissiveIntensity: 0.8 }));
+    packet.position.set(gameState.player.position.x, 0, gameState.player.position.z - 1);
+    packet.userData = { speed: 0.4, isQuantum: true };
+    scene.add(packet);
+    gameState.lasers.push(packet);
+}
+
+function captureFallingAtom() {
+    sound.playClick();
+}
+
+function launchSlingshotProbe() {
+    sound.playLaser();
+    gameState.slingshotVel = { x: 0.18, z: -0.18 };
+    showToast('🚀 Spacecraft probe launched toward Moon gravity assist!');
+}
+
 function spawnAsteroidEnemy() {
-    const geo = new THREE.DodecahedronGeometry(0.8 + Math.random() * 0.8, 1);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x8b5cf6, roughness: 0.8 });
-    const enemy = new THREE.Mesh(geo, mat);
+    const enemy = new THREE.Mesh(new THREE.DodecahedronGeometry(0.8 + Math.random() * 0.8, 1), new THREE.MeshStandardMaterial({ color: 0x8b5cf6, roughness: 0.8 }));
     enemy.position.set((Math.random() - 0.5) * 20, 0, -25);
     enemy.userData = { speed: 0.15 + Math.random() * 0.15 * gameState.wave, rotX: Math.random() * 0.05, rotY: Math.random() * 0.05 };
     scene.add(enemy);
     gameState.enemies.push(enemy);
+}
+
+function spawnFallingAtom() {
+    const atomTypes = [{ s: 'H', col: 0xffffff }, { s: 'O', col: 0xef4444 }, { s: 'C', col: 0x334155 }];
+    const chosen = atomTypes[Math.floor(Math.random() * atomTypes.length)];
+    const atom = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshStandardMaterial({ color: chosen.col }));
+    atom.position.set((Math.random() - 0.5) * 16, 0, -18);
+    atom.userData = { speed: 0.18, type: chosen.s };
+    scene.add(atom);
+    gameState.enemies.push(atom);
 }
 
 function updateGamePhysics() {
@@ -2623,38 +2695,50 @@ function updateGamePhysics() {
     const moveSpeed = 0.25;
     if (gameState.keys['KeyA'] || gameState.keys['ArrowLeft']) gameState.player.position.x = Math.max(-10, gameState.player.position.x - moveSpeed);
     if (gameState.keys['KeyD'] || gameState.keys['ArrowRight']) gameState.player.position.x = Math.min(10, gameState.player.position.x + moveSpeed);
-    if (gameState.keys['KeyW'] || gameState.keys['ArrowUp']) gameState.player.position.z = Math.max(-5, gameState.player.position.z - moveSpeed);
-    if (gameState.keys['KeyS'] || gameState.keys['ArrowDown']) gameState.player.position.z = Math.min(10, gameState.player.position.z + moveSpeed);
-
-    if (Math.random() < 0.035 * gameState.wave) {
-        spawnAsteroidEnemy();
+    if (currentGame === 'space') {
+        if (gameState.keys['KeyW'] || gameState.keys['ArrowUp']) gameState.player.position.z = Math.max(-5, gameState.player.position.z - moveSpeed);
+        if (gameState.keys['KeyS'] || gameState.keys['ArrowDown']) gameState.player.position.z = Math.min(10, gameState.player.position.z + moveSpeed);
     }
 
+    if (currentGame === 'space' && Math.random() < 0.035 * gameState.wave) {
+        spawnAsteroidEnemy();
+    } else if (currentGame === 'alchemy' && Math.random() < 0.03) {
+        spawnFallingAtom();
+    }
+
+    // Lasers / Projectiles
     for (let i = gameState.lasers.length - 1; i >= 0; i--) {
         const l = gameState.lasers[i];
-        l.position.z -= 0.8;
+        l.position.z -= l.userData.speed || 0.8;
         if (l.position.z < -40) {
             scene.remove(l);
             gameState.lasers.splice(i, 1);
         }
     }
 
+    // Enemies / Falling Objects
     for (let j = gameState.enemies.length - 1; j >= 0; j--) {
         const e = gameState.enemies[j];
         e.position.z += e.userData.speed;
-        e.rotation.x += e.userData.rotX;
-        e.rotation.y += e.userData.rotY;
+        if (e.userData.rotX) e.rotation.x += e.userData.rotX;
+        if (e.userData.rotY) e.rotation.y += e.userData.rotY;
 
         if (e.position.distanceTo(gameState.player.position) < 1.6) {
-            sound.playExplosion();
+            if (currentGame === 'alchemy') {
+                sound.playQuantumPing();
+                gameState.score += 150;
+                updateGameHud();
+            } else {
+                sound.playExplosion();
+                gameState.lives--;
+                updateGameHud();
+                if (gameState.lives <= 0) {
+                    endActiveGame();
+                    return;
+                }
+            }
             scene.remove(e);
             gameState.enemies.splice(j, 1);
-            gameState.lives--;
-            updateGameHud();
-            if (gameState.lives <= 0) {
-                endActiveGame();
-                return;
-            }
             continue;
         }
 
@@ -2677,6 +2761,11 @@ function updateGamePhysics() {
             gameState.enemies.splice(j, 1);
         }
     }
+
+    if (currentGame === 'slingshot' && gameState.slingshotProbe) {
+        gameState.slingshotProbe.position.x += gameState.slingshotVel.x;
+        gameState.slingshotProbe.position.z += gameState.slingshotVel.z;
+    }
 }
 
 function updateGameHud() {
@@ -2686,7 +2775,7 @@ function updateGameHud() {
     const hsEl = document.getElementById('highScore');
 
     if (scoreEl) scoreEl.textContent = gameState.score;
-    if (livesEl) livesEl.textContent = '❤️'.repeat(Math.max(0, gameState.lives));
+    if (livesEl) livesEl.textContent = '❤️❤️❤️'.slice(0, Math.max(0, gameState.lives) * 2);
     if (waveEl) waveEl.textContent = gameState.wave;
 
     if (gameState.score > gameState.highScore) {
@@ -2707,7 +2796,7 @@ function startActiveGame() {
     if (goModal) goModal.style.display = 'none';
 
     sound.playClick();
-    showToast('🚀 Mission Started! Engage Arcade Simulation!');
+    showToast('🚀 Game Simulation Active! Engage controls!');
 }
 
 function endActiveGame() {
@@ -2728,23 +2817,8 @@ function restartActiveGame() {
     startActiveGame();
 }
 
-function switchGame(gType) {
-    currentGame = gType;
-    sound.playClick();
-    const help = document.getElementById('gameHelpText');
-    if (help) {
-        const helps = {
-            space: 'WASD / Arrow Keys to maneuver starfighter.<br>SPACEBAR to fire plasma lasers.<br>Destroy kinetic asteroids before Earth impact!',
-            quantum: 'Adjust quantum wavepacket energy E and barrier potential V₀.<br>Achieve resonance transmission without quantum reflection.',
-            alchemy: 'Collect chemical elements from periodic hopper.<br>Synthesize target compounds before beaker overflows!',
-            slingshot: 'Calculate gravitational slingshot vector thrust.<br>Perform orbital insertion into Mars orbit.'
-        };
-        help.innerHTML = helps[gType] || helps.space;
-    }
-}
-
 // ==========================================================================
-// 13. DOM READY BOOTSTRAP
+// 13. DOM BOOTSTRAP
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     initStars();
