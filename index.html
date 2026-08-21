@@ -364,6 +364,7 @@
                         <option value="Neptune">🔵 Neptune</option>
                         <option value="voyager">🛰️ Voyager 1 Interstellar Trajectory</option>
                         <option value="jwst">🔭 James Webb Space Telescope (L2 Halo)</option>
+                        <option value="comet">☄️ 1P/Halley Comet (Eccentric Orbit)</option>
                     </select>
                 </div>
 
@@ -543,53 +544,7 @@
             <button class="back-btn" onclick="goHome()">← Command Hub</button>
         </section>
 
-        <!-- ======================= 6. PHYSICS & QUANTUM LAB (16+ EXPERIMENTS) ======================= -->
-        <section class="page" id="physics">
-            <div class="scene-wrap">
-                <div class="scene" id="physicsScene"></div>
-            </div>
 
-            <div class="panel panel-left wide-panel">
-                <div class="panel-header">
-                    <h3>🔬 Physics Simulation Lab</h3>
-                    <span class="panel-tag">5 EXPERIMENTS</span>
-                </div>
-
-                <div class="panel-section">
-                    <h4>⚗️ Select Experiment</h4>
-                    <select id="physicsExpSelect" class="panel-select-lg" onchange="loadPhysicsExp(this.value)">
-                        <option value="pendulum">1. 🎢 Double Pendulum — Chaos & Energy</option>
-                        <option value="wave2d">2. 🌊 2D Wave Interference — Two Point Sources</option>
-                        <option value="projectile">3. 🔫 Projectile Motion — Cannon & Trajectory</option>
-                        <option value="magfield">4. 🧲 Bar Magnet — 3D Field Lines</option>
-                        <option value="springs">5. 📏 Spring & SHM — Mass on Spring</option>
-                    </select>
-                </div>
-
-                <!-- Dynamic Controls Container for Selected Experiment -->
-                <div class="panel-section" id="physicsDynamicControls">
-                    <!-- Injected dynamically via JS based on experiment -->
-                </div>
-
-                <div class="panel-section">
-                    <h4>🎮 Execution Controls</h4>
-                    <div class="btn-group-grid">
-                        <button class="ctrl-btn" id="physPlay" onclick="togglePhysicsPlay()">⏸ Pause</button>
-                        <button class="ctrl-btn" id="physReset" onclick="resetPhysics()">🔄 Reset</button>
-                        <button class="ctrl-btn" id="physTheoryBtn" onclick="togglePhysicsTheory()">📜 Theory & Formulas</button>
-                    </div>
-                    <label class="slider-label">Time Warp Factor: <input type="range" id="physSpeed" min="0.1" max="3" step="0.1" value="1"></label>
-                </div>
-            </div>
-
-            <!-- Physics Theory & Formula Box -->
-            <div class="info-box glass-card" id="physInfo" style="display:none">
-                <button class="close-btn" onclick="closeInfo('physInfo')">✕</button>
-                <div id="physInfoContent"></div>
-            </div>
-
-            <button class="back-btn" onclick="goHome()">← Command Hub</button>
-        </section>
 
         <!-- ======================= 7. ROBOTICS & CYBERNETICS ======================= -->
         <section class="page" id="robot">
@@ -799,9 +754,7 @@
     <div class="toast" id="toast"></div>
 
     <!-- Application Script -->
-    <script src="script.js?v=3"></script>
-    <!-- Physics Experiment Builders -->
-    <script src="physics_experiments.js?v=3"></script>
+    <script src="script.js?v=4"></script>
 </body>
 
 </html>
