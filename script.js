@@ -1427,37 +1427,42 @@ function initCell() {
     function animate() {
         animationId = requestAnimationFrame(animate);
         if (!isPaused) {
-            const speed = parseFloat(document.getElementById('cellSpeed')?.value || 0.5);
+            const speed = parseFloat(document.getElementById('cellSpeed')?.value ?? 0.5);
             simTime += 0.01 * speed;
 
             const model = scene.getObjectByName('cellModel');
             if (model) {
                 if (cellAnim === 'rotate') {
-                    model.rotation.y = simTime;
-                    model.rotation.x = Math.sin(simTime * 0.4) * 0.12;
+                    model.rotation.y += 0.004 * speed;
+                    model.rotation.x = 0; // Keep upright and steady (no pitch/wobble)
                 } else if (cellAnim === 'explode') {
-                    model.rotation.y += 0.003 * speed;
+                    model.rotation.y += 0.002 * speed;
+                    model.rotation.x = 0;
+                } else if (cellAnim === 'mitosis') {
+                    model.rotation.y += 0.002 * speed;
+                    model.rotation.x = 0;
                 }
             }
 
-            // Animate ATP Synthase Rotor & Protons
+            // 1. Precise F₀F₁ ATP Synthase Rotor (Central γ-shaft & c-ring spin smoothly along Y-axis)
             if (cellType === 'mitochondria') {
                 const rotor = scene.getObjectByName('atpShaftRotor');
                 const protVal = parseFloat(document.getElementById('mitoProtons')?.value || 3);
-                if (rotor) rotor.rotation.y += 0.08 * protVal;
+                if (rotor) rotor.rotation.y += 0.05 * protVal;
             }
 
-            // Animate Bacteria Flagellum undulation
+            // 2. Precise Bacterial Flagellum (True corkscrew rotation strictly along longitudinal X-axis)
             if (cellType === 'bacteria') {
                 const flagellum = scene.getObjectByName('bactFlagellum');
                 const motorRpm = parseFloat(document.getElementById('bacteriaMotor')?.value || 70);
                 if (flagellum) {
-                    flagellum.rotation.x = Math.sin(simTime * 8) * 0.2;
-                    flagellum.rotation.z += 0.12 * (motorRpm / 50);
+                    flagellum.rotation.x += 0.08 * (motorRpm / 50); // Axial corkscrew rotation
+                    flagellum.rotation.y = 0;
+                    flagellum.rotation.z = 0;
                 }
             }
 
-            // Animate Neuron Action Potential & Synaptic Vesicles
+            // 3. Animate Neuron Action Potential & Synaptic Vesicles
             if (actionPotentialActive) {
                 apProgress += 0.025;
                 const apWave = scene.getObjectByName('apPulseWave');
@@ -3540,4 +3545,18 @@ function restartActiveGame() {
 document.addEventListener('DOMContentLoaded', () => {
     initStars();
     initNav();
+
+    // Live Cytology HUD Bindings
+    const mitoProt = document.getElementById('mitoProtons');
+    if (mitoProt) {
+        mitoProt.addEventListener('input', (e) => {
+            const v = parseFloat(e.target.value);
+            const tag = document.getElementById('mitoProtonVal');
+            const rpm = document.getElementById('mitoRpm');
+            const yieldEl = document.getElementById('mitoAtpYield');
+            if (tag) tag.textContent = `ΔpH ${(v * 0.4 + 0.2).toFixed(1)}`;
+            if (rpm) rpm.textContent = `${Math.round(v * 2000)} RPM`;
+            if (yieldEl) yieldEl.textContent = `${Math.round(v * 7.2)} ATP / Glucose`;
+        });
+    }
 });
