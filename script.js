@@ -1379,7 +1379,7 @@ function setVirusType(vType) {
 }
 
 // ==========================================================================
-// 9. MODULE 4: CYTOLOGY & NEUROBIOLOGY LAB
+// 9. MODULE 4: CYTOLOGY & NEUROBIOLOGY LAB (ANATOMICALLY PRECISE)
 // ==========================================================================
 let cellType = 'animal';
 let cellAnim = 'rotate';
@@ -1390,31 +1390,36 @@ let apProgress = 0;
 let synapseParticles = [];
 
 const ORGANELLE_DATA = {
-    nucleus: { name: 'Nucleus & Nucleolus', role: 'Genomic Command Center', size: '5–10 μm', desc: 'Contains the genome (chromatin/DNA) and nucleolus for rRNA transcription and ribosome subunit assembly.' },
-    mitochondria: { name: 'Mitochondria', role: 'Cellular Powerhouse & ATP Synthesis', size: '1–4 μm', desc: 'Generates >90% of cellular ATP via oxidative phosphorylation, the citric acid (Krebs) cycle, and the electron transport chain.' },
-    er_rough: { name: 'Rough Endoplasmic Reticulum', role: 'Protein Folding & Translation', size: '0.2–1 μm folds', desc: 'Studded with 80S ribosomes; synthesizes membrane-bound and secretory proteins for cellular export.' },
-    er_smooth: { name: 'Smooth Endoplasmic Reticulum', role: 'Lipid Synthesis & Detoxification', size: '0.1–0.5 μm tubes', desc: 'Synthesizes phospholipids and steroid hormones; regulates calcium storage and metabolizes xenobiotic toxins.' },
-    golgi: { name: 'Golgi Apparatus', role: 'Protein Sorting, Packaging & Glycosylation', size: '1–3 μm stack', desc: 'Modifies proteins from the ER by adding oligosaccharides (glycosylation) and packages them into transport vesicles.' },
-    lysosome: { name: 'Lysosome', role: 'Autophagy & Enzymatic Digestion', size: '0.1–1.2 μm', desc: 'Acidic organelle (pH ~4.5–5.0) packed with hydrolytic enzymes for recycling damaged organelles and pathogens.' },
-    centrosome: { name: 'Centrosome & Centrioles', role: 'Microtubule Organizing Center (MTOC)', size: '0.4 μm', desc: 'Composed of paired orthogonal centrioles with 9 triplet microtubules; orchestrates the mitotic spindle during cell division.' },
-    chloroplast: { name: 'Chloroplast', role: 'Photosynthesis & Carbon Fixation', size: '5–8 μm', desc: 'Contains chlorophyll and stacked thylakoid grana; converts light photons into chemical energy (glucose) via the Calvin cycle.' },
-    vacuole: { name: 'Central Vacuole', role: 'Turgor Pressure & Osmotic Homeostasis', size: 'Up to 90% cell volume', desc: 'Maintains plant rigidity against gravity through osmotic turgor pressure; stores nutrients and hydrolytic enzymes.' },
-    cell_wall: { name: 'Cellulose Cell Wall', role: 'Structural Rigidity & Protection', size: '0.1–10 μm thick', desc: 'Rigid cross-linked cellulose microfibrils providing tensile strength against osmotic lysis.' },
-    soma: { name: 'Neuron Soma & Nissl Granules', role: 'Metabolic & Genetic Center', size: '20–50 μm', desc: 'Integrates incoming synaptic postsynaptic potentials (EPSPs/IPSPs) and produces neurotransmitter enzymes.' },
-    axon: { name: 'Myelinated Axon & Nodes of Ranvier', role: 'Action Potential Propagation', size: 'Up to 1 meter', desc: 'Propagates electrical action potentials via saltatory conduction between voltage-gated Na⁺/K⁺ channel clusters at Nodes of Ranvier.' },
-    synapse: { name: 'Synaptic Bouton & Cleft', role: 'Chemical Neurotransmission', size: '20–40 nm cleft', desc: 'Voltage-gated Ca²⁺ influx triggers SNARE-mediated synaptic vesicle fusion, releasing neurotransmitters across the cleft.' },
-    atp_synthase: { name: 'F₀F₁ ATP Synthase Turbine', role: 'Rotary Catalytic Nanomachine', size: '10 nm rotor', desc: 'Proton-motive force (H⁺) drives c-ring rotor rotation at up to 6,000 RPM, catalyzing ADP + Pᵢ → ATP.' }
+    nucleus: { name: 'Nucleus & Nucleolus', role: 'Genomic Command Center', size: '5–10 μm', desc: 'Houses double-stranded chromatin DNA, nuclear pores for mRNA export, and a dense nucleolus for rRNA transcription and ribosomal subunit assembly.' },
+    nucleolus: { name: 'Nucleolus', role: 'Ribosome Biogenesis', size: '1–2 μm', desc: 'Dense non-membrane-bound subnuclear structure where rRNA is transcribed and assembled with ribosomal proteins.' },
+    mitochondria: { name: 'Mitochondrion (with Cristae)', role: 'ATP Synthesis & Respiration', size: '1–4 μm', desc: 'Double-membraned organelle with folded inner cristae maximizing surface area for the Electron Transport Chain and ATP Synthase.' },
+    er_rough: { name: 'Rough Endoplasmic Reticulum', role: 'Secretory Protein Synthesis', size: '0.2–1 μm folds', desc: 'Interconnected flattened cisternae studded with membrane-bound 80S ribosomes synthesizing transmembrane and export proteins.' },
+    er_smooth: { name: 'Smooth Endoplasmic Reticulum', role: 'Lipid & Steroid Biosynthesis', size: '0.1–0.5 μm tubules', desc: 'Network of smooth tubular membranes synthesizing phospholipids, cholesterol, and steroid hormones, while sequestering Ca²⁺ ions.' },
+    golgi: { name: 'Golgi Apparatus & Dictyosomes', role: 'Post-Translational Packaging', size: '1–3 μm stack', desc: 'Polarized cisternae (cis-entry face to trans-exit face) modifying proteins via glycosylation and packaging them into clathrin-coated vesicles.' },
+    lysosome: { name: 'Lysosome & Peroxisome', role: 'Autophagy & Waste Degradation', size: '0.1–1.2 μm', desc: 'Membrane-bound acidic vesicles packed with ~50 hydrolytic acid hydrolases and catalase for breaking down cellular debris and peroxides.' },
+    centrosome: { name: 'Centrosome (Orthogonal Centrioles)', role: 'Microtubule Organizing Center', size: '0.4 μm', desc: 'Pair of perpendicular barrel-shaped centrioles made of 9 microtubule triplets (9x3 pattern) orchestrating the mitotic spindle.' },
+    chloroplast: { name: 'Chloroplast (Thylakoid Grana)', role: 'Photosynthesis & Carbon Fixation', size: '5–8 μm', desc: 'Double-membraned plastid containing stroma, stacked coin-like thylakoid grana with chlorophyll photosystems, and rubisco for the Calvin cycle.' },
+    vacuole: { name: 'Large Central Vacuole', role: 'Turgor Pressure & Cell Rigidity', size: '70–90% of plant volume', desc: 'Massive tonoplast-enclosed fluid reservoir maintaining hydrostatic turgor pressure against the cell wall to keep plant tissue upright.' },
+    cell_wall: { name: 'Plant Cellulose Cell Wall', role: 'Structural Tensile Strength', size: '0.1–10 μm thick', desc: 'Rigid extracellular matrix composed of cross-linked cellulose microfibrils, hemicellulose, and pectin providing tensile support against osmotic lysis.' },
+    soma: { name: 'Neuron Soma & Nissl Granules', role: 'Somatic Signal Integration', size: '20–50 μm', desc: 'Cell body containing nucleus, Golgi, and dense rough ER (Nissl bodies) integrating incoming synaptic post-synaptic potentials.' },
+    dendrite: { name: 'Dendritic Tree & Spines', role: 'Synaptic Signal Reception', size: '100–500 μm arbor', desc: 'Extensive bifurcating branches studded with actin-rich mushroom dendritic spines receiving chemical inputs from upstream axons.' },
+    axon: { name: 'Myelinated Axon & Nodes of Ranvier', role: 'Saltatory Conduction Highway', size: 'Up to 1 meter', desc: 'Cylindrical axon insulated by myelin Schwann cell sheaths; action potentials jump between uninsulated Nodes of Ranvier at up to 120 m/s.' },
+    synapse: { name: 'Synaptic Bouton & Synaptic Cleft', role: 'Chemical Neurotransmission', size: '20–40 nm cleft', desc: 'Presynaptic terminal knob packed with synaptic vesicles that undergo SNARE-mediated exocytosis releasing acetylcholine / glutamate into the cleft.' },
+    nucleoid: { name: 'Bacterial Nucleoid DNA', role: 'Prokaryotic Chromosome', size: '1–2 μm condensed', desc: 'Supercoiled, non-membrane-bound single circular double-stranded DNA molecule containing the essential bacterial genome.' },
+    plasmid: { name: 'Bacterial Plasmids', role: 'Autonomous Extrachromosomal DNA', size: '1–200 kbp', desc: 'Small autonomous circular DNA rings often conferring antibiotic resistance and virulence factors transferred via conjugation.' },
+    flagellum: { name: 'Helical Flagellum & Rotary Motor', role: 'Proton-Driven Motility', size: '15–20 μm filament', desc: 'Rigid flagellin helix anchored to a basal rotary motor embedded in the cell envelope, spinning at up to 1,000 RPM for run-and-tumble chemotaxis.' },
+    atp_synthase: { name: 'F₀F₁ ATP Synthase Complex', role: 'Rotary Catalytic Nanomachine', size: '10 nm turbine', desc: 'Proton flow down the electrochemical gradient across the inner mitochondrial membrane drives rotation of the c-ring rotor and γ-shaft, synthesizing ATP in the α₃β₃ stator head.' }
 };
 
 function initCell() {
     const setup = createScene('cellScene');
     if (!setup) return;
 
-    camera.position.set(0, 0, 22);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-    const pointLight = new THREE.PointLight(0xffffff, 1.2, 100);
-    pointLight.position.set(15, 20, 20);
-    scene.add(pointLight);
+    camera.position.set(0, 3, 24);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(15, 25, 20);
+    scene.add(dirLight);
 
     initCellRaycaster();
     buildCellModel();
@@ -1429,39 +1434,41 @@ function initCell() {
             if (model) {
                 if (cellAnim === 'rotate') {
                     model.rotation.y = simTime;
-                    model.rotation.x = Math.sin(simTime * 0.4) * 0.15;
+                    model.rotation.x = Math.sin(simTime * 0.4) * 0.12;
                 } else if (cellAnim === 'explode') {
                     model.rotation.y += 0.003 * speed;
                 }
             }
 
-            // Animate ATP Synthase Rotor
+            // Animate ATP Synthase Rotor & Protons
             if (cellType === 'mitochondria') {
                 const rotor = scene.getObjectByName('atpShaftRotor');
                 const protVal = parseFloat(document.getElementById('mitoProtons')?.value || 3);
-                if (rotor) rotor.rotation.y += 0.06 * protVal;
+                if (rotor) rotor.rotation.y += 0.08 * protVal;
             }
 
-            // Animate Bacteria Flagellum
+            // Animate Bacteria Flagellum undulation
             if (cellType === 'bacteria') {
                 const flagellum = scene.getObjectByName('bactFlagellum');
                 const motorRpm = parseFloat(document.getElementById('bacteriaMotor')?.value || 70);
-                if (flagellum) flagellum.rotation.z += 0.05 * (motorRpm / 50);
+                if (flagellum) {
+                    flagellum.rotation.x = Math.sin(simTime * 8) * 0.2;
+                    flagellum.rotation.z += 0.12 * (motorRpm / 50);
+                }
             }
 
             // Animate Neuron Action Potential & Synaptic Vesicles
             if (actionPotentialActive) {
-                apProgress += 0.02;
+                apProgress += 0.025;
                 const apWave = scene.getObjectByName('apPulseWave');
                 if (apWave) {
                     apWave.position.x = -6 + apProgress * 15;
-                    apWave.scale.setScalar(1 + Math.sin(apProgress * Math.PI) * 0.5);
+                    apWave.scale.setScalar(1 + Math.sin(apProgress * Math.PI) * 0.6);
                 }
 
-                // Animate Synaptic Vesicle Discharge
                 synapseParticles.forEach(p => {
-                    p.position.x += 0.08;
-                    p.position.y += (Math.random() - 0.5) * 0.04;
+                    p.position.x += 0.06;
+                    p.position.y += (Math.random() - 0.5) * 0.03;
                 });
 
                 if (apProgress >= 1.0) {
@@ -1474,7 +1481,7 @@ function initCell() {
         }
         controls.update();
         renderer.render(scene, camera);
-        updateTelemetry(cellOrganelles.length * 20 + 200);
+        updateTelemetry(cellOrganelles.length * 20 + 300);
     }
     animate();
 }
@@ -1524,8 +1531,8 @@ function inspectOrganelle(key) {
                 <div class="info-stat-value">${data.size}</div>
             </div>
             <div class="info-stat-card">
-                <div class="info-stat-label">Status</div>
-                <div class="info-stat-value text-emerald">Physiologically Active</div>
+                <div class="info-stat-label">Physiological State</div>
+                <div class="info-stat-value text-emerald">Active In Vivo</div>
             </div>
         </div>
     `;
@@ -1542,103 +1549,160 @@ function buildCellModel() {
     if (cellAnim === 'mitosis') {
         buildMitosisStage3D(cellGroup, mitosisStage);
     } else if (cellType === 'animal') {
+        camera.position.set(0, 3, 24);
         buildAnimalCell3D(cellGroup, cellAnim === 'explode');
     } else if (cellType === 'plant') {
+        camera.position.set(0, 3, 25);
         buildPlantCell3D(cellGroup, cellAnim === 'explode');
     } else if (cellType === 'neuron') {
+        camera.position.set(0, 1, 24);
         buildNeuron3D(cellGroup);
     } else if (cellType === 'bacteria') {
+        camera.position.set(0, 2, 22);
         buildBacteria3D(cellGroup);
     } else if (cellType === 'mitochondria') {
+        camera.position.set(0, 0, 18);
         buildMitochondriaAtp3D(cellGroup);
     }
 
     scene.add(cellGroup);
 }
 
-// 1. Comprehensive Animal Cell
+// --------------------------------------------------------------------------
+// 1. ANIMAL CELL (3/4 Cutaway Hemisphere with Organelles)
+// --------------------------------------------------------------------------
 function buildAnimalCell3D(group, isExploded = false) {
     const explodeDist = isExploded ? 2.2 : 1.0;
 
-    // Translucent Membrane
-    const memGeo = new THREE.SphereGeometry(5.2, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.75);
+    // Translucent Cutaway Plasma Membrane (Hemispherical Bowl)
+    const memGeo = new THREE.SphereGeometry(6.0, 32, 32, 0, Math.PI * 1.5, 0, Math.PI * 0.85);
     const memMat = new THREE.MeshStandardMaterial({
         color: 0x38bdf8,
         transparent: true,
-        opacity: isExploded ? 0.15 : 0.35,
-        roughness: 0.2,
-        side: THREE.DoubleSide
+        opacity: isExploded ? 0.12 : 0.3,
+        roughness: 0.3,
+        side: THREE.DoubleSide,
+        depthWrite: false
     });
-    const membrane = new THREE.Mesh(memGeo, memMat);
-    group.add(membrane);
+    group.add(new THREE.Mesh(memGeo, memMat));
 
-    // Nucleus & Nucleolus
+    // Cytoplasm Translucent Bed
+    const cytoGeo = new THREE.CylinderGeometry(5.8, 5.0, 0.4, 32);
+    const cytoMat = new THREE.MeshStandardMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.25, depthWrite: false });
+    const cyto = new THREE.Mesh(cytoGeo, cytoMat);
+    cyto.position.y = -1.2;
+    group.add(cyto);
+
+    // Nucleus (Cutaway Sphere with Chromatin & Nucleolus)
     const nucGroup = new THREE.Group();
     nucGroup.position.set(0, 0, 0);
     nucGroup.userData = { organelleKey: 'nucleus' };
-    const nucMesh = new THREE.Mesh(new THREE.SphereGeometry(1.8, 24, 24), new THREE.MeshStandardMaterial({ color: 0xa855f7, roughness: 0.4 }));
-    nucGroup.add(nucMesh);
-    const nucleolusMesh = new THREE.Mesh(new THREE.SphereGeometry(0.7, 16, 16), new THREE.MeshStandardMaterial({ color: 0x6b21a8, roughness: 0.3 }));
-    nucleolusMesh.position.set(0.3, 0.3, 0.3);
-    nucGroup.add(nucleolusMesh);
+
+    // Outer Purple Nuclear Envelope
+    const nucGeo = new THREE.SphereGeometry(2.0, 24, 24, 0, Math.PI * 1.5, 0, Math.PI);
+    const nucMat = new THREE.MeshStandardMaterial({ color: 0x8b5cf6, roughness: 0.4, side: THREE.DoubleSide });
+    nucGroup.add(new THREE.Mesh(nucGeo, nucMat));
+
+    // Inner Dark Chromatin Core
+    const chromGeo = new THREE.SphereGeometry(1.6, 20, 20);
+    const chromMat = new THREE.MeshStandardMaterial({ color: 0x6d28d9, roughness: 0.5 });
+    nucGroup.add(new THREE.Mesh(chromGeo, chromMat));
+
+    // Dense Nucleolus Sphere
+    const nucL = new THREE.Mesh(new THREE.SphereGeometry(0.7, 16, 16), new THREE.MeshStandardMaterial({ color: 0x4c1d95, roughness: 0.3 }));
+    nucL.position.set(0.4, 0.4, 0.4);
+    nucL.userData = { organelleKey: 'nucleolus' };
+    nucGroup.add(nucL);
     group.add(nucGroup);
     cellOrganelles.push(nucGroup);
 
-    // Rough Endoplasmic Reticulum (Ribbon layers with ribosomes)
-    const erGroup = new THREE.Group();
-    erGroup.position.set(-2.6 * explodeDist, 0.5 * explodeDist, 0);
-    erGroup.userData = { organelleKey: 'er_rough' };
+    // Rough Endoplasmic Reticulum (Concentric Folded Cisternae with Ribosomes)
+    const rerGroup = new THREE.Group();
+    rerGroup.position.set(-2.8 * explodeDist, 0.6 * explodeDist, 0);
+    rerGroup.userData = { organelleKey: 'er_rough' };
     for (let r = 0; r < 4; r++) {
-        const fold = new THREE.Mesh(new THREE.TorusGeometry(1.4 + r * 0.4, 0.15, 8, 24, Math.PI), new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3 }));
-        fold.rotation.z = Math.PI / 4;
-        erGroup.add(fold);
-    }
-    group.add(erGroup);
-    cellOrganelles.push(erGroup);
+        const fold = new THREE.Mesh(new THREE.TorusGeometry(1.5 + r * 0.45, 0.16, 8, 32, Math.PI * 0.9), new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3 }));
+        fold.rotation.z = Math.PI / 4 + r * 0.1;
+        rerGroup.add(fold);
 
-    // Golgi Apparatus & Vesicles
+        // Studded 80S Ribosomes on RER
+        for (let b = 0; b < 12; b++) {
+            const ribo = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
+            const angle = (b / 12) * Math.PI * 0.9;
+            ribo.position.set(Math.cos(angle) * (1.5 + r * 0.45), Math.sin(angle) * (1.5 + r * 0.45), 0.15);
+            rerGroup.add(ribo);
+        }
+    }
+    group.add(rerGroup);
+    cellOrganelles.push(rerGroup);
+
+    // Smooth Endoplasmic Reticulum (Tubular Network)
+    const serGroup = new THREE.Group();
+    serGroup.position.set(-3.5 * explodeDist, -1.8 * explodeDist, 0.8 * explodeDist);
+    serGroup.userData = { organelleKey: 'er_smooth' };
+    for (let s = 0; s < 5; s++) {
+        const tube = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.12, 6, 16), new THREE.MeshStandardMaterial({ color: 0x60a5fa }));
+        tube.position.set((s % 2) * 0.5, Math.floor(s / 2) * 0.5, (s % 3) * 0.3);
+        tube.rotation.x = Math.random() * Math.PI;
+        serGroup.add(tube);
+    }
+    group.add(serGroup);
+    cellOrganelles.push(serGroup);
+
+    // Golgi Apparatus (Curved Stack of Cisternae with Budding Vesicles)
     const golgiGroup = new THREE.Group();
-    golgiGroup.position.set(2.6 * explodeDist, -1.2 * explodeDist, 0.8 * explodeDist);
+    golgiGroup.position.set(3.0 * explodeDist, -1.2 * explodeDist, 0.8 * explodeDist);
     golgiGroup.userData = { organelleKey: 'golgi' };
     for (let g = 0; g < 5; g++) {
-        const cisterna = new THREE.Mesh(new THREE.CylinderGeometry(1.6 - g * 0.2, 1.6 - g * 0.2, 0.15, 24), new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3 }));
-        cisterna.position.y = g * 0.3;
+        const cisterna = new THREE.Mesh(new THREE.CylinderGeometry(1.8 - g * 0.25, 1.8 - g * 0.25, 0.15, 24), new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3 }));
+        cisterna.position.y = g * 0.32;
+        cisterna.rotation.z = 0.2;
         golgiGroup.add(cisterna);
     }
-    // Budding Vesicles
-    for (let v = 0; v < 6; v++) {
-        const ves = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 12), new THREE.MeshStandardMaterial({ color: 0xfbbf24 }));
-        ves.position.set((Math.random() - 0.5) * 2.2, 0.5 + Math.random() * 0.8, (Math.random() - 0.5) * 1.5);
+    // Budding Transport Vesicles
+    for (let v = 0; v < 8; v++) {
+        const ves = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), new THREE.MeshStandardMaterial({ color: 0xfbbf24 }));
+        ves.position.set((Math.random() - 0.5) * 2.5, 0.6 + Math.random() * 1.0, (Math.random() - 0.5) * 1.8);
         golgiGroup.add(ves);
     }
     group.add(golgiGroup);
     cellOrganelles.push(golgiGroup);
 
-    // 4 Mitochondria
+    // 4 Mitochondria with Cutaway Folded Cristae
     const mitoPositions = [
-        [-2.2 * explodeDist, -2.5 * explodeDist, 1.2 * explodeDist],
-        [2.8 * explodeDist, 2.0 * explodeDist, -1.5 * explodeDist],
-        [-1.0 * explodeDist, 3.2 * explodeDist, 1.5 * explodeDist],
-        [1.8 * explodeDist, -2.8 * explodeDist, -1.8 * explodeDist]
+        [-2.4 * explodeDist, -2.6 * explodeDist, 1.4 * explodeDist],
+        [3.0 * explodeDist, 2.2 * explodeDist, -1.4 * explodeDist],
+        [-1.2 * explodeDist, 3.4 * explodeDist, 1.6 * explodeDist],
+        [2.0 * explodeDist, -3.0 * explodeDist, -1.8 * explodeDist]
     ];
     mitoPositions.forEach(pos => {
         const mito = new THREE.Group();
         mito.position.set(...pos);
         mito.userData = { organelleKey: 'mitochondria' };
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.4, 16), new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 }));
-        body.rotation.x = Math.random();
-        body.rotation.y = Math.random();
+
+        // Outer smooth capsule
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.6, 16), new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 }));
+        body.rotation.x = 0.5;
+        body.rotation.y = 0.3;
         mito.add(body);
+
+        // Folded inner cristae ridges
+        for (let c = -0.6; c <= 0.6; c += 0.3) {
+            const fold = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.08, 6, 12, Math.PI), new THREE.MeshStandardMaterial({ color: 0xfbbf24 }));
+            fold.position.y = c;
+            mito.add(fold);
+        }
         group.add(mito);
         cellOrganelles.push(mito);
     });
 
-    // Centrosome (Orthogonal Centrioles)
+    // Centrosome (Two Perpendicular 9x3 Centrioles)
     const centroGroup = new THREE.Group();
-    centroGroup.position.set(0.5 * explodeDist, 2.5 * explodeDist, 0);
+    centroGroup.position.set(0.6 * explodeDist, 2.8 * explodeDist, 0);
     centroGroup.userData = { organelleKey: 'centrosome' };
-    const c1 = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.8, 12), new THREE.MeshStandardMaterial({ color: 0xec4899 }));
-    const c2 = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.8, 12), new THREE.MeshStandardMaterial({ color: 0xec4899 }));
+
+    const c1 = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 1.0, 9, 1, true), new THREE.MeshStandardMaterial({ color: 0xec4899, wireframe: true }));
+    const c2 = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 1.0, 9, 1, true), new THREE.MeshStandardMaterial({ color: 0xec4899, wireframe: true }));
     c2.rotation.x = Math.PI / 2;
     centroGroup.add(c1);
     centroGroup.add(c2);
@@ -1647,223 +1711,399 @@ function buildAnimalCell3D(group, isExploded = false) {
 
     // Lysosomes & Peroxisomes
     for (let l = 0; l < 8; l++) {
-        const lyso = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 12), new THREE.MeshStandardMaterial({ color: 0x10b981 }));
-        lyso.position.set((Math.random() - 0.5) * 6 * explodeDist, (Math.random() - 0.5) * 6 * explodeDist, (Math.random() - 0.5) * 6 * explodeDist);
+        const lyso = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 12), new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.2 }));
+        lyso.position.set((Math.random() - 0.5) * 6 * explodeDist, (Math.random() - 0.5) * 5 * explodeDist, (Math.random() - 0.5) * 5 * explodeDist);
         lyso.userData = { organelleKey: 'lysosome' };
         group.add(lyso);
         cellOrganelles.push(lyso);
     }
 }
 
-// 2. Comprehensive Plant Cell
+// --------------------------------------------------------------------------
+// 2. PLANT CELL (Hexagonal Prism Box with Massive Central Vacuole & Chloroplasts)
+// --------------------------------------------------------------------------
 function buildPlantCell3D(group, isExploded = false) {
     const explodeDist = isExploded ? 2.2 : 1.0;
 
-    // Rigid Cell Wall Frame
-    const wallGeo = new THREE.BoxGeometry(8.5, 7.5, 6.5);
-    const wallMat = new THREE.MeshStandardMaterial({
-        color: 0x16a34a,
-        transparent: true,
-        opacity: isExploded ? 0.15 : 0.35,
-        wireframe: false,
-        roughness: 0.2
-    });
-    const cellWall = new THREE.Mesh(wallGeo, wallMat);
-    cellWall.userData = { organelleKey: 'cell_wall' };
-    group.add(cellWall);
-    cellOrganelles.push(cellWall);
+    // Rigid Hexagonal/Rectangular Plant Cell Wall (Open 3-Sided Cutaway Box)
+    const w = 9.5, h = 8.5, d = 7.5;
+    const wallGroup = new THREE.Group();
+    wallGroup.userData = { organelleKey: 'cell_wall' };
 
-    // Large Central Vacuole
+    // Emerald Green Cellulose Microfibril Wall Beams
+    const beamMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.3 });
+    const cornerThick = 0.4;
+    const beams = [
+        { p: [0, -h/2, -d/2], s: [w, cornerThick, cornerThick] },
+        { p: [0, h/2, -d/2], s: [w, cornerThick, cornerThick] },
+        { p: [-w/2, 0, -d/2], s: [cornerThick, h, cornerThick] },
+        { p: [w/2, 0, -d/2], s: [cornerThick, h, cornerThick] },
+        { p: [-w/2, -h/2, 0], s: [cornerThick, cornerThick, d] },
+        { p: [w/2, -h/2, 0], s: [cornerThick, cornerThick, d] }
+    ];
+    beams.forEach(b => {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(...b.s), beamMat);
+        mesh.position.set(...b.p);
+        wallGroup.add(mesh);
+    });
+
+    // Translucent Back & Floor Cellulose Plates
+    const backPlate = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0x22c55e, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false }));
+    backPlate.position.set(0, 0, -d/2);
+    wallGroup.add(backPlate);
+
+    const floorPlate = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ color: 0x16a34a, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false }));
+    floorPlate.position.set(0, -h/2, 0);
+    floorPlate.rotation.x = Math.PI / 2;
+    wallGroup.add(floorPlate);
+
+    group.add(wallGroup);
+    cellOrganelles.push(wallGroup);
+
+    // GIGANTIC CENTRAL VACUOLE (Occupies 75% of volume in center)
     const vacGroup = new THREE.Group();
-    vacGroup.position.set(0.8 * explodeDist, 0, 0);
+    vacGroup.position.set(0.6 * explodeDist, -0.4 * explodeDist, 0);
     vacGroup.userData = { organelleKey: 'vacuole' };
-    const vacMesh = new THREE.Mesh(new THREE.SphereGeometry(2.4, 24, 24), new THREE.MeshStandardMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.65, roughness: 0.1 }));
+
+    const vacMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(3.2, 32, 32),
+        new THREE.MeshStandardMaterial({
+            color: 0x00f0ff,
+            transparent: true,
+            opacity: 0.55,
+            roughness: 0.1,
+            emissive: 0x00f0ff,
+            emissiveIntensity: 0.15,
+            depthWrite: false
+        })
+    );
+    vacMesh.scale.set(1.2, 1.0, 0.9);
     vacGroup.add(vacMesh);
     group.add(vacGroup);
     cellOrganelles.push(vacGroup);
 
-    // Nucleus
+    // Nucleus (Peripheral — Pushed to side by the massive vacuole)
     const nucGroup = new THREE.Group();
-    nucGroup.position.set(-2.8 * explodeDist, 1.8 * explodeDist, 0);
+    nucGroup.position.set(-3.2 * explodeDist, 2.2 * explodeDist, 0.4 * explodeDist);
     nucGroup.userData = { organelleKey: 'nucleus' };
-    nucGroup.add(new THREE.Mesh(new THREE.SphereGeometry(1.4, 24, 24), new THREE.MeshStandardMaterial({ color: 0xa855f7 })));
+
+    const nuc = new THREE.Mesh(new THREE.SphereGeometry(1.6, 24, 24), new THREE.MeshStandardMaterial({ color: 0x8b5cf6, roughness: 0.3 }));
+    nucGroup.add(nuc);
+    const nucL = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 16), new THREE.MeshStandardMaterial({ color: 0x4c1d95 }));
+    nucL.position.set(0.3, 0.3, 0.3);
+    nucGroup.add(nucL);
     group.add(nucGroup);
     cellOrganelles.push(nucGroup);
 
-    // 6 Chloroplasts with interior Thylakoids
+    // 6 Detailed Chloroplasts (Stacked Thylakoid Grana Discs)
     const chlorPositions = [
-        [-2.5 * explodeDist, -2.0 * explodeDist, 1.5 * explodeDist],
-        [-2.5 * explodeDist, 0, -1.8 * explodeDist],
-        [2.5 * explodeDist, 2.2 * explodeDist, 1.6 * explodeDist],
-        [2.5 * explodeDist, -2.0 * explodeDist, -1.5 * explodeDist],
-        [0, 2.6 * explodeDist, -1.6 * explodeDist],
-        [0, -2.6 * explodeDist, 1.6 * explodeDist]
+        [-3.2 * explodeDist, -1.8 * explodeDist, 1.8 * explodeDist],
+        [-3.2 * explodeDist, 0.2 * explodeDist, -1.6 * explodeDist],
+        [2.8 * explodeDist, 2.6 * explodeDist, 1.6 * explodeDist],
+        [2.8 * explodeDist, -2.4 * explodeDist, -1.4 * explodeDist],
+        [0, 3.0 * explodeDist, -1.6 * explodeDist],
+        [-0.8 * explodeDist, -3.0 * explodeDist, 1.6 * explodeDist]
     ];
     chlorPositions.forEach(pos => {
         const chlor = new THREE.Group();
         chlor.position.set(...pos);
         chlor.userData = { organelleKey: 'chloroplast' };
-        const body = new THREE.Mesh(new THREE.SphereGeometry(0.7, 16, 16), new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.2 }));
-        body.scale.set(1.5, 0.9, 0.9);
-        chlor.add(body);
+
+        // Outer Green Plastid Membrane
+        const outer = new THREE.Mesh(
+            new THREE.SphereGeometry(0.85, 16, 16),
+            new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.2, emissive: 0x15803d, emissiveIntensity: 0.3 })
+        );
+        outer.scale.set(1.4, 0.9, 0.9);
+        chlor.add(outer);
+
+        // Stacked Thylakoid Grana Coins
+        for (let g = -0.4; g <= 0.4; g += 0.25) {
+            const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.08, 12), new THREE.MeshStandardMaterial({ color: 0x14532d }));
+            disc.position.x = g;
+            chlor.add(disc);
+        }
         group.add(chlor);
         cellOrganelles.push(chlor);
     });
+
+    // Plant Mitochondria
+    for (let m = 0; m < 3; m++) {
+        const mito = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.3, 12), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+        mito.position.set(-2.6 * explodeDist + m * 2.2, -2.8 * explodeDist, (Math.random() - 0.5) * 2.2);
+        mito.rotation.set(Math.random(), Math.random(), Math.random());
+        mito.userData = { organelleKey: 'mitochondria' };
+        group.add(mito);
+        cellOrganelles.push(mito);
+    }
 }
 
-// 3. Human Neuron & Synaptic Terminal
+// --------------------------------------------------------------------------
+// 3. HUMAN NEURON & SYNAPSE (Multipolar Tree + Nodes of Ranvier + Boutons)
+// --------------------------------------------------------------------------
 function buildNeuron3D(group) {
-    // Soma (Cell Body)
+    // Stellate Soma (Cell Body with Nissl Granules)
     const somaGroup = new THREE.Group();
-    somaGroup.position.set(-7, 0, 0);
+    somaGroup.position.set(-7.5, 0, 0);
     somaGroup.userData = { organelleKey: 'soma' };
-    const soma = new THREE.Mesh(new THREE.SphereGeometry(2.0, 24, 24), new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00f0ff, emissiveIntensity: 0.2 }));
+
+    const soma = new THREE.Mesh(
+        new THREE.SphereGeometry(2.2, 24, 24),
+        new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00f0ff, emissiveIntensity: 0.25, roughness: 0.3 })
+    );
     somaGroup.add(soma);
 
-    // Dendritic Tree with Spines
-    for (let i = 0; i < 12; i++) {
-        const dAngle = (i / 12) * Math.PI * 2;
-        const dGeo = new THREE.CylinderGeometry(0.08, 0.25, 4.0, 8);
-        const dMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8 });
-        const dendrite = new THREE.Mesh(dGeo, dMat);
-        dendrite.position.set(Math.cos(dAngle) * 2.8, Math.sin(dAngle) * 2.8, (Math.random() - 0.5) * 1.5);
-        dendrite.rotation.z = dAngle + Math.PI / 2;
-        somaGroup.add(dendrite);
+    // Central Nucleus
+    const nuc = new THREE.Mesh(new THREE.SphereGeometry(1.0, 16, 16), new THREE.MeshStandardMaterial({ color: 0x8b5cf6 }));
+    somaGroup.add(nuc);
+
+    // Rich Branching Dendritic Tree with Dendritic Spines
+    const dendriteMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.3 });
+    for (let d = 0; d < 8; d++) {
+        const dAngle = (d / 8) * Math.PI * 2;
+        const mainBranch = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.35, 4.0, 8), dendriteMat);
+        mainBranch.position.set(Math.cos(dAngle) * 3.0, Math.sin(dAngle) * 3.0, (Math.random() - 0.5) * 1.5);
+        mainBranch.rotation.z = dAngle + Math.PI / 2;
+        somaGroup.add(mainBranch);
+
+        // Secondary Bifurcations with Spines
+        for (let b = 0; b < 2; b++) {
+            const subBranch = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.12, 2.5, 6), dendriteMat);
+            subBranch.position.set(Math.cos(dAngle) * 4.8 + (b - 0.5) * 1.0, Math.sin(dAngle) * 4.8 + (b - 0.5) * 1.0, 0);
+            subBranch.rotation.z = dAngle + Math.PI / 2 + (b === 0 ? 0.4 : -0.4);
+            somaGroup.add(subBranch);
+
+            // Spines (Mushroom knobs)
+            const spine = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), new THREE.MeshBasicMaterial({ color: 0xffd700 }));
+            spine.position.copy(subBranch.position).add(new THREE.Vector3((Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4, 0.2));
+            somaGroup.add(spine);
+        }
     }
     group.add(somaGroup);
     cellOrganelles.push(somaGroup);
 
-    // Long Myelinated Axon with Nodes of Ranvier
+    // Long Cylindrical Axon Highway
     const axonGroup = new THREE.Group();
     axonGroup.position.set(0.5, 0, 0);
     axonGroup.userData = { organelleKey: 'axon' };
-    const coreAxon = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 13, 16), new THREE.MeshStandardMaterial({ color: 0x64748b }));
+
+    const coreAxon = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 13.5, 16), new THREE.MeshStandardMaterial({ color: 0x64748b }));
     coreAxon.rotation.z = Math.PI / 2;
     axonGroup.add(coreAxon);
 
-    // 5 Myelin Sheaths
+    // 5 Myelin Sheaths (Schwann Cells) with Exposed Nodes of Ranvier
     for (let m = 0; m < 5; m++) {
-        const sheath = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 2.0, 16), new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3 }));
-        sheath.position.set(-4.5 + m * 2.4, 0, 0);
+        const sheath = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.6, 0.6, 2.0, 16),
+            new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3 })
+        );
+        sheath.position.set(-4.6 + m * 2.4, 0, 0);
         sheath.rotation.z = Math.PI / 2;
         axonGroup.add(sheath);
+
+        // Schwann cell nucleus dot on myelin
+        const schNuc = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshStandardMaterial({ color: 0xd97706 }));
+        schNuc.position.set(-4.6 + m * 2.4, 0.65, 0);
+        axonGroup.add(schNuc);
     }
     group.add(axonGroup);
     cellOrganelles.push(axonGroup);
 
-    // Synaptic Terminal Bouton & Post-Synaptic Membrane
+    // Presynaptic Terminal Bouton & Synaptic Cleft
     const synGroup = new THREE.Group();
-    synGroup.position.set(7.5, 0, 0);
+    synGroup.position.set(7.8, 0, 0);
     synGroup.userData = { organelleKey: 'synapse' };
-    const bouton = new THREE.Mesh(new THREE.SphereGeometry(1.1, 16, 16), new THREE.MeshStandardMaterial({ color: 0x10b981 }));
-    bouton.scale.set(1.4, 1, 1);
+
+    // Swollen Presynaptic Terminal Knob
+    const bouton = new THREE.Mesh(
+        new THREE.SphereGeometry(1.2, 16, 16),
+        new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.3 })
+    );
+    bouton.scale.set(1.5, 1.1, 1.1);
     synGroup.add(bouton);
 
-    // Post-synaptic Receptor Membrane
-    const postMem = new THREE.Mesh(new THREE.BoxGeometry(0.3, 3.2, 3.2), new THREE.MeshStandardMaterial({ color: 0x3b82f6 }));
-    postMem.position.set(2.2, 0, 0);
+    // Postsynaptic Target Dendrite Membrane
+    const postMem = new THREE.Mesh(
+        new THREE.BoxGeometry(0.4, 3.6, 3.6),
+        new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3 })
+    );
+    postMem.position.set(2.4, 0, 0);
     synGroup.add(postMem);
 
-    // Vesicle Spheres inside Cleft
-    for (let k = 0; k < 25; k++) {
+    // Neurotransmitter Vesicles inside Bouton
+    for (let k = 0; k < 30; k++) {
         const ves = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
-        ves.position.set(0.6 + Math.random() * 0.8, (Math.random() - 0.5) * 1.6, (Math.random() - 0.5) * 1.6);
+        ves.position.set(0.6 + Math.random() * 0.9, (Math.random() - 0.5) * 1.8, (Math.random() - 0.5) * 1.8);
         synGroup.add(ves);
         synapseParticles.push(ves);
     }
     group.add(synGroup);
     cellOrganelles.push(synGroup);
 
-    // Glowing Action Potential Traveling Pulse Wave Mesh
-    const apWave = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 }));
+    // Glowing Traveling Action Potential Wave Mesh
+    const apWave = new THREE.Mesh(new THREE.SphereGeometry(0.85, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 }));
     apWave.name = 'apPulseWave';
     apWave.visible = false;
     group.add(apWave);
 }
 
-// 4. Bacteria Cell (Prokaryote)
+// --------------------------------------------------------------------------
+// 4. BACTERIA CELL (Prokaryotic Bacillus with 3-Layer Envelope & Nucleoid)
+// --------------------------------------------------------------------------
 function buildBacteria3D(group) {
     const bactGroup = new THREE.Group();
-    bactGroup.userData = { organelleKey: 'soma' };
 
-    // Capsule Body (Rod Bacilli)
-    const capGeo = new THREE.CylinderGeometry(1.8, 1.8, 6, 32);
-    const capMat = new THREE.MeshStandardMaterial({ color: 0xec4899, transparent: true, opacity: 0.5, roughness: 0.3 });
+    // 180° Open Longitudinal Cutaway Capsule (Rod-Shaped Bacillus)
+    // Layer 1: Outer Glycocalyx Capsule (Pink/Magenta)
+    const capGeo = new THREE.CylinderGeometry(2.2, 2.2, 7.5, 32, 1, false, 0, Math.PI * 1.4);
+    const capMat = new THREE.MeshStandardMaterial({
+        color: 0xdb2777,
+        roughness: 0.3,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.6,
+        depthWrite: false
+    });
     const capMesh = new THREE.Mesh(capGeo, capMat);
     capMesh.rotation.z = Math.PI / 2;
     bactGroup.add(capMesh);
 
-    // Tangled Circular Nucleoid DNA
-    const nucGeo = new THREE.TorusKnotGeometry(1.0, 0.2, 64, 8);
-    const nucMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, wireframe: true });
-    bactGroup.add(new THREE.Mesh(nucGeo, nucMat));
+    // Hemispherical End Caps
+    const endCapL = new THREE.Mesh(new THREE.SphereGeometry(2.2, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xbe185d, side: THREE.DoubleSide }));
+    endCapL.position.x = -3.75;
+    endCapL.rotation.z = Math.PI / 2;
+    bactGroup.add(endCapL);
 
-    // Spinning Helical Flagellum
+    const endCapR = new THREE.Mesh(new THREE.SphereGeometry(2.2, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xbe185d, side: THREE.DoubleSide }));
+    endCapR.position.x = 3.75;
+    endCapR.rotation.z = -Math.PI / 2;
+    bactGroup.add(endCapR);
+
+    // Layer 2: Inner Peptidoglycan Cell Wall (Amber Rim)
+    const wallGeo = new THREE.CylinderGeometry(2.0, 2.0, 7.3, 32, 1, true, 0, Math.PI * 1.4);
+    const wallMesh = new THREE.Mesh(wallGeo, new THREE.MeshStandardMaterial({ color: 0xf59e0b, side: THREE.DoubleSide }));
+    wallMesh.rotation.z = Math.PI / 2;
+    bactGroup.add(wallMesh);
+
+    // Tangled Neon-Blue Circular Nucleoid DNA (Supercoiled Chromosome without membrane)
+    const nucGroup = new THREE.Group();
+    nucGroup.userData = { organelleKey: 'nucleoid' };
+
+    const nucGeo = new THREE.TorusKnotGeometry(1.3, 0.3, 128, 16, 2, 3);
+    const nucMat = new THREE.MeshStandardMaterial({
+        color: 0x00f0ff,
+        emissive: 0x00f0ff,
+        emissiveIntensity: 0.65,
+        roughness: 0.2
+    });
+    nucGroup.add(new THREE.Mesh(nucGeo, nucMat));
+    bactGroup.add(nucGroup);
+    cellOrganelles.push(nucGroup);
+
+    // Circular Plasmid DNA Rings (Extrachromosomal DNA)
+    for (let p = 0; p < 3; p++) {
+        const plasmid = new THREE.Mesh(
+            new THREE.TorusGeometry(0.45, 0.07, 8, 24),
+            new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xffaa00, emissiveIntensity: 0.5 })
+        );
+        plasmid.position.set(-2.2 + p * 2.2, 0.9, (Math.random() - 0.5) * 1.5);
+        plasmid.rotation.set(Math.random(), Math.random(), 0);
+        plasmid.userData = { organelleKey: 'plasmid' };
+        bactGroup.add(plasmid);
+        cellOrganelles.push(plasmid);
+    }
+
+    // 70S Cytoplasmic Ribosomes
+    for (let r = 0; r < 50; r++) {
+        const ribo = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
+        ribo.position.set((Math.random() - 0.5) * 6.0, (Math.random() - 0.5) * 3.0, (Math.random() - 0.5) * 2.0);
+        bactGroup.add(ribo);
+    }
+
+    // Long Spinning Helical Flagellum with Basal Rotary Hook
+    const flagGroup = new THREE.Group();
+    flagGroup.name = 'bactFlagellum';
+    flagGroup.userData = { organelleKey: 'flagellum' };
+    flagGroup.position.set(3.75, 0, 0);
+
+    const hookMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.9, 12), new THREE.MeshStandardMaterial({ color: 0x64748b }));
+    hookMesh.rotation.z = Math.PI / 2;
+    flagGroup.add(hookMesh);
+
     const flagPts = [];
-    for (let t = 0; t <= 12; t += 0.3) {
-        flagPts.push(new THREE.Vector3(3.2 + t * 0.8, Math.sin(t * 1.5) * 0.8, Math.cos(t * 1.5) * 0.8));
+    for (let t = 0; t <= 15; t += 0.3) {
+        flagPts.push(new THREE.Vector3(0.5 + t * 0.7, Math.sin(t * 1.4) * 0.95, Math.cos(t * 1.4) * 0.95));
     }
     const flagCurve = new THREE.CatmullRomCurve3(flagPts);
-    const flagMesh = new THREE.Mesh(new THREE.TubeGeometry(flagCurve, 64, 0.12, 8, false), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
-    flagMesh.name = 'bactFlagellum';
-    bactGroup.add(flagMesh);
+    const flagTube = new THREE.Mesh(new THREE.TubeGeometry(flagCurve, 64, 0.15, 8, false), new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3 }));
+    flagGroup.add(flagTube);
+    bactGroup.add(flagGroup);
+    cellOrganelles.push(flagGroup);
 
-    // Pili / Fimbriae Hair Appendages
-    for (let f = 0; f < 36; f++) {
-        const pilus = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.5, 6), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-        const angle = Math.random() * Math.PI * 2;
-        pilus.position.set((Math.random() - 0.5) * 5, Math.cos(angle) * 2.2, Math.sin(angle) * 2.2);
-        pilus.rotation.z = Math.random();
+    // Radiating Pili / Fimbriae Hair Bristles
+    for (let f = 0; f < 40; f++) {
+        const pilus = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.8, 6), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+        const angle = (f / 40) * Math.PI * 2;
+        pilus.position.set((Math.random() - 0.5) * 6.0, Math.cos(angle) * 2.3, Math.sin(angle) * 2.3);
+        pilus.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, Math.cos(angle), Math.sin(angle)));
         bactGroup.add(pilus);
     }
+
     group.add(bactGroup);
-    cellOrganelles.push(bactGroup);
 }
 
-// 5. Mitochondria ATP Synthase Nanomachine
+// --------------------------------------------------------------------------
+// 5. MITOCHONDRIA F₀F₁ ATP SYNTHASE ENGINE (High-Fidelity Turbine)
+// --------------------------------------------------------------------------
 function buildMitochondriaAtp3D(group) {
     const mitoGroup = new THREE.Group();
     mitoGroup.userData = { organelleKey: 'atp_synthase' };
 
-    // Outer Membrane
-    const outerGeo = new THREE.CylinderGeometry(6, 6, 0.4, 32);
-    const outerMem = new THREE.Mesh(outerGeo, new THREE.MeshStandardMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.35 }));
+    // Outer Mitochondrial Membrane
+    const outerMem = new THREE.Mesh(new THREE.CylinderGeometry(6.5, 6.5, 0.4, 32), new THREE.MeshStandardMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.35, depthWrite: false }));
     outerMem.position.y = 4.5;
     mitoGroup.add(outerMem);
 
-    // Inner Cristae Membrane with F₀ Base Ring
-    const innerMem = new THREE.Mesh(outerGeo, new THREE.MeshStandardMaterial({ color: 0xef4444, transparent: true, opacity: 0.45 }));
+    // Inner Folded Cristae Membrane (Lipid Bilayer)
+    const innerMem = new THREE.Mesh(new THREE.CylinderGeometry(6.5, 6.5, 0.4, 32), new THREE.MeshStandardMaterial({ color: 0xef4444, transparent: true, opacity: 0.45, depthWrite: false }));
     innerMem.position.y = 1.5;
     mitoGroup.add(innerMem);
 
-    // F₀ Membrane-Embedded c-ring Rotor
-    const f0Rotor = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 1.2, 24), new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.3 }));
+    // F₀ Membrane-Embedded c-ring Rotor (Rotates with proton flow)
+    const f0Rotor = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 1.3, 24), new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.3 }));
     f0Rotor.position.y = 1.5;
     mitoGroup.add(f0Rotor);
 
-    // γ Central Rotor Shaft (Spinning)
+    // γ Central Rotor Shaft (Spinning Turbine Axle)
     const shaftRotor = new THREE.Group();
     shaftRotor.name = 'atpShaftRotor';
     shaftRotor.position.y = 0;
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 3.2, 16), new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.8 }));
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 3.4, 16), new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.8, roughness: 0.2 }));
     shaft.position.y = -0.5;
     shaftRotor.add(shaft);
     mitoGroup.add(shaftRotor);
 
-    // F₁ Catalytic Stator Head Hexamer (α₃β₃)
-    const f1Head = new THREE.Mesh(new THREE.SphereGeometry(1.6, 24, 24), new THREE.MeshStandardMaterial({ color: 0xa855f7, roughness: 0.3 }));
-    f1Head.position.y = -2.2;
-    mitoGroup.add(f1Head);
+    // F₁ Catalytic Stator Head Hexamer ((αβ)₃ Complex)
+    const f1Group = new THREE.Group();
+    f1Group.position.y = -2.4;
+    for (let h = 0; h < 6; h++) {
+        const angle = (h / 6) * Math.PI * 2;
+        const lobeCol = h % 2 === 0 ? 0x8b5cf6 : 0xa855f7; // alternating alpha and beta subunits
+        const lobe = new THREE.Mesh(new THREE.SphereGeometry(0.85, 16, 16), new THREE.MeshStandardMaterial({ color: lobeCol, roughness: 0.3 }));
+        lobe.position.set(Math.cos(angle) * 1.0, 0, Math.sin(angle) * 1.0);
+        f1Group.add(lobe);
+    }
+    mitoGroup.add(f1Group);
 
-    // Stator b Peripheral Arm
-    const statorArm = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 5.0, 12), new THREE.MeshStandardMaterial({ color: 0x64748b }));
-    statorArm.position.set(2.0, -0.5, 0);
+    // Stator b Peripheral Arm (Anchors Stator Head to Membrane)
+    const statorArm = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 5.2, 12), new THREE.MeshStandardMaterial({ color: 0x64748b }));
+    statorArm.position.set(2.2, -0.4, 0);
     mitoGroup.add(statorArm);
 
-    // Proton H⁺ Particles Stream
-    for (let h = 0; h < 40; h++) {
-        const prot = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), new THREE.MeshBasicMaterial({ color: 0x00f0ff }));
-        prot.position.set((Math.random() - 0.5) * 3, 2.5 + Math.random() * 2, (Math.random() - 0.5) * 3);
+    // Proton H⁺ Particles Stream Driving the Turbine
+    for (let h = 0; h < 45; h++) {
+        const prot = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8), new THREE.MeshBasicMaterial({ color: 0x00f0ff }));
+        prot.position.set((Math.random() - 0.5) * 3.5, 2.5 + Math.random() * 2, (Math.random() - 0.5) * 3.5);
         mitoGroup.add(prot);
     }
 
@@ -1871,7 +2111,9 @@ function buildMitochondriaAtp3D(group) {
     cellOrganelles.push(mitoGroup);
 }
 
-// 6. Mitosis 5-Stage Cell Division Model
+// --------------------------------------------------------------------------
+// 6. MITOSIS 5-STAGE CELL DIVISION ENGINE
+// --------------------------------------------------------------------------
 function buildMitosisStage3D(group, stage) {
     const stageInfo = [
         'Stage 1: Interphase — Chromatin and centrosomes replicate inside nuclear envelope.',
@@ -1884,49 +2126,44 @@ function buildMitosisStage3D(group, stage) {
     if (infoEl) infoEl.textContent = stageInfo[stage - 1];
 
     if (stage === 1) {
-        // Interphase (Intact single cell)
-        const cell = new THREE.Mesh(new THREE.SphereGeometry(4.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.3 }));
+        const cell = new THREE.Mesh(new THREE.SphereGeometry(4.8, 32, 32), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.3, depthWrite: false }));
         group.add(cell);
-        const nuc = new THREE.Mesh(new THREE.SphereGeometry(2.0, 24, 24), new THREE.MeshStandardMaterial({ color: 0xa855f7 }));
+        const nuc = new THREE.Mesh(new THREE.SphereGeometry(2.2, 24, 24), new THREE.MeshStandardMaterial({ color: 0x8b5cf6 }));
         group.add(nuc);
     } else if (stage === 2) {
-        // Prophase (4 X-chromatids + Asters)
-        const cell = new THREE.Mesh(new THREE.SphereGeometry(4.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.3 }));
+        const cell = new THREE.Mesh(new THREE.SphereGeometry(4.8, 32, 32), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.3, depthWrite: false }));
         group.add(cell);
-        for (let x = -1.5; x <= 1.5; x += 1.0) {
-            const chrom = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.12, 8, 16), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+        for (let x = -1.8; x <= 1.8; x += 1.2) {
+            const chrom = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.14, 8, 16), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
             chrom.position.set(x, (Math.random() - 0.5) * 1.5, 0);
             group.add(chrom);
         }
     } else if (stage === 3) {
-        // Metaphase (Lined up on equator)
-        const cell = new THREE.Mesh(new THREE.SphereGeometry(4.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.3 }));
+        const cell = new THREE.Mesh(new THREE.SphereGeometry(4.8, 32, 32), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.3, depthWrite: false }));
         group.add(cell);
-        for (let y = -2; y <= 2; y += 1.0) {
-            const chrom = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+        for (let y = -2.2; y <= 2.2; y += 1.1) {
+            const chrom = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.9, 0.35), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
             chrom.position.set(0, y, 0);
             group.add(chrom);
         }
     } else if (stage === 4) {
-        // Anaphase (Chromatids pulled to poles)
-        const cell = new THREE.Mesh(new THREE.SphereGeometry(4.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.3 }));
+        const cell = new THREE.Mesh(new THREE.SphereGeometry(4.8, 32, 32), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.3, depthWrite: false }));
         cell.scale.set(1.4, 1, 1);
         group.add(cell);
-        for (let y = -1.5; y <= 1.5; y += 1.0) {
-            const cLeft = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.2), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
-            cLeft.position.set(-2.8, y, 0);
+        for (let y = -1.8; y <= 1.8; y += 1.2) {
+            const cLeft = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.25), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+            cLeft.position.set(-3.0, y, 0);
             group.add(cLeft);
-            const cRight = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.2), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
-            cRight.position.set(2.8, y, 0);
+            const cRight = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.25), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+            cRight.position.set(3.0, y, 0);
             group.add(cRight);
         }
     } else if (stage === 5) {
-        // Telophase / Cytokinesis (2 daughter cells)
-        const cell1 = new THREE.Mesh(new THREE.SphereGeometry(3.2, 24, 24), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35 }));
-        cell1.position.x = -3.2;
+        const cell1 = new THREE.Mesh(new THREE.SphereGeometry(3.4, 24, 24), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35, depthWrite: false }));
+        cell1.position.x = -3.4;
         group.add(cell1);
-        const cell2 = new THREE.Mesh(new THREE.SphereGeometry(3.2, 24, 24), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35 }));
-        cell2.position.x = 3.2;
+        const cell2 = new THREE.Mesh(new THREE.SphereGeometry(3.4, 24, 24), new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35, depthWrite: false }));
+        cell2.position.x = 3.4;
         group.add(cell2);
     }
 }
@@ -1947,6 +2184,16 @@ function setCellType(type) {
     const btn = document.getElementById(`cellType${type.charAt(0).toUpperCase() + type.slice(1)}`);
     if (btn) btn.classList.add('active');
 
+    // Auto-reset animation mode from mitosis when switching specimen
+    if (cellAnim === 'mitosis') {
+        cellAnim = 'rotate';
+        document.querySelectorAll('#cell .ctrl-btn').forEach(b => b.classList.remove('active'));
+        const rotBtn = document.getElementById('cellAnimRotate');
+        if (rotBtn) rotBtn.classList.add('active');
+        const mitCtrl = document.getElementById('cellMitosisControls');
+        if (mitCtrl) mitCtrl.style.display = 'none';
+    }
+
     const neuronCtrl = document.getElementById('cellNeuronControls');
     const mitoCtrl = document.getElementById('cellMitoControls');
     const bactCtrl = document.getElementById('cellBacteriaControls');
@@ -1955,6 +2202,7 @@ function setCellType(type) {
     if (bactCtrl) bactCtrl.style.display = type === 'bacteria' ? 'block' : 'none';
 
     buildCellModel();
+    showToast(`Switched Specimen: ${type.toUpperCase()} CELL`);
 }
 
 function setCellAnim(anim) {
