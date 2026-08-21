@@ -719,7 +719,15 @@
 
                 <div class="panel-section" id="gameInstructions">
                     <h4>📖 Game Controls</h4>
-                    <p id="gameHelpText" class="panel-note">WASD / Arrow Keys to move starfighter.<br>SPACEBAR to fire quantum laser cannons.<br>Destroy incoming kinetic asteroids before they impact Earth!</p>
+                    <p id="gameHelpText" class="panel-note">WASD / Arrow Keys to move starfighter.<br>SPACEBAR to fire plasma laser cannons.<br>Destroy incoming kinetic asteroids before they impact Earth!</p>
+                </div>
+
+                <!-- Dynamic Game Telemetry & Specific Gauges -->
+                <div class="panel-section" id="gameSubHudSection">
+                    <h4>📊 Mission Telemetry</h4>
+                    <div class="game-sub-hud" id="gameSubHud">
+                        <!-- Dynamically Injected per Game -->
+                    </div>
                 </div>
 
                 <div class="panel-section">
@@ -739,6 +747,15 @@
                 </div>
             </div>
 
+            <!-- Virtual Arcade Touch Controls -->
+            <div class="arcade-touch-pad" id="arcadeTouchPad">
+                <button class="arcade-btn" id="btnLeft" onpointerdown="triggerGameKey('KeyA', true)" onpointerup="triggerGameKey('KeyA', false)">◀</button>
+                <button class="arcade-btn" id="btnUp" onpointerdown="triggerGameKey('KeyW', true)" onpointerup="triggerGameKey('KeyW', false)">▲</button>
+                <button class="arcade-btn" id="btnDown" onpointerdown="triggerGameKey('KeyS', true)" onpointerup="triggerGameKey('KeyS', false)">▼</button>
+                <button class="arcade-btn" id="btnRight" onpointerdown="triggerGameKey('KeyD', true)" onpointerup="triggerGameKey('KeyD', false)">▶</button>
+                <button class="arcade-btn action-btn-fire" id="btnAction" onclick="handleGameAction()">⚡</button>
+            </div>
+
             <!-- Game Over / Victory Modal -->
             <div class="game-over glass-card" id="gameOver" style="display:none">
                 <h2 id="gameOverTitle">MISSION TERMINATED</h2>
@@ -754,7 +771,7 @@
     <div class="toast" id="toast"></div>
 
     <!-- Application Script -->
-    <script src="script.js?v=4"></script>
+    <script src="script.js?v=5"></script>
 </body>
 
 </html>

@@ -3936,34 +3936,63 @@ function setRobotMode(mode) {
 }
 
 // ==========================================================================
-// 12. MODULE 7: 3D SCIENCE ARCADE (4 UNIQUE INTERACTIVE GAMES)
+// 12. MODULE 7: 3D SCIENCE ARCADE (4 HIGH-QUALITY DIVERSE 3D GAMES)
 // ==========================================================================
+
 let gameState = {
     running: false,
     score: 0,
     lives: 3,
+    maxLives: 3,
     wave: 1,
     highScore: 0,
     keys: {},
     player: null,
     lasers: [],
     enemies: [],
-    quantumBarrier: null,
-    alchemyTarget: null,
-    alchemyInventory: { H: 0, C: 0, O: 0, N: 0 },
-    slingshotProbe: null,
-    slingshotVel: { x: 0, z: 0 }
+    particles: [],
+    powerups: [],
+    // Game 1: Space Combat specific
+    earthShield: 100,
+    empCharge: 100,
+    triBeamTimer: 0,
+    // Game 2: Quantum specific
+    waveEnergy: 5.0,
+    barrierHeight: 6.0,
+    quantumTargetState: 'tunnel',
+    quantumQuota: 3,
+    quantumProgress: 0,
+    // Game 3: Chemistry specific
+    alchemyTargetIndex: 0,
+    alchemyInventory: { H: 0, C: 0, O: 0, N: 0, Na: 0, Cl: 0 },
+    alchemyTargetMolecule: null,
+    // Game 4: Gravitational Slingshot specific
+    slingshotCraft: null,
+    slingshotVel: new THREE.Vector3(0, 0, 0),
+    slingshotHeading: 0,
+    slingshotFuel: 100,
+    slingshotOrbitLine: null,
+    slingshotMoonAngle: 0,
+    slingshotStatus: 'aiming'
 };
+
+const ALCHEMY_RECIPES = [
+    { name: 'Water', formula: 'H₂O', req: { H: 2, O: 1 }, points: 300, desc: 'Essential solvent for biochemical life.' },
+    { name: 'Carbon Dioxide', formula: 'CO₂', req: { C: 1, O: 2 }, points: 350, desc: 'Key greenhouse gas & photosynthesis reagent.' },
+    { name: 'Methane', formula: 'CH₄', req: { C: 1, H: 4 }, points: 450, desc: 'Primary component of natural gas.' },
+    { name: 'Ammonia', formula: 'NH₃', req: { N: 1, H: 3 }, points: 400, desc: 'Critical nitrogen fertilizer precursor.' },
+    { name: 'Table Salt', formula: 'NaCl', req: { Na: 1, Cl: 1 }, points: 500, desc: 'Ionic crystal electrolyte matrix.' }
+];
 
 function initGames() {
     const setup = createScene('gameScene');
     if (!setup) return;
 
-    camera.position.set(0, 12, 18);
-    camera.lookAt(0, 0, -5);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const light = new THREE.DirectionalLight(0xffffff, 1.2);
-    light.position.set(0, 20, 10);
+    camera.position.set(0, 14, 20);
+    camera.lookAt(0, 0, -4);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+    const light = new THREE.DirectionalLight(0xffffff, 1.4);
+    light.position.set(10, 30, 20);
     scene.add(light);
 
     initGameInputHandlers();
@@ -3976,10 +4005,11 @@ function initGames() {
     function animate() {
         animationId = requestAnimationFrame(animate);
         if (gameState.running && !isPaused) {
-            updateGamePhysics();
+            updateActiveGamePhysics();
         }
+        controls.update();
         renderer.render(scene, camera);
-        updateTelemetry(gameState.enemies.length + gameState.lasers.length);
+        updateTelemetry(gameState.enemies.length + gameState.lasers.length + gameState.particles.length);
     }
     animate();
 }
@@ -3990,22 +4020,36 @@ function initGameInputHandlers() {
         if (e.code === 'Space' && gameState.running) {
             e.preventDefault();
             handleGameAction();
+        } else if (e.code === 'KeyE' && currentGame === 'space' && gameState.running) {
+            detonateSmartEMP();
+        } else if (e.code === 'KeyR' && currentGame === 'alchemy' && gameState.running) {
+            purgeAlchemyInventory();
         }
     });
+
     window.addEventListener('keyup', (e) => {
         gameState.keys[e.code] = false;
     });
 }
 
+function triggerGameKey(code, isDown) {
+    gameState.keys[code] = isDown;
+    if (isDown && code === 'Space' && gameState.running) {
+        handleGameAction();
+    }
+}
+
 function handleGameAction() {
+    if (!gameState.running) return;
+
     if (currentGame === 'space') {
         firePlayerLaser();
     } else if (currentGame === 'quantum') {
         fireQuantumWavepacket();
     } else if (currentGame === 'alchemy') {
-        captureFallingAtom();
+        synthesizeAlchemyMolecule();
     } else if (currentGame === 'slingshot') {
-        launchSlingshotProbe();
+        fireSlingshotEngine();
     }
 }
 
@@ -4014,8 +4058,14 @@ function switchGame(gType) {
     sound.playClick();
 
     disposeHierarchy(scene.getObjectByName('gameWorldGroup'));
+    gameState.enemies.forEach(e => scene.remove(e));
+    gameState.lasers.forEach(l => scene.remove(l));
+    gameState.particles.forEach(p => scene.remove(p));
+    gameState.powerups.forEach(pu => scene.remove(pu));
     gameState.enemies = [];
     gameState.lasers = [];
+    gameState.particles = [];
+    gameState.powerups = [];
     gameState.player = null;
 
     const gameGroup = new THREE.Group();
@@ -4026,221 +4076,768 @@ function switchGame(gType) {
     if (sel && sel.value !== gType) sel.value = gType;
 
     if (gType === 'space') {
-        if (help) help.innerHTML = 'WASD / Arrow Keys to fly starfighter.<br>SPACEBAR to fire plasma lasers.<br>Destroy kinetic asteroids before Earth impact!';
-        camera.position.set(0, 12, 18);
-        camera.lookAt(0, 0, -5);
-        buildSpaceFighter(gameGroup);
+        if (help) help.innerHTML = '<strong>WASD / Arrows:</strong> Fly starfighter in 3D arena.<br><strong>SPACEBAR:</strong> Fire twin plasma cannons.<br><strong>E / Shift:</strong> Detonate Smart EMP clearing screen!<br>Protect Earth’s shield from asteroid impacts!';
+        camera.position.set(0, 16, 22);
+        camera.lookAt(0, 0, -6);
+        buildSpaceFighterWorld(gameGroup);
     } else if (gType === 'quantum') {
-        if (help) help.innerHTML = 'A/D to position Particle Emitter.<br>SPACEBAR to fire Quantum Wavepacket.<br>Hit the tunnel resonance energy barrier to sort isotopes into detectors!';
-        camera.position.set(0, 16, 16);
+        if (help) help.innerHTML = '<strong>A / D:</strong> Aim Particle Accelerator angle.<br><strong>W / S:</strong> Tune wavepacket kinetic energy (E).<br><strong>SPACEBAR:</strong> Fire Quantum Wavepacket.<br>Hit the tunnel resonance barrier to sort states into detectors!';
+        camera.position.set(0, 18, 18);
         camera.lookAt(0, 0, 0);
         buildQuantumGameWorld(gameGroup);
     } else if (gType === 'alchemy') {
-        if (help) help.innerHTML = 'A/D to move Chemical Ion Collector.<br>SPACEBAR to catch falling elements.<br>Assemble the requested molecular formula before reactor overload!';
-        camera.position.set(0, 14, 18);
+        if (help) help.innerHTML = '<strong>A / D:</strong> Glide Magnetic Ion Catcher.<br><strong>SPACEBAR:</strong> Synthesize & Bond target molecule.<br><strong>R:</strong> Purge reactor waste / excess ions.<br>Collect precise elements to synthesize chemical formulas!';
+        camera.position.set(0, 16, 20);
         camera.lookAt(0, 0, 0);
         buildAlchemyGameWorld(gameGroup);
     } else if (gType === 'slingshot') {
-        if (help) help.innerHTML = 'A/D to aim launch trajectory angle.<br>SPACEBAR to launch spacecraft probe.<br>Perform lunar gravity assist to reach Mars circular orbit!';
-        camera.position.set(0, 30, 20);
-        camera.lookAt(0, 0, 0);
+        if (help) help.innerHTML = '<strong>A / D:</strong> Gimbal spacecraft heading.<br><strong>SPACE / W:</strong> Fire main rocket thrusters (Delta-V).<br><strong>S:</strong> Fire retrograde brake thruster.<br>Use Moon’s gravity slingshot to enter Mars orbit!';
+        camera.position.set(0, 36, 24);
+        camera.lookAt(0, 0, -2);
         buildSlingshotGameWorld(gameGroup);
     }
 
     scene.add(gameGroup);
+    renderGameSubHud();
 }
 
-function buildSpaceFighter(group) {
+// --------------------------------------------------------------------------
+// 1. GAME 1: 🚀 ASTEROID KINETIC DEFLECTOR (3D SPACE COMBAT)
+// --------------------------------------------------------------------------
+function buildSpaceFighterWorld(group) {
+    // Starfighter Ship
     const ship = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2.5, 8), new THREE.MeshStandardMaterial({ color: 0x00f0ff, metalness: 0.8, roughness: 0.2 }));
-    body.rotation.x = Math.PI / 2;
-    ship.add(body);
+    ship.name = 'starfighter';
 
-    const wings = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.1, 1.2), new THREE.MeshStandardMaterial({ color: 0x4361ee, roughness: 0.3 }));
-    wings.position.z = 0.5;
+    // Aerodynamic Composite Fuselage
+    const hullGeo = new THREE.ConeGeometry(0.85, 3.2, 16);
+    const hullMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.85, roughness: 0.25 });
+    const hull = new THREE.Mesh(hullGeo, hullMat);
+    hull.rotation.x = Math.PI / 2;
+    ship.add(hull);
+
+    // Glowing Cockpit Canopy
+    const canopyGeo = new THREE.SphereGeometry(0.45, 16, 16);
+    const canopyMat = new THREE.MeshPhysicalMaterial({ color: 0x00f0ff, transmission: 0.8, roughness: 0.1, emissive: 0x00f0ff, emissiveIntensity: 0.4 });
+    const canopy = new THREE.Mesh(canopyGeo, canopyMat);
+    canopy.position.set(0, 0.35, 0.2);
+    canopy.scale.set(0.7, 0.6, 1.8);
+    ship.add(canopy);
+
+    // Swept Delta Wings
+    const wingGeo = new THREE.BoxGeometry(4.2, 0.08, 1.4);
+    const wingMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.3 });
+    const wings = new THREE.Mesh(wingGeo, wingMat);
+    wings.position.set(0, 0, 0.6);
     ship.add(wings);
 
-    ship.position.set(0, 0, 8);
+    // Dual Wingtip Plasma Cannons
+    [-1.8, 1.8].forEach(x => {
+        const cannon = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 1.8, 12), new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.95 }));
+        cannon.rotation.x = Math.PI / 2;
+        cannon.position.set(x, 0, 0.3);
+        ship.add(cannon);
+    });
+
+    // Twin Ion Engine Exhaust Thrusters
+    const engineGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.1, 0.8, 16), new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 }));
+    engineGlow.rotation.x = -Math.PI / 2;
+    engineGlow.position.set(0, 0, 1.8);
+    ship.add(engineGlow);
+
+    ship.position.set(0, 0, 9);
     group.add(ship);
     gameState.player = ship;
-}
-
-function buildQuantumGameWorld(group) {
-    const emitter = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.2, 2.5, 16), new THREE.MeshStandardMaterial({ color: 0xa855f7 }));
-    emitter.rotation.x = Math.PI / 2;
-    emitter.position.set(0, 0, 8);
-    group.add(emitter);
-    gameState.player = emitter;
-
-    const barrier = new THREE.Mesh(new THREE.BoxGeometry(16, 2, 0.4), new THREE.MeshStandardMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.5 }));
-    barrier.position.set(0, 0, 0);
-    group.add(barrier);
-    gameState.quantumBarrier = barrier;
-
-    for (let x of [-6, -2, 2, 6]) {
-        const bin = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 3), new THREE.MeshStandardMaterial({ color: 0x10b981 }));
-        bin.position.set(x, 0, -8);
-        group.add(bin);
-    }
-}
-
-function buildAlchemyGameWorld(group) {
-    const collector = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.2, 0.8, 24), new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.6 }));
-    collector.position.set(0, 0, 7);
-    group.add(collector);
-    gameState.player = collector;
-    gameState.alchemyInventory = { H: 0, C: 0, O: 0, N: 0 };
-    gameState.alchemyTarget = { formula: 'H2O', req: { H: 2, O: 1 } };
-}
-
-function buildSlingshotGameWorld(group) {
-    const earth = new THREE.Mesh(new THREE.SphereGeometry(2.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0x38bdf8 }));
-    earth.position.set(-8, 0, 6);
-    group.add(earth);
-
-    const moon = new THREE.Mesh(new THREE.SphereGeometry(1.0, 24, 24), new THREE.MeshStandardMaterial({ color: 0xcbd5e1 }));
-    moon.position.set(0, 0, 0);
-    moon.name = 'slingshotMoon';
-    group.add(moon);
-
-    const mars = new THREE.Mesh(new THREE.SphereGeometry(1.8, 32, 32), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
-    mars.position.set(8, 0, -8);
-    group.add(mars);
-
-    const probe = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffd700 }));
-    probe.position.set(-6, 0, 6);
-    group.add(probe);
-    gameState.slingshotProbe = probe;
-    gameState.player = probe;
+    gameState.earthShield = 100;
+    gameState.empCharge = 100;
+    gameState.triBeamTimer = 0;
 }
 
 function firePlayerLaser() {
-    if (!gameState.player) return;
+    if (!gameState.player || !gameState.running) return;
     sound.playLaser();
 
-    for (let x of [-1.2, 1.2]) {
-        const laser = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.5, 8), new THREE.MeshBasicMaterial({ color: 0x00f0ff }));
+    const isTri = gameState.triBeamTimer > 0;
+    const offsets = isTri ? [-1.8, 0, 1.8] : [-1.8, 1.8];
+
+    offsets.forEach(x => {
+        const laser = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.1, 0.1, 2.2, 8),
+            new THREE.MeshBasicMaterial({ color: isTri ? 0xfacc15 : 0x00f0ff })
+        );
         laser.rotation.x = Math.PI / 2;
-        laser.position.set(gameState.player.position.x + x, gameState.player.position.y, gameState.player.position.z - 1.2);
+        laser.position.set(gameState.player.position.x + x, 0, gameState.player.position.z - 1.5);
+        laser.userData = { speed: 1.1, damage: isTri ? 2 : 1 };
         scene.add(laser);
         gameState.lasers.push(laser);
+    });
+}
+
+function detonateSmartEMP() {
+    if (gameState.empCharge < 100) {
+        showToast('⚡ EMP Capacitor charging (' + Math.round(gameState.empCharge) + '%)');
+        return;
+    }
+    sound.playExplosion();
+    gameState.empCharge = 0;
+
+    // Create EMP Nova Shockwave
+    const novaGeo = new THREE.RingGeometry(0.5, 2.5, 32);
+    const novaMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.95 });
+    const nova = new THREE.Mesh(novaGeo, novaMat);
+    nova.rotation.x = Math.PI / 2;
+    nova.position.copy(gameState.player.position);
+    nova.userData = { scaleRate: 3.5, life: 1.0 };
+    scene.add(nova);
+    gameState.particles.push(nova);
+
+    // Destroy all current asteroids on screen
+    gameState.enemies.forEach(e => {
+        createExplosionParticles(e.position, e.userData.color || 0x8b5cf6);
+        scene.remove(e);
+        gameState.score += 150;
+    });
+    gameState.enemies = [];
+    showToast('💣 SMART EMP DETONATED! All threat vectors eliminated!');
+    updateGameHud();
+}
+
+function spawnSpaceAsteroid() {
+    const diff = document.getElementById('difficulty')?.value || 'medium';
+    const mult = diff === 'hard' ? 1.4 : (diff === 'easy' ? 0.7 : 1.0);
+
+    const typeRoll = Math.random();
+    let type = 'basalt', col = 0x64748b, hp = 1, r = 1.0, pts = 100;
+
+    if (typeRoll < 0.15) {
+        type = 'uranium'; // Rare green explosive core
+        col = 0x22c55e;
+        hp = 2;
+        r = 1.3;
+        pts = 400;
+    } else if (typeRoll < 0.40) {
+        type = 'ice'; // Fast icy comet
+        col = 0x38bdf8;
+        hp = 1;
+        r = 0.8;
+        pts = 200;
+    }
+
+    const astGeo = new THREE.DodecahedronGeometry(r, 1);
+    const astMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.8, emissive: type === 'uranium' ? 0x16a34a : 0x000000, emissiveIntensity: 0.5 });
+    const ast = new THREE.Mesh(astGeo, astMat);
+
+    ast.position.set((Math.random() - 0.5) * 22, 0, -28);
+    ast.userData = {
+        type,
+        hp,
+        color: col,
+        points: pts,
+        speed: (0.16 + Math.random() * 0.12 * gameState.wave) * mult,
+        rotX: (Math.random() - 0.5) * 0.06,
+        rotY: (Math.random() - 0.5) * 0.06
+    };
+    scene.add(ast);
+    gameState.enemies.push(ast);
+}
+
+function createExplosionParticles(pos, color = 0xf97316) {
+    for (let i = 0; i < 14; i++) {
+        const pGeo = new THREE.DodecahedronGeometry(0.2 + Math.random() * 0.2, 0);
+        const pMat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.9 });
+        const p = new THREE.Mesh(pGeo, pMat);
+        p.position.copy(pos);
+        p.userData = {
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: (Math.random() - 0.5) * 0.3,
+            vz: (Math.random() - 0.5) * 0.5,
+            life: 1.0
+        };
+        scene.add(p);
+        gameState.particles.push(p);
     }
 }
 
+// --------------------------------------------------------------------------
+// 2. GAME 2: ⚛️ QUANTUM TUNNELING BARRIER SORTER
+// --------------------------------------------------------------------------
+function buildQuantumGameWorld(group) {
+    // Accelerator Cannon Base & Emitter Track
+    const track = new THREE.Mesh(new THREE.RingGeometry(8.5, 9.5, 32, 1, 0, Math.PI), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8 }));
+    track.rotation.x = Math.PI / 2;
+    track.position.set(0, 0, 6);
+    group.add(track);
+
+    const emitter = new THREE.Group();
+    const cannonMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.9, 2.5, 16), new THREE.MeshStandardMaterial({ color: 0xa855f7, metalness: 0.8, roughness: 0.2 }));
+    cannonMesh.rotation.x = Math.PI / 2;
+    emitter.add(cannonMesh);
+
+    emitter.position.set(0, 0, 7);
+    group.add(emitter);
+    gameState.player = emitter;
+
+    // Center Potential Energy Barrier (V0)
+    const barrierGeo = new THREE.BoxGeometry(18, 2.5, 0.6);
+    const barrierMat = new THREE.MeshPhysicalMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.45, roughness: 0.1, transmission: 0.6 });
+    const barrier = new THREE.Mesh(barrierGeo, barrierMat);
+    barrier.position.set(0, 0, 0);
+    barrier.name = 'quantumBarrier';
+    group.add(barrier);
+
+    // 3 Detector Spectrometer Collector Sinks
+    const bins = [
+        { label: 'Tunnel Sink (E < V₀)', col: 0x00f0ff, x: -6, type: 'tunnel' },
+        { label: 'Resonance Sink (E ≈ V₀)', col: 0xfacc15, x: 0, type: 'resonate' },
+        { label: 'Reflect Sink (E > V₀)', col: 0xec4899, x: 6, type: 'reflect' }
+    ];
+
+    bins.forEach(b => {
+        const binMesh = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.2, 3.5), new THREE.MeshStandardMaterial({ color: b.col, transparent: true, opacity: 0.6, roughness: 0.3 }));
+        binMesh.position.set(b.x, 0, -9);
+        binMesh.userData = { binType: b.type };
+        group.add(binMesh);
+
+        const lbl = createLabelSprite(b.type.toUpperCase(), '🎯');
+        lbl.position.set(b.x, 2.0, -9);
+        lbl.scale.set(3.5, 0.9, 1);
+        group.add(lbl);
+    });
+
+    gameState.waveEnergy = 5.0;
+    gameState.barrierHeight = 6.0;
+    gameState.quantumQuota = 3;
+    gameState.quantumProgress = 0;
+    gameState.quantumTargetState = 'tunnel';
+}
+
 function fireQuantumWavepacket() {
-    if (!gameState.player) return;
+    if (!gameState.player || !gameState.running) return;
     sound.playQuantumPing();
-    const packet = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 16), new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00f0ff, emissiveIntensity: 0.8 }));
-    packet.position.set(gameState.player.position.x, 0, gameState.player.position.z - 1);
-    packet.userData = { speed: 0.4, isQuantum: true };
+
+    const E = gameState.waveEnergy;
+    const V0 = gameState.barrierHeight;
+
+    // Real Quantum Transmission Probability (T)
+    const L = 1.0;
+    let T = 0.0;
+    if (E < V0) {
+        const k2 = Math.sqrt(2 * (V0 - E));
+        T = 1 / (1 + (V0 * V0 * Math.sinh(k2 * L) ** 2) / (4 * E * (V0 - E)));
+    } else {
+        const k1 = Math.sqrt(2 * (E - V0));
+        T = 1 / (1 + (V0 * V0 * Math.sin(k1 * L) ** 2) / (4 * E * (E - V0)));
+    }
+
+    const tunnels = Math.random() < T;
+
+    const packet = new THREE.Mesh(
+        new THREE.SphereGeometry(0.55, 16, 16),
+        new THREE.MeshStandardMaterial({ color: tunnels ? 0x00f0ff : 0xec4899, emissive: tunnels ? 0x0284c7 : 0xbe185d, emissiveIntensity: 0.8 })
+    );
+    packet.position.set(gameState.player.position.x, 0, gameState.player.position.z - 1.2);
+    packet.userData = {
+        vx: Math.sin(gameState.player.rotation.y) * 0.45,
+        vz: -Math.cos(gameState.player.rotation.y) * 0.45,
+        energy: E,
+        tunnels: tunnels,
+        passedBarrier: false
+    };
     scene.add(packet);
     gameState.lasers.push(packet);
 }
 
-function captureFallingAtom() {
+// --------------------------------------------------------------------------
+// 3. GAME 3: 🧪 CHEMICAL ALCHEMY MOLECULE CRAFTER
+// --------------------------------------------------------------------------
+function buildAlchemyGameWorld(group) {
+    // Magnetic Ion Catcher Basket
+    const catcher = new THREE.Group();
+    const dish = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 1.4, 0.9, 32), new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8, roughness: 0.2 }));
+    catcher.add(dish);
+
+    const forcefield = new THREE.Mesh(new THREE.SphereGeometry(2.0, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35, side: THREE.DoubleSide }));
+    forcefield.position.y = 0.4;
+    catcher.add(forcefield);
+
+    catcher.position.set(0, 0, 7.5);
+    group.add(catcher);
+    gameState.player = catcher;
+
+    gameState.alchemyInventory = { H: 0, C: 0, O: 0, N: 0, Na: 0, Cl: 0 };
+    gameState.alchemyTargetIndex = 0;
+    gameState.alchemyTargetMolecule = ALCHEMY_RECIPES[0];
+}
+
+function spawnAlchemyAtom() {
+    const pool = [
+        { s: 'H', col: 0xffffff, r: 0.4 },
+        { s: 'H', col: 0xffffff, r: 0.4 },
+        { s: 'O', col: 0xef4444, r: 0.55 },
+        { s: 'C', col: 0x334155, r: 0.6 },
+        { s: 'N', col: 0x2563eb, r: 0.55 },
+        { s: 'Na', col: 0x8b5cf6, r: 0.65 },
+        { s: 'Cl', col: 0x22c55e, r: 0.6 }
+    ];
+    const chosen = pool[Math.floor(Math.random() * pool.length)];
+
+    const atomGroup = new THREE.Group();
+    const sphere = new THREE.Mesh(new THREE.SphereGeometry(chosen.r, 24, 24), new THREE.MeshStandardMaterial({ color: chosen.col, roughness: 0.4 }));
+    atomGroup.add(sphere);
+
+    const lbl = createLabelSprite(chosen.s, '⚛️');
+    lbl.position.y = chosen.r + 0.8;
+    lbl.scale.set(2.0, 0.5, 1);
+    atomGroup.add(lbl);
+
+    atomGroup.position.set((Math.random() - 0.5) * 18, 0, -22);
+    atomGroup.userData = {
+        symbol: chosen.s,
+        speed: 0.18 + Math.random() * 0.08,
+        rotY: 0.02
+    };
+    scene.add(atomGroup);
+    gameState.enemies.push(atomGroup);
+}
+
+function synthesizeAlchemyMolecule() {
+    if (!gameState.running) return;
+    const target = gameState.alchemyTargetMolecule;
+    if (!target) return;
+
+    let satisfied = true;
+    for (const elem in target.req) {
+        if ((gameState.alchemyInventory[elem] || 0) < target.req[elem]) {
+            satisfied = false;
+            break;
+        }
+    }
+
+    if (satisfied) {
+        sound.playLaser();
+        for (const elem in target.req) {
+            gameState.alchemyInventory[elem] -= target.req[elem];
+        }
+        gameState.score += target.points;
+        showToast(`🧪 Synthesized ${target.name} (${target.formula})! +${target.points} pts`);
+
+        // Advance Recipe
+        gameState.alchemyTargetIndex = (gameState.alchemyTargetIndex + 1) % ALCHEMY_RECIPES.length;
+        gameState.alchemyTargetMolecule = ALCHEMY_RECIPES[gameState.alchemyTargetIndex];
+
+        updateGameHud();
+        renderGameSubHud();
+    } else {
+        showToast('⚠️ Missing required elements for: ' + target.formula);
+    }
+}
+
+function purgeAlchemyInventory() {
     sound.playClick();
+    gameState.alchemyInventory = { H: 0, C: 0, O: 0, N: 0, Na: 0, Cl: 0 };
+    showToast('🧹 Purged reactor inventory.');
+    renderGameSubHud();
 }
 
-function launchSlingshotProbe() {
+// --------------------------------------------------------------------------
+// 4. GAME 4: 🪐 GRAVITATIONAL SLINGSHOT ORBITAL INSERTION
+// --------------------------------------------------------------------------
+function buildSlingshotGameWorld(group) {
+    // Earth Gravity Core (M = 800)
+    const earth = new THREE.Mesh(new THREE.SphereGeometry(2.6, 32, 32), new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.5 }));
+    earth.position.set(-9, 0, 5);
+    group.add(earth);
+    const eLbl = createLabelSprite('EARTH (Origin)', '🌍');
+    eLbl.position.set(-9, 3.8, 5);
+    group.add(eLbl);
+
+    // Orbiting Luna (Moon, M = 160)
+    const moon = new THREE.Mesh(new THREE.SphereGeometry(1.1, 24, 24), new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.8 }));
+    moon.position.set(-1, 0, 0);
+    moon.name = 'slingshotMoon';
+    group.add(moon);
+    const mLbl = createLabelSprite('MOON (Gravity Slingshot)', '🌕');
+    mLbl.position.set(-1, 2.2, 0);
+    moon.add(mLbl);
+
+    // Mars Target Destination (Capture Corridor Ring)
+    const mars = new THREE.Mesh(new THREE.SphereGeometry(1.9, 32, 32), new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.6 }));
+    mars.position.set(10, 0, -10);
+    group.add(mars);
+    const marsLbl = createLabelSprite('MARS (Capture Goal)', '🔴');
+    marsLbl.position.set(10, 3.0, -10);
+    group.add(marsLbl);
+
+    // Green Capture Orbit Corridor
+    const corridor = new THREE.Mesh(new THREE.RingGeometry(3.0, 4.2, 64), new THREE.MeshBasicMaterial({ color: 0x22c55e, side: THREE.DoubleSide, transparent: true, opacity: 0.35 }));
+    corridor.rotation.x = Math.PI / 2;
+    corridor.position.set(10, 0, -10);
+    group.add(corridor);
+
+    // Artemis Exploration Probe
+    const probe = new THREE.Group();
+    const probeBody = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 1.2), new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.9 }));
+    probe.add(probeBody);
+    const solarWing = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.05, 0.8), new THREE.MeshStandardMaterial({ color: 0x1e3a8a }));
+    probe.add(solarWing);
+
+    probe.position.set(-7, 0, 5);
+    group.add(probe);
+    gameState.slingshotCraft = probe;
+    gameState.player = probe;
+
+    gameState.slingshotVel = { x: 0, y: 0, z: 0 };
+    gameState.slingshotHeading = -Math.PI / 4;
+    gameState.slingshotFuel = 100;
+    gameState.slingshotStatus = 'aiming';
+    gameState.slingshotMoonAngle = 0;
+}
+
+function fireSlingshotEngine() {
+    if (!gameState.slingshotCraft || !gameState.running || gameState.slingshotFuel <= 0) return;
     sound.playLaser();
-    gameState.slingshotVel = { x: 0.18, z: -0.18 };
-    showToast('🚀 Spacecraft probe launched toward Moon gravity assist!');
+
+    const thrust = 0.06;
+    gameState.slingshotVel.x += Math.cos(gameState.slingshotHeading) * thrust;
+    gameState.slingshotVel.z += Math.sin(gameState.slingshotHeading) * thrust;
+    gameState.slingshotFuel = Math.max(0, gameState.slingshotFuel - 8);
+    gameState.slingshotStatus = 'flying';
+
+    showToast(`🚀 Main Burn Engaged! Fuel: ${Math.round(gameState.slingshotFuel)}%`);
+    renderGameSubHud();
 }
 
-function spawnAsteroidEnemy() {
-    const enemy = new THREE.Mesh(new THREE.DodecahedronGeometry(0.8 + Math.random() * 0.8, 1), new THREE.MeshStandardMaterial({ color: 0x8b5cf6, roughness: 0.8 }));
-    enemy.position.set((Math.random() - 0.5) * 20, 0, -25);
-    enemy.userData = { speed: 0.15 + Math.random() * 0.15 * gameState.wave, rotX: Math.random() * 0.05, rotY: Math.random() * 0.05 };
-    scene.add(enemy);
-    gameState.enemies.push(enemy);
-}
-
-function spawnFallingAtom() {
-    const atomTypes = [{ s: 'H', col: 0xffffff }, { s: 'O', col: 0xef4444 }, { s: 'C', col: 0x334155 }];
-    const chosen = atomTypes[Math.floor(Math.random() * atomTypes.length)];
-    const atom = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshStandardMaterial({ color: chosen.col }));
-    atom.position.set((Math.random() - 0.5) * 16, 0, -18);
-    atom.userData = { speed: 0.18, type: chosen.s };
-    scene.add(atom);
-    gameState.enemies.push(atom);
-}
-
-function updateGamePhysics() {
+// --------------------------------------------------------------------------
+// 5. MASTER GAME LOOP & PHYSICS UPDATE ROUTER
+// --------------------------------------------------------------------------
+function updateActiveGamePhysics() {
     if (!gameState.player) return;
 
-    const moveSpeed = 0.25;
+    if (currentGame === 'space') {
+        updateSpaceCombatPhysics();
+    } else if (currentGame === 'quantum') {
+        updateQuantumPhysics();
+    } else if (currentGame === 'alchemy') {
+        updateAlchemyPhysics();
+    } else if (currentGame === 'slingshot') {
+        updateSlingshotPhysics();
+    }
+
+    // Update Particle System
+    for (let i = gameState.particles.length - 1; i >= 0; i--) {
+        const p = gameState.particles[i];
+        if (p.userData.scaleRate) {
+            const ds = p.userData.scaleRate * 0.02;
+            p.scale.x += ds;
+            p.scale.y += ds;
+            p.scale.z += ds;
+            if (p.material) p.material.opacity -= 0.02;
+            if (p.material && p.material.opacity <= 0) {
+                scene.remove(p);
+                gameState.particles.splice(i, 1);
+            }
+        } else if (p.userData.life !== undefined) {
+            p.position.x += p.userData.vx;
+            p.position.y += p.userData.vy;
+            p.position.z += p.userData.vz;
+            p.userData.life -= 0.03;
+            p.material.opacity = p.userData.life;
+            if (p.userData.life <= 0) {
+                scene.remove(p);
+                gameState.particles.splice(i, 1);
+            }
+        }
+    }
+}
+
+function updateSpaceCombatPhysics() {
+    const moveSpeed = 0.28;
     if (gameState.keys['KeyA'] || gameState.keys['ArrowLeft']) gameState.player.position.x = Math.max(-10, gameState.player.position.x - moveSpeed);
     if (gameState.keys['KeyD'] || gameState.keys['ArrowRight']) gameState.player.position.x = Math.min(10, gameState.player.position.x + moveSpeed);
-    if (currentGame === 'space') {
-        if (gameState.keys['KeyW'] || gameState.keys['ArrowUp']) gameState.player.position.z = Math.max(-5, gameState.player.position.z - moveSpeed);
-        if (gameState.keys['KeyS'] || gameState.keys['ArrowDown']) gameState.player.position.z = Math.min(10, gameState.player.position.z + moveSpeed);
-    }
+    if (gameState.keys['KeyW'] || gameState.keys['ArrowUp']) gameState.player.position.z = Math.max(-2, gameState.player.position.z - moveSpeed);
+    if (gameState.keys['KeyS'] || gameState.keys['ArrowDown']) gameState.player.position.z = Math.min(12, gameState.player.position.z + moveSpeed);
 
-    if (currentGame === 'space' && Math.random() < 0.035 * gameState.wave) {
-        spawnAsteroidEnemy();
-    } else if (currentGame === 'alchemy' && Math.random() < 0.03) {
-        spawnFallingAtom();
-    }
+    // Charge EMP Over Time
+    if (gameState.empCharge < 100) gameState.empCharge = Math.min(100, gameState.empCharge + 0.15);
+    if (gameState.triBeamTimer > 0) gameState.triBeamTimer -= 0.016;
 
-    // Lasers / Projectiles
+    // Spawn Asteroids
+    if (Math.random() < 0.038 * gameState.wave) spawnSpaceAsteroid();
+
+    // Lasers Update
     for (let i = gameState.lasers.length - 1; i >= 0; i--) {
         const l = gameState.lasers[i];
-        l.position.z -= l.userData.speed || 0.8;
-        if (l.position.z < -40) {
+        l.position.z -= l.userData.speed || 0.9;
+        if (l.position.z < -35) {
             scene.remove(l);
             gameState.lasers.splice(i, 1);
         }
     }
 
-    // Enemies / Falling Objects
+    // Asteroids Update & Collisions
     for (let j = gameState.enemies.length - 1; j >= 0; j--) {
         const e = gameState.enemies[j];
         e.position.z += e.userData.speed;
-        if (e.userData.rotX) e.rotation.x += e.userData.rotX;
-        if (e.userData.rotY) e.rotation.y += e.userData.rotY;
+        e.rotation.x += e.userData.rotX || 0.01;
+        e.rotation.y += e.userData.rotY || 0.01;
 
-        if (e.position.distanceTo(gameState.player.position) < 1.6) {
-            if (currentGame === 'alchemy') {
-                sound.playQuantumPing();
-                gameState.score += 150;
-                updateGameHud();
-            } else {
-                sound.playExplosion();
-                gameState.lives--;
-                updateGameHud();
-                if (gameState.lives <= 0) {
-                    endActiveGame();
-                    return;
-                }
-            }
+        // Player Collision
+        const pDist = Math.hypot(e.position.x - gameState.player.position.x, e.position.z - gameState.player.position.z);
+        if (pDist < 1.8) {
+            sound.playExplosion();
+            createExplosionParticles(e.position, e.userData.color);
+            gameState.lives--;
+            updateGameHud();
             scene.remove(e);
             gameState.enemies.splice(j, 1);
+            if (gameState.lives <= 0) {
+                endActiveGame();
+                return;
+            }
             continue;
         }
 
+        // Laser Collisions
         for (let k = gameState.lasers.length - 1; k >= 0; k--) {
             const l = gameState.lasers[k];
-            if (l.position.distanceTo(e.position) < 1.4) {
+            const lDist = Math.hypot(l.position.x - e.position.x, l.position.z - e.position.z);
+            if (lDist < 1.6) {
                 sound.playExplosion();
-                scene.remove(e);
+                e.userData.hp -= l.userData.damage || 1;
+
+                if (e.userData.hp <= 0) {
+                    createExplosionParticles(e.position, e.userData.color);
+                    gameState.score += e.userData.points;
+                    scene.remove(e);
+                    gameState.enemies.splice(j, 1);
+                }
                 scene.remove(l);
-                gameState.enemies.splice(j, 1);
                 gameState.lasers.splice(k, 1);
-                gameState.score += 100 * gameState.wave;
                 updateGameHud();
                 break;
             }
         }
 
-        if (e && e.position.z > 15) {
+        // Asteroid breached defense perimeter
+        if (e && e.position.z > 14) {
+            gameState.earthShield = Math.max(0, gameState.earthShield - 15);
+            sound.playExplosion();
             scene.remove(e);
+            gameState.enemies.splice(j, 1);
+            if (gameState.earthShield <= 0) {
+                endActiveGame('EARTH SHIELD COLLAPSED');
+                return;
+            }
+        }
+    }
+    renderGameSubHud();
+}
+
+function updateQuantumPhysics() {
+    if (gameState.keys['KeyA'] || gameState.keys['ArrowLeft']) gameState.player.rotation.y = Math.min(0.7, gameState.player.rotation.y + 0.04);
+    if (gameState.keys['KeyD'] || gameState.keys['ArrowRight']) gameState.player.rotation.y = Math.max(-0.7, gameState.player.rotation.y - 0.04);
+    if (gameState.keys['KeyW'] || gameState.keys['ArrowUp']) gameState.waveEnergy = Math.min(10.0, gameState.waveEnergy + 0.08);
+    if (gameState.keys['KeyS'] || gameState.keys['ArrowDown']) gameState.waveEnergy = Math.max(1.0, gameState.waveEnergy - 0.08);
+
+    // Wavepackets Movement
+    for (let i = gameState.lasers.length - 1; i >= 0; i--) {
+        const p = gameState.lasers[i];
+        p.position.x += p.userData.vx;
+        p.position.z += p.userData.vz;
+
+        // Barrier Encounter (Z = 0)
+        if (!p.userData.passedBarrier && p.position.z <= 0) {
+            p.userData.passedBarrier = true;
+            if (!p.userData.tunnels) {
+                // Reflect
+                p.userData.vz = -p.userData.vz;
+                createExplosionParticles(p.position, 0xec4899);
+            } else {
+                createExplosionParticles(p.position, 0x00f0ff);
+            }
+        }
+
+        // Sorter Bin Collisions (Z = -9)
+        if (p.position.z < -8.5) {
+            let matched = false;
+            if (p.position.x < -3 && p.userData.tunnels) {
+                matched = true; // Tunnel bin
+                gameState.score += 250;
+            } else if (p.position.x > 3 && !p.userData.tunnels) {
+                matched = true; // Reflect bin
+                gameState.score += 250;
+            } else if (Math.abs(p.position.x) <= 3 && Math.abs(p.userData.energy - gameState.barrierHeight) < 1.0) {
+                matched = true; // Resonance bin
+                gameState.score += 400;
+            }
+
+            if (matched) {
+                sound.playLaser();
+                showToast('⚛️ Quantum State Sorted Successfully! +Score');
+                gameState.quantumProgress++;
+                if (gameState.quantumProgress >= gameState.quantumQuota) {
+                    gameState.wave++;
+                    gameState.quantumProgress = 0;
+                    gameState.barrierHeight = 4.0 + Math.random() * 4.0;
+                    showToast('🎉 WAVE ' + gameState.wave + ' COMPLETE! Quantum potential shifted!');
+                }
+            }
+            updateGameHud();
+            scene.remove(p);
+            gameState.lasers.splice(i, 1);
+        } else if (p.position.z > 14) {
+            scene.remove(p);
+            gameState.lasers.splice(i, 1);
+        }
+    }
+    renderGameSubHud();
+}
+
+function updateAlchemyPhysics() {
+    const moveSpeed = 0.32;
+    if (gameState.keys['KeyA'] || gameState.keys['ArrowLeft']) gameState.player.position.x = Math.max(-9, gameState.player.position.x - moveSpeed);
+    if (gameState.keys['KeyD'] || gameState.keys['ArrowRight']) gameState.player.position.x = Math.min(9, gameState.player.position.x + moveSpeed);
+
+    if (Math.random() < 0.04) spawnAlchemyAtom();
+
+    for (let j = gameState.enemies.length - 1; j >= 0; j--) {
+        const a = gameState.enemies[j];
+        a.position.z += a.userData.speed;
+        a.rotation.y += a.userData.rotY;
+
+        // Catch Atom in Ion Catcher
+        const aDist = Math.hypot(a.position.x - gameState.player.position.x, a.position.z - gameState.player.position.z);
+        if (aDist < 2.0) {
+            sound.playQuantumPing();
+            const s = a.userData.symbol;
+            gameState.alchemyInventory[s] = (gameState.alchemyInventory[s] || 0) + 1;
+            createExplosionParticles(a.position, 0x38bdf8);
+            scene.remove(a);
+            gameState.enemies.splice(j, 1);
+            renderGameSubHud();
+            continue;
+        }
+
+        if (a.position.z > 14) {
+            scene.remove(a);
             gameState.enemies.splice(j, 1);
         }
     }
+}
 
-    if (currentGame === 'slingshot' && gameState.slingshotProbe) {
-        gameState.slingshotProbe.position.x += gameState.slingshotVel.x;
-        gameState.slingshotProbe.position.z += gameState.slingshotVel.z;
+function updateSlingshotPhysics() {
+    const moon = scene.getObjectByName('slingshotMoon');
+    if (moon) {
+        gameState.slingshotMoonAngle += 0.015;
+        moon.position.x = -9 + Math.cos(gameState.slingshotMoonAngle) * 8.5;
+        moon.position.z = 5 + Math.sin(gameState.slingshotMoonAngle) * 8.5;
+    }
+
+    if (gameState.keys['KeyA'] || gameState.keys['ArrowLeft']) gameState.slingshotHeading -= 0.05;
+    if (gameState.keys['KeyD'] || gameState.keys['ArrowRight']) gameState.slingshotHeading += 0.05;
+    gameState.slingshotCraft.rotation.y = -gameState.slingshotHeading;
+
+    if (gameState.slingshotStatus === 'flying') {
+        const cp = gameState.slingshotCraft.position;
+
+        // Gravity Wells (Earth, Moon, Mars)
+        const G = 0.8;
+        const bodies = [
+            { pos: new THREE.Vector3(-9, 0, 5), M: 12.0 }, // Earth
+            { pos: moon ? moon.position : new THREE.Vector3(0, 0, 0), M: 5.5 }, // Moon
+            { pos: new THREE.Vector3(10, 0, -10), M: 8.0 } // Mars
+        ];
+
+        bodies.forEach(b => {
+            const dx = b.pos.x - cp.x;
+            const dz = b.pos.z - cp.z;
+            const dist = Math.max(1.2, Math.hypot(dx, dz));
+            const force = (G * b.M) / (dist * dist);
+            gameState.slingshotVel.x += (dx / dist) * force * 0.016;
+            gameState.slingshotVel.z += (dz / dist) * force * 0.016;
+        });
+
+        cp.x += gameState.slingshotVel.x;
+        cp.z += gameState.slingshotVel.z;
+
+        // Check Mars Capture Corridor (Pos: 10, 0, -10, Radius: 3.0 to 4.2)
+        const marsDist = Math.hypot(cp.x - 10, cp.z - (-10));
+        const speed = Math.hypot(gameState.slingshotVel.x, gameState.slingshotVel.z);
+        if (marsDist >= 2.5 && marsDist <= 4.5 && speed < 0.25) {
+            sound.playLaser();
+            gameState.score += 2000;
+            updateGameHud();
+            gameState.running = false;
+            showToast('🎉 MISSION ACCOMPLISHED! Mars Orbital Capture Achieved!');
+            const goModal = document.getElementById('gameOver');
+            const title = document.getElementById('gameOverTitle');
+            if (goModal && title) {
+                title.textContent = '🏆 MARS CAPTURE SUCCESS';
+                title.style.color = '#22c55e';
+                goModal.style.display = 'block';
+            }
+        }
+    }
+    renderGameSubHud();
+}
+
+function renderGameSubHud() {
+    const hud = document.getElementById('gameSubHud');
+    if (!hud) return;
+
+    if (currentGame === 'space') {
+        hud.innerHTML = `
+            <div class="game-sub-item">
+                <span class="game-sub-label">Earth Shield Integrity</span>
+                <span class="game-sub-val">${Math.round(gameState.earthShield)}%</span>
+                <div class="game-progress-bar"><div class="game-progress-fill" style="width:${gameState.earthShield}%;background:${gameState.earthShield < 30 ? '#ef4444' : '#00f0ff'};"></div></div>
+            </div>
+            <div class="game-sub-item">
+                <span class="game-sub-label">Smart EMP Capacitor</span>
+                <span class="game-sub-val">${Math.round(gameState.empCharge)}%</span>
+                <div class="game-progress-bar"><div class="game-progress-fill" style="width:${gameState.empCharge}%;background:#a855f7;"></div></div>
+            </div>
+        `;
+    } else if (currentGame === 'quantum') {
+        hud.innerHTML = `
+            <div class="game-sub-item">
+                <span class="game-sub-label">Particle Energy (E)</span>
+                <span class="game-sub-val">${gameState.waveEnergy.toFixed(1)} eV</span>
+            </div>
+            <div class="game-sub-item">
+                <span class="game-sub-label">Barrier Potential (V₀)</span>
+                <span class="game-sub-val">${gameState.barrierHeight.toFixed(1)} eV</span>
+            </div>
+            <div class="game-sub-item">
+                <span class="game-sub-label">Wave Sorter Progress</span>
+                <span class="game-sub-val">${gameState.quantumProgress} / ${gameState.quantumQuota}</span>
+            </div>
+        `;
+    } else if (currentGame === 'alchemy') {
+        const t = gameState.alchemyTargetMolecule || ALCHEMY_RECIPES[0];
+        const inv = gameState.alchemyInventory;
+        hud.innerHTML = `
+            <div class="game-sub-item">
+                <span class="game-sub-label">Target Synthesis</span>
+                <span class="game-sub-val" style="color:#facc15;">${t.name} (${t.formula})</span>
+            </div>
+            <div class="game-sub-item">
+                <span class="game-sub-label">Collected Atoms</span>
+                <span class="game-sub-val">H:${inv.H || 0} C:${inv.C || 0} O:${inv.O || 0} N:${inv.N || 0} Na:${inv.Na || 0} Cl:${inv.Cl || 0}</span>
+            </div>
+        `;
+    } else if (currentGame === 'slingshot') {
+        hud.innerHTML = `
+            <div class="game-sub-item">
+                <span class="game-sub-label">Delta-V Fuel</span>
+                <span class="game-sub-val">${Math.round(gameState.slingshotFuel)}%</span>
+                <div class="game-progress-bar"><div class="game-progress-fill" style="width:${gameState.slingshotFuel}%;"></div></div>
+            </div>
+            <div class="game-sub-item">
+                <span class="game-sub-label">Probe Speed</span>
+                <span class="game-sub-val">${(Math.hypot(gameState.slingshotVel.x, gameState.slingshotVel.z) * 100).toFixed(1)} km/s</span>
+            </div>
+        `;
     }
 }
 
@@ -4266,30 +4863,35 @@ function startActiveGame() {
     gameState.score = 0;
     gameState.lives = 3;
     gameState.wave = 1;
+    gameState.earthShield = 100;
+    gameState.empCharge = 100;
     updateGameHud();
+    renderGameSubHud();
 
     const goModal = document.getElementById('gameOver');
     if (goModal) goModal.style.display = 'none';
 
     sound.playClick();
-    showToast('🚀 Game Simulation Active! Engage controls!');
+    showToast(`🚀 Mission Started: ${document.getElementById('gameSelect')?.options[document.getElementById('gameSelect').selectedIndex].text}`);
 }
 
-function endActiveGame() {
+function endActiveGame(customTitle = 'MISSION TERMINATED') {
     gameState.running = false;
     sound.playExplosion();
 
     const goModal = document.getElementById('gameOver');
+    const title = document.getElementById('gameOverTitle');
     const finalScoreEl = document.getElementById('finalScore');
+    if (title) {
+        title.textContent = customTitle;
+        title.style.color = '#ef4444';
+    }
     if (goModal) goModal.style.display = 'block';
     if (finalScoreEl) finalScoreEl.textContent = gameState.score;
 }
 
 function restartActiveGame() {
-    gameState.enemies.forEach(e => scene.remove(e));
-    gameState.lasers.forEach(l => scene.remove(l));
-    gameState.enemies = [];
-    gameState.lasers = [];
+    switchGame(currentGame);
     startActiveGame();
 }
 
