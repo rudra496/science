@@ -1,11 +1,11 @@
 /**
- * SCIENCE LAB 3D — MASTER AUTONOMOUS SIMULATION & EXPERIMENT ENGINE (v2.5)
- * Pure Client-Side Architecture for GitHub Pages / WebGL / Three.js r128
- * Built for Rudra Sarker (rudra496.github.io/science)
+ * SCIENCE LAB 3D — MASTER COMPREHENSIVE SIMULATION & ARCADE ENGINE (v2.5)
+ * 100% Client-Side WebGL / Three.js r128 / Web Audio API / Vanilla JS
+ * Author: Rudra Sarker (rudra496.github.io/science)
  */
 
 // ==========================================================================
-// 1. GLOBAL STATE & SYSTEM INITIALIZATION
+// 1. GLOBAL STATE, AUDIO SYNTHESIZER & WEBGL ENGINE
 // ==========================================================================
 let currentPage = 'home';
 let scene, camera, renderer, controls;
@@ -21,7 +21,7 @@ let currentExperiment = 'slit';
 let currentGame = 'space';
 let resizeHandler = null;
 
-// Sound FX Engine via Web Audio API (100% Client-Side, No External Audio Files)
+// Native Web Audio Synthesizer Engine (Zero external audio files)
 class SoundEngine {
     constructor() {
         this.ctx = null;
@@ -45,14 +45,14 @@ class SoundEngine {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(880, this.ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(110, this.ctx.currentTime + 0.15);
+        osc.frequency.setValueAtTime(920, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.14);
         gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.14);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start();
-        osc.stop(this.ctx.currentTime + 0.15);
+        osc.stop(this.ctx.currentTime + 0.14);
     }
 
     playExplosion() {
@@ -63,14 +63,14 @@ class SoundEngine {
         const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * dur, this.ctx.sampleRate);
         const data = buf.getChannelData(0);
         for (let i = 0; i < buf.length; i++) {
-            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.1));
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.08));
         }
         const src = this.ctx.createBufferSource();
         src.buffer = buf;
         const filter = this.ctx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(300, this.ctx.currentTime);
-        filter.frequency.linearRampToValueAtTime(50, this.ctx.currentTime + dur);
+        filter.frequency.setValueAtTime(280, this.ctx.currentTime);
+        filter.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + dur);
         const gain = this.ctx.createGain();
         gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + dur);
@@ -87,14 +87,14 @@ class SoundEngine {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(523.25, this.ctx.currentTime); // C5
-        osc.frequency.exponentialRampToValueAtTime(1046.5, this.ctx.currentTime + 0.2); // C6
+        osc.frequency.setValueAtTime(587.33, this.ctx.currentTime); // D5
+        osc.frequency.exponentialRampToValueAtTime(1174.66, this.ctx.currentTime + 0.18); // D6
         gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+        gain.gain.exponentialRampToValueAtTime(0.005, this.ctx.currentTime + 0.22);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start();
-        osc.stop(this.ctx.currentTime + 0.25);
+        osc.stop(this.ctx.currentTime + 0.22);
     }
 
     playClick() {
@@ -104,19 +104,19 @@ class SoundEngine {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(800, this.ctx.currentTime);
-        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
+        osc.frequency.setValueAtTime(880, this.ctx.currentTime);
+        gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.035);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start();
-        osc.stop(this.ctx.currentTime + 0.04);
+        osc.stop(this.ctx.currentTime + 0.035);
     }
 }
 const sound = new SoundEngine();
 
 // ==========================================================================
-// 2. 118 CHEMICAL ELEMENTS DATASET (COMPLETE)
+// 2. COMPLETE 118 ELEMENTS DATASET
 // ==========================================================================
 const ELEMENTS = [
     {n:1,s:'H',name:'Hydrogen',cat:'nonmetal',color:'#90CAF9',mass:1.008,p:1,g:1,config:'1s¹',found:'1766',use:'Rocket fuel, ammonia, fuel cells',fact:'Most abundant cosmic element (75% universe mass)'},
@@ -185,7 +185,7 @@ const ELEMENTS = [
     {n:64,s:'Gd',name:'Gadolinium',cat:'lanthanide',color:'#FFCC80',mass:157.25,p:6,g:3,config:'[Xe]4f⁷5d¹6s²',found:'1880',use:'MRI scan intravenous contrast agents, neutron shielding',fact:'Highly paramagnetic at room temperature'},
     {n:65,s:'Tb',name:'Terbium',cat:'lanthanide',color:'#80DEEA',mass:158.93,p:6,g:3,config:'[Xe]4f⁹6s²',found:'1843',use:'Terfenol-D magnetostrictive sonar transducers, phosphors',fact:'Changes mechanical length when exposed to magnetic fields'},
     {n:66,s:'Dy',name:'Dysprosium',cat:'lanthanide',color:'#B2FF59',mass:162.50,p:6,g:3,config:'[Xe]4f¹⁰6s²',found:'1886',use:'Wind turbine magnets, nuclear reactor control rods',fact:'Name translates from Greek as "hard to get at"'},
-    {n:67,s:'Ho',name:'Holmium',cat:'lanthanide',color:'#69F0AE',mass:164.93,p:6,g:3,config:'[Xe]4f¹¹6s²',found:'1878',use:'Medical surgery lasers, magnetic flux concentrators',fact:'Has highest magnetic magnetic moment of any natural element'},
+    {n:67,s:'Ho',name:'Holmium',cat:'lanthanide',color:'#69F0AE',mass:164.93,p:6,g:3,config:'[Xe]4f¹¹6s²',found:'1878',use:'Medical surgery lasers, magnetic flux concentrators',fact:'Has highest magnetic moment of any natural element'},
     {n:68,s:'Er',name:'Erbium',cat:'lanthanide',color:'#EA80FC',mass:167.26,p:6,g:3,config:'[Xe]4f¹²6s²',found:'1843',use:'Erbium-doped fiber optic amplifiers (EDFA) powering internet',fact:'Amplifies global internet fiber signals around the world'},
     {n:69,s:'Tm',name:'Thulium',cat:'lanthanide',color:'#7C4DFF',mass:168.93,p:6,g:3,config:'[Xe]4f¹³6s²',found:'1879',use:'Portable dental X-ray machines, surgical lasers',fact:'Second rarest natural lanthanide on Earth'},
     {n:70,s:'Yb',name:'Ytterbium',cat:'lanthanide',color:'#448AFF',mass:173.05,p:6,g:3,config:'[Xe]4f¹⁴6s²',found:'1878',use:'Optical atomic clocks, high-power fiber lasers',fact:'Fourth element named after the single Swedish quarry Ytterby'},
@@ -239,11 +239,9 @@ const ELEMENTS = [
     {n:118,s:'Og',name:'Oganesson',cat:'noble',color:'#F44336',mass:294,p:7,g:18,config:'[Rn]5f¹⁴6d¹⁰7s²7p⁶',found:'2002',use:'Transactinide quantum chemistry research',fact:'Heaviest known element in the universe; atomic number 118'}
 ];
 
-// Periodic Table Layout Grid Map (Period vs Group)
 function getPeriodicPosition(elem) {
     let col = elem.g;
     let row = elem.p;
-    // Lanthanides & Actinides positioning
     if (elem.n >= 57 && elem.n <= 71) {
         row = 8.5;
         col = elem.n - 57 + 3;
@@ -257,7 +255,7 @@ function getPeriodicPosition(elem) {
 }
 
 // ==========================================================================
-// 3. SCENE LIFECYCLE & WEBGL ENGINE HELPERS
+// 3. SCENE LIFECYCLE & WEBGL ENGINE
 // ==========================================================================
 function disposeHierarchy(obj) {
     if (!obj) return;
@@ -283,7 +281,6 @@ function createScene(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return null;
 
-    // Clean up previous animation frame and listeners
     if (animationId) {
         cancelAnimationFrame(animationId);
         animationId = null;
@@ -318,7 +315,7 @@ function createScene(containerId) {
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.maxDistance = 1200;
-    controls.minDistance = 2;
+    controls.minDistance = 1.5;
 
     resizeHandler = () => {
         if (container && camera && renderer) {
@@ -463,7 +460,6 @@ function initNav() {
         });
     }
 
-    // Audio Mute Toggle
     const audioBtn = document.getElementById('audioToggle');
     if (audioBtn) {
         audioBtn.addEventListener('click', () => {
@@ -473,7 +469,6 @@ function initNav() {
         });
     }
 
-    // Fullscreen Toggle
     const fsBtn = document.getElementById('fsToggle');
     if (fsBtn) {
         fsBtn.addEventListener('click', () => {
@@ -485,7 +480,6 @@ function initNav() {
         });
     }
 
-    // High-Res HD Snapshot Export
     const snapBtn = document.getElementById('snapBtn');
     if (snapBtn) {
         snapBtn.addEventListener('click', () => {
@@ -504,7 +498,6 @@ function initNav() {
         });
     }
 
-    // Global Search Autocomplete Engine
     initGlobalSearch();
 }
 
@@ -652,6 +645,15 @@ function initElements() {
                     model.rotation.y += 0.008 * rotSpeed;
                     model.rotation.x += 0.003 * rotSpeed;
                 }
+            } else if (currentElemMode === 'reaction') {
+                const rxnModel = scene.getObjectByName('interactiveModel');
+                if (rxnModel) {
+                    rxnModel.children.forEach(c => {
+                        if (c.userData.isSpark) {
+                            c.position.y += Math.sin(simTime * 5 + c.userData.offset) * 0.02;
+                        }
+                    });
+                }
             }
         }
         controls.update();
@@ -719,7 +721,6 @@ function buildPeriodicTable3D() {
         cardGroup.position.set(pos.x, pos.y, pos.z);
         cardGroup.userData = { element: elem, floatOffset: Math.random() * Math.PI * 2 };
 
-        // 3D Card Tile
         const tileGeo = new THREE.BoxGeometry(1.35, 1.4, 0.08);
         const tileMat = new THREE.MeshStandardMaterial({
             color: new THREE.Color(elem.color),
@@ -731,7 +732,6 @@ function buildPeriodicTable3D() {
         const tileMesh = new THREE.Mesh(tileGeo, tileMat);
         cardGroup.add(tileMesh);
 
-        // Canvas Texture with Atomic Symbol & Number
         const canvas = document.createElement('canvas');
         canvas.width = 256;
         canvas.height = 256;
@@ -742,23 +742,19 @@ function buildPeriodicTable3D() {
         ctx.lineWidth = 10;
         ctx.strokeRect(6, 6, 244, 244);
 
-        // Atomic Number
         ctx.fillStyle = '#94a3b8';
         ctx.font = 'bold 36px monospace';
         ctx.fillText(elem.n, 20, 50);
 
-        // Symbol
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 88px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(elem.s, 128, 145);
 
-        // Name
         ctx.fillStyle = '#cbd5e1';
         ctx.font = '500 28px sans-serif';
         ctx.fillText(elem.name, 128, 200);
 
-        // Atomic Weight
         ctx.fillStyle = elem.color;
         ctx.font = 'bold 22px monospace';
         ctx.fillText(elem.mass.toFixed(2), 128, 235);
@@ -776,7 +772,6 @@ function buildPeriodicTable3D() {
 
     scene.add(container);
 
-    // Interactive Click Handler on Elements
     const dom = renderer.domElement;
     dom.onpointerdown = (e) => {
         const rect = dom.getBoundingClientRect();
@@ -860,7 +855,6 @@ function setElemMode(mode) {
     if (rxnCtrl) rxnCtrl.style.display = mode === 'reaction' ? 'block' : 'none';
     if (latCtrl) latCtrl.style.display = mode === 'lattice' ? 'block' : 'none';
 
-    // Clear previous model containers
     disposeHierarchy(scene.getObjectByName('elementsContainer'));
     disposeHierarchy(scene.getObjectByName('atomModelGroup'));
     disposeHierarchy(scene.getObjectByName('interactiveModel'));
@@ -884,13 +878,11 @@ function setElemMode(mode) {
     }
 }
 
-// Bohr 3D Atomic Orbital Engine
 function buildBohrAtom3D(elem) {
     disposeHierarchy(scene.getObjectByName('atomModelGroup'));
     const atomGroup = new THREE.Group();
     atomGroup.name = 'atomModelGroup';
 
-    // Nucleus with protons (red) and neutrons (blue)
     const nucleusGroup = new THREE.Group();
     const nucleonCount = Math.min(elem.n * 2, 40);
     const nucleonGeo = new THREE.SphereGeometry(0.28, 16, 16);
@@ -907,7 +899,6 @@ function buildBohrAtom3D(elem) {
     }
     atomGroup.add(nucleusGroup);
 
-    // Shell configuration calculation (2, 8, 18, 32...)
     let remaining = elem.n;
     const shells = [];
     const maxCapacity = [2, 8, 18, 32, 50];
@@ -943,7 +934,6 @@ function buildBohrAtom3D(elem) {
     showToast(`Visualizing 3D Bohr Atomic Structure for ${elem.name} (#${elem.n})`);
 }
 
-// 3D Molecular Forge Engine
 function buildMolecule3D(type) {
     disposeHierarchy(scene.getObjectByName('interactiveModel'));
     const molGroup = new THREE.Group();
@@ -997,13 +987,44 @@ function buildMolecule3D(type) {
     scene.add(molGroup);
 }
 
-function setMoleculeStyle(style) {
-    const sel = document.getElementById('moleculeSelect');
-    buildMolecule3D(sel ? sel.value : 'water');
-    sound.playClick();
+function buildChemicalReactionScene(rxnType) {
+    disposeHierarchy(scene.getObjectByName('interactiveModel'));
+    const rxnGroup = new THREE.Group();
+    rxnGroup.name = 'interactiveModel';
+
+    // Reactant Vessel (Left)
+    const vessel1Geo = new THREE.CylinderGeometry(2, 2, 4, 32, 1, true);
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35, roughness: 0.1 });
+    const vessel1 = new THREE.Mesh(vessel1Geo, glassMat);
+    vessel1.position.set(-5, 0, 0);
+    rxnGroup.add(vessel1);
+
+    // Product Vessel (Right)
+    const vessel2 = new THREE.Mesh(vessel1Geo, glassMat);
+    vessel2.position.set(5, 0, 0);
+    rxnGroup.add(vessel2);
+
+    // Connecting Reaction Channel Tube
+    const tubeGeo = new THREE.CylinderGeometry(0.5, 0.5, 8, 16);
+    const tubeMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.4 });
+    const tube = new THREE.Mesh(tubeGeo, tubeMat);
+    tube.rotation.z = Math.PI / 2;
+    tube.position.set(0, 1.5, 0);
+    rxnGroup.add(tube);
+
+    // Sparks & Reaction Glow
+    for (let i = 0; i < 20; i++) {
+        const sparkGeo = new THREE.SphereGeometry(0.15, 8, 8);
+        const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+        const spark = new THREE.Mesh(sparkGeo, sparkMat);
+        spark.position.set((Math.random() - 0.5) * 3, Math.random() * 2, (Math.random() - 0.5) * 3);
+        spark.userData = { isSpark: true, offset: Math.random() * 10 };
+        rxnGroup.add(spark);
+    }
+
+    scene.add(rxnGroup);
 }
 
-// Chemical Reaction Engine
 function runChemicalReaction() {
     sound.playExplosion();
     showToast('Exothermic Chemical Reaction Executed! ΔH Released.');
@@ -1021,7 +1042,6 @@ function runChemicalReaction() {
     }
 }
 
-// 3D Crystal Lattice Generator
 function buildCrystalLattice3D(latticeType) {
     disposeHierarchy(scene.getObjectByName('interactiveModel'));
     const latGroup = new THREE.Group();
@@ -1035,26 +1055,18 @@ function buildCrystalLattice3D(latticeType) {
     for (let x = -1; x <= 1; x++) {
         for (let y = -1; y <= 1; y++) {
             for (let z = -1; z <= 1; z++) {
-                // Corner atoms
                 const corner = new THREE.Mesh(sphereGeo, goldMat);
                 corner.position.set(x * spacing, y * spacing, z * spacing);
                 latGroup.add(corner);
 
-                // Face Centered (FCC)
-                if (latticeType === 'fcc') {
-                    if (x < 1 && y < 1) {
-                        const face = new THREE.Mesh(sphereGeo, silverMat);
-                        face.position.set((x + 0.5) * spacing, (y + 0.5) * spacing, z * spacing);
-                        latGroup.add(face);
-                    }
-                }
-                // Body Centered (BCC)
-                else if (latticeType === 'bcc') {
-                    if (x < 1 && y < 1 && z < 1) {
-                        const body = new THREE.Mesh(sphereGeo, silverMat);
-                        body.position.set((x + 0.5) * spacing, (y + 0.5) * spacing, (z + 0.5) * spacing);
-                        latGroup.add(body);
-                    }
+                if (latticeType === 'fcc' && x < 1 && y < 1) {
+                    const face = new THREE.Mesh(sphereGeo, silverMat);
+                    face.position.set((x + 0.5) * spacing, (y + 0.5) * spacing, z * spacing);
+                    latGroup.add(face);
+                } else if (latticeType === 'bcc' && x < 1 && y < 1 && z < 1) {
+                    const body = new THREE.Mesh(sphereGeo, silverMat);
+                    body.position.set((x + 0.5) * spacing, (y + 0.5) * spacing, (z + 0.5) * spacing);
+                    latGroup.add(body);
                 }
             }
         }
@@ -1086,7 +1098,6 @@ function initSolar() {
     camera.position.set(0, 45, 75);
     scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 
-    // Sun Light Source
     const sunLight = new THREE.PointLight(0xffffff, 2.5, 300);
     sunLight.position.set(0, 0, 0);
     scene.add(sunLight);
@@ -1100,17 +1111,14 @@ function initSolar() {
             simTime += 0.01 * speedMultiplier;
 
             celestialMeshes.forEach(item => {
-                // Orbit Revolution
                 if (item.data.speed > 0) {
                     const angle = simTime * item.data.speed * 0.3;
                     item.group.position.x = Math.cos(angle) * item.data.dist;
                     item.group.position.z = Math.sin(angle) * item.data.dist;
                 }
-                // Axial Self-Rotation
                 if (item.planetMesh) {
                     item.planetMesh.rotation.y += item.data.rot;
                 }
-                // Moons Revolution
                 if (item.moons) {
                     item.moons.forEach(m => {
                         const mAngle = simTime * m.speed * 2;
@@ -1120,7 +1128,6 @@ function initSolar() {
                 }
             });
 
-            // Asteroid Belt Rotation
             const asteroidPoints = scene.getObjectByName('asteroidBelt');
             if (asteroidPoints) asteroidPoints.rotation.y += 0.001 * speedMultiplier;
         }
@@ -1142,7 +1149,6 @@ function buildSolarSystem() {
         const pGroup = new THREE.Group();
         pGroup.position.x = p.dist;
 
-        // Planet Sphere
         const geo = new THREE.SphereGeometry(p.r, 32, 32);
         const mat = p.glow
             ? new THREE.MeshBasicMaterial({ color: p.col })
@@ -1150,14 +1156,12 @@ function buildSolarSystem() {
         const planetMesh = new THREE.Mesh(geo, mat);
         pGroup.add(planetMesh);
 
-        // Sun Corona / Glow Sphere
         if (p.glow) {
             const glowGeo = new THREE.SphereGeometry(p.r * 1.25, 32, 32);
             const glowMat = new THREE.MeshBasicMaterial({ color: 0xff7700, transparent: true, opacity: 0.35, side: THREE.BackSide });
             pGroup.add(new THREE.Mesh(glowGeo, glowMat));
         }
 
-        // Saturn Rings
         if (p.rings) {
             const ringGeo = new THREE.RingGeometry(p.r * 1.4, p.r * 2.4, 64);
             const ringMat = new THREE.MeshStandardMaterial({ color: 0xe2d4b7, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
@@ -1166,7 +1170,6 @@ function buildSolarSystem() {
             pGroup.add(ringMesh);
         }
 
-        // Earth Moon
         const moons = [];
         if (p.hasMoon) {
             const moonGeo = new THREE.SphereGeometry(0.22, 16, 16);
@@ -1177,7 +1180,6 @@ function buildSolarSystem() {
             moons.push({ mesh: moonMesh, dist: 1.6, speed: 1.5 });
         }
 
-        // Orbit Path Line Ring
         if (p.dist > 0) {
             const orbitGeo = new THREE.RingGeometry(p.dist - 0.04, p.dist + 0.04, 128);
             const orbitMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.18 });
@@ -1190,7 +1192,6 @@ function buildSolarSystem() {
         celestialMeshes.push({ group: pGroup, planetMesh, data: p, moons });
     });
 
-    // Main Asteroid Belt Particle System (3,000+ Asteroids)
     const asteroidGeo = new THREE.BufferGeometry();
     const asteroidPositions = [];
     for (let i = 0; i < 3000; i++) {
@@ -1305,7 +1306,7 @@ function buildDnaHelix() {
 
     const turns = parseInt(document.getElementById('dnaTurns')?.value || 3);
     const numPairs = turns * 10;
-    const baseColors = [0xff5252, 0x40c4ff, 0x69f0ae, 0xffd740]; // A, T, G, C
+    const baseColors = [0xff5252, 0x40c4ff, 0x69f0ae, 0xffd740];
     const sphereGeo = new THREE.SphereGeometry(0.35, 16, 16);
     const backboneMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.3, roughness: 0.4 });
 
@@ -1319,7 +1320,6 @@ function buildDnaHelix() {
         const x2 = -x1;
         const z2 = -z1;
 
-        // Backbone sugar-phosphate spheres
         const s1 = new THREE.Mesh(sphereGeo, backboneMat);
         s1.position.set(x1, y, z1);
         s1.userData = { strand: 'left' };
@@ -1330,7 +1330,6 @@ function buildDnaHelix() {
         s2.userData = { strand: 'right' };
         dnaGroup.add(s2);
 
-        // Base pair hydrogen bonding rung
         const p1 = new THREE.Vector3(x1, y, z1);
         const p2 = new THREE.Vector3(x2, y, z2);
         const mid = p1.clone().add(p2).multiplyScalar(0.5);
@@ -1338,7 +1337,6 @@ function buildDnaHelix() {
         const col1 = baseColors[i % 4];
         const col2 = baseColors[(i + 1) % 4];
 
-        // Left half base
         const bGeo1 = new THREE.CylinderGeometry(0.12, 0.12, radius, 12);
         const bMat1 = new THREE.MeshStandardMaterial({ color: col1, roughness: 0.3 });
         const bMesh1 = new THREE.Mesh(bGeo1, bMat1);
@@ -1346,7 +1344,6 @@ function buildDnaHelix() {
         bMesh1.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), mid.clone().sub(p1).normalize());
         dnaGroup.add(bMesh1);
 
-        // Right half base
         const bGeo2 = new THREE.CylinderGeometry(0.12, 0.12, radius, 12);
         const bMat2 = new THREE.MeshStandardMaterial({ color: col2, roughness: 0.3 });
         const bMesh2 = new THREE.Mesh(bGeo2, bMat2);
@@ -1394,7 +1391,6 @@ function buildCrisprScene() {
 
     buildDnaHelix();
 
-    // Cas9 Endonuclease Protein Complex (Large Bi-lobed Enzyme)
     const cas9Geo = new THREE.DodecahedronGeometry(3.5, 1);
     const cas9Mat = new THREE.MeshStandardMaterial({ color: 0xa855f7, roughness: 0.4, transparent: true, opacity: 0.85 });
     const cas9Mesh = new THREE.Mesh(cas9Geo, cas9Mat);
@@ -1416,21 +1412,18 @@ function buildVirusCapsid(virusType) {
     virusGroup.name = 'dnaModel';
 
     if (virusType === 'Bacteriophage') {
-        // Icosahedral Head
         const headGeo = new THREE.IcosahedronGeometry(2.5, 0);
         const headMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3 });
         const head = new THREE.Mesh(headGeo, headMat);
         head.position.y = 3;
         virusGroup.add(head);
 
-        // Helical Sheath Neck
         const neckGeo = new THREE.CylinderGeometry(0.5, 0.5, 3.5, 16);
         const neckMat = new THREE.MeshStandardMaterial({ color: 0x10b981 });
         const neck = new THREE.Mesh(neckGeo, neckMat);
         neck.position.y = 0.5;
         virusGroup.add(neck);
 
-        // Tail fibers
         for (let i = 0; i < 6; i++) {
             const angle = (i / 6) * Math.PI * 2;
             const legGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.8, 8);
@@ -1442,7 +1435,6 @@ function buildVirusCapsid(virusType) {
             virusGroup.add(leg);
         }
     } else {
-        // Coronavirus with Spikes
         const bodyGeo = new THREE.SphereGeometry(2.5, 32, 32);
         const bodyMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.5 });
         virusGroup.add(new THREE.Mesh(bodyGeo, bodyMat));
@@ -1469,7 +1461,7 @@ function setVirusType(vType) {
 }
 
 // ==========================================================================
-// 9. MODULE 4: CYTOLOGY & NEUROBIOLOGY (ACTION POTENTIAL ENGINE)
+// 9. MODULE 4: CYTOLOGY & NEUROBIOLOGY
 // ==========================================================================
 let cellType = 'animal';
 let cellAnim = 'rotate';
@@ -1511,20 +1503,17 @@ function buildCellModel() {
     cellGroup.name = 'cellModel';
 
     if (cellType === 'animal') {
-        // Plasma Membrane (semi-transparent)
         const memGeo = new THREE.SphereGeometry(4.5, 32, 32);
         const memMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.25, roughness: 0.3 });
         cellGroup.add(new THREE.Mesh(memGeo, memMat));
 
-        // Nucleus
         const nucGeo = new THREE.SphereGeometry(1.6, 24, 24);
         const nucMat = new THREE.MeshStandardMaterial({ color: 0xa855f7, roughness: 0.4 });
         const nuc = new THREE.Mesh(nucGeo, nucMat);
         cellGroup.add(nuc);
 
-        // Mitochondria (ATP powerhouses)
         for (let i = 0; i < 5; i++) {
-            const mitoGeo = new THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(0.4, 1.0, 8, 16) : new THREE.CylinderGeometry(0.4, 0.4, 1.2, 16);
+            const mitoGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 16);
             const mitoMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3 });
             const mito = new THREE.Mesh(mitoGeo, mitoMat);
             mito.position.set((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5);
@@ -1532,14 +1521,12 @@ function buildCellModel() {
             cellGroup.add(mito);
         }
     } else if (cellType === 'neuron') {
-        // Soma (Cell Body)
         const somaGeo = new THREE.SphereGeometry(1.8, 24, 24);
         const somaMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00f0ff, emissiveIntensity: 0.3 });
         const soma = new THREE.Mesh(somaGeo, somaMat);
         soma.position.set(-6, 0, 0);
         cellGroup.add(soma);
 
-        // Dendrites
         for (let i = 0; i < 8; i++) {
             const dGeo = new THREE.CylinderGeometry(0.08, 0.2, 3.5, 8);
             const dMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8 });
@@ -1550,7 +1537,6 @@ function buildCellModel() {
             cellGroup.add(d);
         }
 
-        // Myelinated Axon with Nodes of Ranvier
         const axonGeo = new THREE.CylinderGeometry(0.2, 0.2, 14, 16);
         const axonMat = new THREE.MeshStandardMaterial({ color: 0x64748b });
         const axon = new THREE.Mesh(axonGeo, axonMat);
@@ -1558,7 +1544,6 @@ function buildCellModel() {
         axon.rotation.z = Math.PI / 2;
         cellGroup.add(axon);
 
-        // Myelin Sheaths
         for (let j = 0; j < 5; j++) {
             const mGeo = new THREE.CylinderGeometry(0.5, 0.5, 2.2, 16);
             const mMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3 });
@@ -1567,13 +1552,24 @@ function buildCellModel() {
             m.rotation.z = Math.PI / 2;
             cellGroup.add(m);
         }
+    } else if (cellType === 'mitochondria') {
+        const outerGeo = new THREE.SphereGeometry(3.5, 32, 16);
+        outerGeo.scale(1.8, 1, 1);
+        const outerMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.4 });
+        cellGroup.add(new THREE.Mesh(outerGeo, outerMat));
+
+        for (let k = -4; k <= 4; k += 1.2) {
+            const foldGeo = new THREE.TorusGeometry(1.4, 0.2, 8, 24);
+            const foldMat = new THREE.MeshStandardMaterial({ color: 0xef4444 });
+            const fold = new THREE.Mesh(foldGeo, foldMat);
+            fold.position.x = k;
+            cellGroup.add(fold);
+        }
     } else {
-        // Plant Cell with rigid Cell Wall
         const wallGeo = new THREE.BoxGeometry(7, 5.5, 5.5);
         const wallMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, transparent: true, opacity: 0.35, roughness: 0.2 });
         cellGroup.add(new THREE.Mesh(wallGeo, wallMat));
 
-        // Central Vacuole
         const vacGeo = new THREE.SphereGeometry(1.8, 24, 24);
         const vacMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.7 });
         cellGroup.add(new THREE.Mesh(vacGeo, vacMat));
@@ -1614,7 +1610,7 @@ function fireNeuronActionPotential() {
 }
 
 // ==========================================================================
-// 10. MODULE 5: 16+ VERIFIED PHYSICS & QUANTUM SIMULATIONS
+// 10. MODULE 5: 18 FULLY WORKING PHYSICS & QUANTUM SIMULATIONS
 // ==========================================================================
 let physicsParticles = [];
 let physicsCustomObjects = [];
@@ -1650,7 +1646,6 @@ function loadPhysicsExp(expName) {
     currentExperiment = expName;
     sound.playClick();
 
-    // Clean up previous experiment objects
     disposeHierarchy(scene.getObjectByName('physicsExperimentGroup'));
     physicsParticles = [];
     physicsCustomObjects = [];
@@ -1663,76 +1658,76 @@ function loadPhysicsExp(expName) {
     if (sel && sel.value !== expName) sel.value = expName;
 
     switch (expName) {
-        case 'slit': // 1. Double Slit Wave-Particle Duality
+        case 'slit':
             camera.position.set(0, 4, 22);
             controls.target.set(0, 0, 0);
             buildDoubleSlitExp(expGroup, dynControls);
             break;
-        case 'photoelectric': // 2. Photoelectric Effect
+        case 'photoelectric':
             camera.position.set(0, 2, 18);
             buildPhotoelectricExp(expGroup, dynControls);
             break;
-        case 'rutherford': // 3. Rutherford Alpha Scattering
+        case 'rutherford':
             camera.position.set(0, 5, 20);
             buildRutherfordExp(expGroup, dynControls);
             break;
-        case 'fission': // 4. Nuclear Fission Chain Reaction
+        case 'fission':
             camera.position.set(0, 0, 24);
             buildNuclearFissionExp(expGroup, dynControls);
             break;
-        case 'superconduct': // 5. Superconductivity & Meissner Effect
+        case 'superconduct':
             camera.position.set(0, 4, 16);
             buildSuperconductivityExp(expGroup, dynControls);
             break;
-        case 'millikan': // 6. Millikan Oil Drop Experiment
+        case 'millikan':
             camera.position.set(0, 0, 16);
             buildMillikanExp(expGroup, dynControls);
             break;
-        case 'blackhole': // 7. Black Hole Gravitational Lensing (GR)
+        case 'blackhole':
             camera.position.set(0, 6, 22);
             buildBlackHoleExp(expGroup, dynControls);
             break;
-        case 'relativity': // 8. Special Relativity Time Dilation
+        case 'relativity':
             camera.position.set(0, 0, 20);
             buildSpecialRelativityExp(expGroup, dynControls);
             break;
-        case 'gravity': // 9. Orbital Gravity & N-Body
+        case 'gravity':
             camera.position.set(0, 25, 35);
             buildOrbitalGravityExp(expGroup, dynControls);
             break;
-        case 'lorentz': // 10. Lorentz Force Magnetic Bottle
+        case 'lorentz':
             camera.position.set(0, 3, 20);
             buildLorentzForceExp(expGroup, dynControls);
             break;
-        case 'interferometer': // 11. Michelson-Morley Interferometer
+        case 'interferometer':
             camera.position.set(0, 10, 18);
             buildInterferometerExp(expGroup, dynControls);
             break;
-        case 'optics': // 12. Prism Dispersion & Snell's Law
+        case 'optics':
             camera.position.set(0, 2, 18);
             buildOpticsPrismExp(expGroup, dynControls);
             break;
-        case 'doppler': // 13. Doppler Effect & Mach Shockwave
+        case 'doppler':
             camera.position.set(0, 8, 22);
             buildDopplerExp(expGroup, dynControls);
             break;
-        case 'double_pendulum': // 14. Chaotic Double Pendulum
+        case 'double_pendulum':
             camera.position.set(0, -2, 18);
             buildDoublePendulumExp(expGroup, dynControls);
             break;
-        case 'lorenz': // 15. Lorenz Strange Attractor
+        case 'lorenz':
             camera.position.set(0, 0, 65);
             buildLorenzAttractorExp(expGroup, dynControls);
             break;
-        case 'fluid': // 16. Kármán Vortex Shedding
+        case 'fluid':
             camera.position.set(0, 0, 22);
             buildFluidVortexExp(expGroup, dynControls);
             break;
-        case 'thermo': // 17. Maxwell-Boltzmann Distribution
+        case 'thermo':
             camera.position.set(0, 0, 20);
             buildThermodynamicsExp(expGroup, dynControls);
             break;
-        case 'wave': // 18. Standing Waves & Harmonics
+        case 'wave':
             camera.position.set(0, 2, 18);
             buildWaveMotionExp(expGroup, dynControls);
             break;
@@ -1753,14 +1748,12 @@ function buildDoubleSlitExp(group, dynControls) {
         `;
     }
 
-    // Double Slit Barrier
     const barrierGeo = new THREE.BoxGeometry(0.2, 8, 12);
     const barrierMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5 });
     const barrier = new THREE.Mesh(barrierGeo, barrierMat);
     barrier.position.set(-4, 0, 0);
     group.add(barrier);
 
-    // Detector Screen
     const screenGeo = new THREE.PlaneGeometry(8, 12);
     const screenMat = new THREE.MeshBasicMaterial({ color: 0x0f172a, side: THREE.DoubleSide });
     const screen = new THREE.Mesh(screenGeo, screenMat);
@@ -1768,7 +1761,6 @@ function buildDoubleSlitExp(group, dynControls) {
     screen.rotation.y = Math.PI / 2;
     group.add(screen);
 
-    // Quantum Photons Particle Stream
     const count = 800;
     const pGeo = new THREE.BufferGeometry();
     const pos = new Float32Array(count * 3);
@@ -1784,48 +1776,75 @@ function buildDoubleSlitExp(group, dynControls) {
     physicsParticles = [points];
 }
 
-// 7. Black Hole Gravitational Lensing (General Relativity)
-function buildBlackHoleExp(group, dynControls) {
+// 2. Photoelectric Effect
+function buildPhotoelectricExp(group, dynControls) {
     if (dynControls) {
         dynControls.innerHTML = `
-            <h4>🕳️ General Relativity Parameters</h4>
-            <label class="slider-label">Black Hole Mass (M☉): <input type="range" id="bhMass" min="1" max="10" value="4"></label>
-            <label class="slider-label">Kerr Spin Parameter (a): <input type="range" id="bhSpin" min="0" max="0.99" step="0.05" value="0.75"></label>
-            <label><input type="checkbox" id="showGeodesics" checked> Trace Relativistic Photon Geodesics</label>
+            <h4>⚡ Planck Photoelectric Engine</h4>
+            <label class="slider-label">Photon Wavelength: <input type="range" id="photoLambda" min="200" max="700" value="320"><span class="val-tag">320nm</span></label>
+            <label class="slider-label">Light Intensity: <input type="range" id="photoIntensity" min="1" max="10" value="5"></label>
+            <label class="slider-label">Stopping Potential (V₀): <input type="range" id="photoV0" min="0" max="5" step="0.1" value="1.2"><span class="val-tag">1.2V</span></label>
         `;
     }
 
-    // Event Horizon Sphere
-    const bhGeo = new THREE.SphereGeometry(2.2, 32, 32);
-    const bhMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-    const bh = new THREE.Mesh(bhGeo, bhMat);
-    group.add(bh);
+    const tubeGeo = new THREE.CylinderGeometry(2.5, 2.5, 10, 32, 1, true);
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.25 });
+    const tube = new THREE.Mesh(tubeGeo, glassMat);
+    tube.rotation.z = Math.PI / 2;
+    group.add(tube);
 
-    // Photon Sphere Ring (r = 1.5 rs)
-    const psGeo = new THREE.RingGeometry(3.28, 3.32, 64);
-    const psMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide });
-    const ps = new THREE.Mesh(psGeo, psMat);
-    ps.rotation.x = Math.PI / 2;
-    group.add(ps);
+    const plateGeo = new THREE.BoxGeometry(0.2, 3.5, 3.5);
+    const cathodeMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8 });
+    const cathode = new THREE.Mesh(plateGeo, cathodeMat);
+    cathode.position.set(-4, 0, 0);
+    group.add(cathode);
 
-    // Relativistic Accretion Disk (Doppler Beaming Glow)
-    const diskGeo = new THREE.RingGeometry(3.5, 9.5, 64);
-    const diskMat = new THREE.MeshStandardMaterial({
-        color: 0xf59e0b,
-        emissive: 0xf59e0b,
-        emissiveIntensity: 0.8,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.85
-    });
-    const disk = new THREE.Mesh(diskGeo, diskMat);
-    disk.rotation.x = Math.PI / 2.3;
-    group.add(disk);
+    const anodeMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8 });
+    const anode = new THREE.Mesh(plateGeo, anodeMat);
+    anode.position.set(4, 0, 0);
+    group.add(anode);
 
-    // Gravitational Lensing Halo
-    const haloGeo = new THREE.SphereGeometry(10.0, 32, 32);
-    const haloMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.12, side: THREE.BackSide });
-    group.add(new THREE.Mesh(haloGeo, haloMat));
+    const eGeo = new THREE.BufferGeometry();
+    const ePos = new Float32Array(300 * 3);
+    for (let i = 0; i < 300; i++) {
+        ePos[i * 3] = -4 + Math.random() * 8;
+        ePos[i * 3 + 1] = (Math.random() - 0.5) * 2.5;
+        ePos[i * 3 + 2] = (Math.random() - 0.5) * 2.5;
+    }
+    eGeo.setAttribute('position', new THREE.BufferAttribute(ePos, 3));
+    const eMat = new THREE.PointsMaterial({ color: 0x00f0ff, size: 0.2 });
+    const electrons = new THREE.Points(eGeo, eMat);
+    group.add(electrons);
+    physicsParticles = [electrons];
+}
+
+// 3. Rutherford Alpha Scattering
+function buildRutherfordExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>🎯 Alpha Scattering</h4>
+            <label class="slider-label">Target Nucleus: Gold (Z=79)</label>
+            <label class="slider-label">Beam Energy: <input type="range" id="alphaEnergy" min="1" max="10" value="5.5"><span class="val-tag">5.5 MeV</span></label>
+        `;
+    }
+
+    const nucGeo = new THREE.SphereGeometry(1.2, 32, 32);
+    const nucMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8, emissive: 0xffaa00, emissiveIntensity: 0.4 });
+    const nuc = new THREE.Mesh(nucGeo, nucMat);
+    group.add(nuc);
+
+    const aGeo = new THREE.BufferGeometry();
+    const aPos = new Float32Array(400 * 3);
+    for (let i = 0; i < 400; i++) {
+        aPos[i * 3] = -12 + Math.random() * 24;
+        aPos[i * 3 + 1] = (Math.random() - 0.5) * 8;
+        aPos[i * 3 + 2] = (Math.random() - 0.5) * 8;
+    }
+    aGeo.setAttribute('position', new THREE.BufferAttribute(aPos, 3));
+    const aMat = new THREE.PointsMaterial({ color: 0xef4444, size: 0.25 });
+    const alphaPts = new THREE.Points(aGeo, aMat);
+    group.add(alphaPts);
+    physicsParticles = [alphaPts];
 }
 
 // 4. Nuclear Fission Chain Reaction
@@ -1839,7 +1858,6 @@ function buildNuclearFissionExp(group, dynControls) {
         `;
     }
 
-    // U-235 Nucleus Fuel Pellets Grid
     const fuelGeo = new THREE.SphereGeometry(0.6, 16, 16);
     const fuelMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x22c55e, emissiveIntensity: 0.3 });
 
@@ -1854,19 +1872,250 @@ function buildNuclearFissionExp(group, dynControls) {
     }
 }
 
-// 15. Lorenz Strange Attractor (Butterfly Chaos)
-let lorenzPoints = [];
+// 5. Superconductivity & Meissner Effect
+function buildSuperconductivityExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>❄️ Quantum Meissner Levitation</h4>
+            <label class="slider-label">Track Field (Tesla): <input type="range" id="scField" min="1" max="10" value="5"></label>
+            <label class="slider-label">Temperature: <span class="val-tag text-cyan">77 K (LN₂)</span></label>
+        `;
+    }
+
+    const trackGeo = new THREE.TorusGeometry(6, 0.4, 16, 64);
+    const trackMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.1 });
+    const track = new THREE.Mesh(trackGeo, trackMat);
+    track.rotation.x = Math.PI / 2;
+    group.add(track);
+
+    const pelletGeo = new THREE.CylinderGeometry(1.0, 1.0, 0.4, 24);
+    const pelletMat = new THREE.MeshStandardMaterial({ color: 0x10b981, metalness: 0.8 });
+    const pellet = new THREE.Mesh(pelletGeo, pelletMat);
+    pellet.position.set(6, 1.2, 0);
+    pellet.name = 'levitatingPellet';
+    group.add(pellet);
+    physicsCustomObjects.push(pellet);
+}
+
+// 6. Millikan Oil Drop
+function buildMillikanExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>💧 Millikan Oil Drop</h4>
+            <label class="slider-label">Plate Voltage (V): <input type="range" id="millikanVolt" min="0" max="500" value="250"></label>
+            <label class="slider-label">Elementary Charge (e): <span class="val-tag text-cyan">1.602×10⁻¹⁹ C</span></label>
+        `;
+    }
+
+    const plateGeo = new THREE.CylinderGeometry(4, 4, 0.2, 32);
+    const topPlate = new THREE.Mesh(plateGeo, new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+    topPlate.position.y = 4;
+    group.add(topPlate);
+
+    const botPlate = new THREE.Mesh(plateGeo, new THREE.MeshStandardMaterial({ color: 0x3b82f6 }));
+    botPlate.position.y = -4;
+    group.add(botPlate);
+
+    const dropGeo = new THREE.SphereGeometry(0.35, 16, 16);
+    const dropMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b });
+    const drop = new THREE.Mesh(dropGeo, dropMat);
+    drop.name = 'oilDrop';
+    group.add(drop);
+    physicsCustomObjects.push(drop);
+}
+
+// 7. Black Hole Gravitational Lensing (GR)
+function buildBlackHoleExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>🕳️ General Relativity Parameters</h4>
+            <label class="slider-label">Black Hole Mass (M☉): <input type="range" id="bhMass" min="1" max="10" value="4"></label>
+            <label class="slider-label">Kerr Spin Parameter (a): <input type="range" id="bhSpin" min="0" max="0.99" step="0.05" value="0.75"></label>
+            <label><input type="checkbox" id="showGeodesics" checked> Trace Relativistic Photon Geodesics</label>
+        `;
+    }
+
+    const bhGeo = new THREE.SphereGeometry(2.2, 32, 32);
+    const bhMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const bh = new THREE.Mesh(bhGeo, bhMat);
+    group.add(bh);
+
+    const psGeo = new THREE.RingGeometry(3.28, 3.32, 64);
+    const psMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide });
+    const ps = new THREE.Mesh(psGeo, psMat);
+    ps.rotation.x = Math.PI / 2;
+    group.add(ps);
+
+    const diskGeo = new THREE.RingGeometry(3.5, 9.5, 64);
+    const diskMat = new THREE.MeshStandardMaterial({
+        color: 0xf59e0b,
+        emissive: 0xf59e0b,
+        emissiveIntensity: 0.8,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.85
+    });
+    const disk = new THREE.Mesh(diskGeo, diskMat);
+    disk.rotation.x = Math.PI / 2.3;
+    group.add(disk);
+
+    const haloGeo = new THREE.SphereGeometry(10.0, 32, 32);
+    const haloMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.12, side: THREE.BackSide });
+    group.add(new THREE.Mesh(haloGeo, haloMat));
+}
+
+// 8. Special Relativity
+function buildSpecialRelativityExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>🚀 Lorentz Relativistic Transformation</h4>
+            <label class="slider-label">Relativistic Velocity (v/c): <input type="range" id="relVel" min="0" max="0.99" step="0.01" value="0.8"><span class="val-tag" id="relVelVal">0.80 c</span></label>
+            <label class="slider-label">Lorentz Factor (γ): <span class="val-tag text-cyan" id="gammaVal">1.67</span></label>
+        `;
+    }
+
+    const rocket = new THREE.Group();
+    rocket.name = 'relRocket';
+    const bodyGeo = new THREE.CylinderGeometry(0.8, 0.8, 6, 16);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.7 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.rotation.z = Math.PI / 2;
+    rocket.add(body);
+
+    const noseGeo = new THREE.ConeGeometry(0.8, 2, 16);
+    const nose = new THREE.Mesh(noseGeo, new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+    nose.rotation.z = -Math.PI / 2;
+    nose.position.x = 4;
+    rocket.add(nose);
+
+    group.add(rocket);
+    physicsCustomObjects.push(rocket);
+}
+
+// 9. Orbital Gravity
+function buildOrbitalGravityExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>🪐 N-Body Orbital Mechanics</h4>
+            <label class="slider-label">Launch Velocity (km/s): <input type="range" id="orbVel" min="5" max="15" step="0.1" value="7.8"></label>
+        `;
+    }
+
+    const planetGeo = new THREE.SphereGeometry(3.5, 32, 32);
+    const planetMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.6 });
+    group.add(new THREE.Mesh(planetGeo, planetMat));
+
+    const satGeo = new THREE.SphereGeometry(0.4, 16, 16);
+    const sat = new THREE.Mesh(satGeo, new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
+    sat.name = 'gravitySatellite';
+    sat.position.set(7, 0, 0);
+    group.add(sat);
+    physicsCustomObjects.push(sat);
+}
+
+// 10. Lorentz Force
+function buildLorentzForceExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>🧲 Electrodynamics Parameters</h4>
+            <label class="slider-label">Magnetic Field (B): <input type="range" id="magB" min="0.5" max="5" value="2"></label>
+            <label class="slider-label">Particle Charge (q): <input type="range" id="partQ" min="-2" max="2" value="1"></label>
+        `;
+    }
+
+    for (let x of [-6, 6]) {
+        const coilGeo = new THREE.TorusGeometry(3.5, 0.3, 16, 32);
+        const coilMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8 });
+        const coil = new THREE.Mesh(coilGeo, coilMat);
+        coil.position.x = x;
+        coil.rotation.y = Math.PI / 2;
+        group.add(coil);
+    }
+}
+
+// 11. Interferometer
+function buildInterferometerExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>🔬 Michelson Laser Interferometer</h4>
+            <label class="slider-label">Arm Length Difference (ΔL): <input type="range" id="armDelta" min="-50" max="50" value="0"></label>
+        `;
+    }
+
+    const baseGeo = new THREE.BoxGeometry(12, 0.4, 12);
+    const base = new THREE.Mesh(baseGeo, new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+    group.add(base);
+
+    const splitter = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.6 }));
+    splitter.position.y = 0.7;
+    group.add(splitter);
+}
+
+// 12. Optics Prism
+function buildOpticsPrismExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>🌈 Prism Chromatic Dispersion</h4>
+            <label class="slider-label">Prism Refractive Index (n): <input type="range" id="prismN" min="1.3" max="2.0" step="0.05" value="1.52"></label>
+        `;
+    }
+
+    const prismGeo = new THREE.CylinderGeometry(2, 2, 4, 3);
+    const prismMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5, roughness: 0.1 });
+    const prism = new THREE.Mesh(prismGeo, prismMat);
+    group.add(prism);
+}
+
+// 13. Doppler Effect
+function buildDopplerExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>📢 Doppler & Supersonic Mach Cone</h4>
+            <label class="slider-label">Mach Number (M): <input type="range" id="machM" min="0.2" max="2.5" step="0.1" value="1.4"></label>
+        `;
+    }
+
+    for (let r = 1; r <= 8; r += 1.2) {
+        const ringGeo = new THREE.RingGeometry(r - 0.05, r + 0.05, 32);
+        const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide }));
+        ring.rotation.x = Math.PI / 2;
+        ring.position.x = -r * 0.8;
+        group.add(ring);
+    }
+}
+
+// 14. Chaotic Double Pendulum
+function buildDoublePendulumExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>⚖️ Double Pendulum Physics</h4>
+            <label class="slider-label">Mass 1 (kg): <input type="range" id="pendM1" min="1" max="5" value="2"></label>
+            <label class="slider-label">Mass 2 (kg): <input type="range" id="pendM2" min="1" max="5" value="1"></label>
+        `;
+    }
+
+    const armMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8 });
+    const bobMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.4 });
+
+    const arm1 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4, 16), armMat);
+    arm1.position.y = -2;
+    const bob1 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), bobMat);
+    bob1.position.y = -4;
+
+    group.add(arm1);
+    group.add(bob1);
+}
+
+// 15. Lorenz Attractor
 function buildLorenzAttractorExp(group, dynControls) {
     if (dynControls) {
         dynControls.innerHTML = `
             <h4>🦋 Lorenz Non-Linear Parameters</h4>
             <label class="slider-label">Prandtl Number (σ): <input type="range" id="lorSigma" min="5" max="20" value="10"></label>
             <label class="slider-label">Rayleigh Number (ρ): <input type="range" id="lorRho" min="10" max="40" value="28"></label>
-            <label class="slider-label">Geometric Factor (β): <input type="range" id="lorBeta" min="1" max="5" step="0.1" value="2.66"></label>
         `;
     }
 
-    // Pre-calculate 3D trajectory
     let x = 0.1, y = 0, z = 0;
     const dt = 0.008;
     const pts = [];
@@ -1892,63 +2141,75 @@ function buildLorenzAttractorExp(group, dynControls) {
     group.add(tube);
 }
 
-// 14. Chaotic Double Pendulum
-function buildDoublePendulumExp(group, dynControls) {
+// 16. Fluid Vortex Shedding
+function buildFluidVortexExp(group, dynControls) {
     if (dynControls) {
         dynControls.innerHTML = `
-            <h4>⚖️ Double Pendulum Physics</h4>
-            <label class="slider-label">Mass 1 (kg): <input type="range" id="pendM1" min="1" max="5" value="2"></label>
-            <label class="slider-label">Mass 2 (kg): <input type="range" id="pendM2" min="1" max="5" value="1"></label>
-            <label class="slider-label">Gravity (g): <input type="range" id="pendG" min="1" max="20" value="9.8"></label>
+            <h4>🌊 Kármán Vortex Street</h4>
+            <label class="slider-label">Reynolds Number (Re): <input type="range" id="fluidRe" min="50" max="500" value="180"></label>
         `;
     }
 
-    const armMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8 });
-    const bobMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.4 });
+    const obsGeo = new THREE.CylinderGeometry(1.2, 1.2, 6, 32);
+    const obs = new THREE.Mesh(obsGeo, new THREE.MeshStandardMaterial({ color: 0x334155 }));
+    group.add(obs);
 
-    const arm1 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4, 16), armMat);
-    arm1.position.y = -2;
-    const bob1 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), bobMat);
-    bob1.position.y = -4;
-
-    group.add(arm1);
-    group.add(bob1);
+    const fGeo = new THREE.BufferGeometry();
+    const fPos = new Float32Array(800 * 3);
+    for (let i = 0; i < 800; i++) {
+        fPos[i * 3] = -12 + Math.random() * 24;
+        fPos[i * 3 + 1] = (Math.random() - 0.5) * 6;
+        fPos[i * 3 + 2] = (Math.random() - 0.5) * 6;
+    }
+    fGeo.setAttribute('position', new THREE.BufferAttribute(fPos, 3));
+    const fPts = new THREE.Points(fGeo, new THREE.PointsMaterial({ color: 0x38bdf8, size: 0.2 }));
+    group.add(fPts);
+    physicsParticles = [fPts];
 }
 
-// 10. Lorentz Force Magnetic Bottle
-function buildLorentzForceExp(group, dynControls) {
+// 17. Thermodynamics
+function buildThermodynamicsExp(group, dynControls) {
     if (dynControls) {
         dynControls.innerHTML = `
-            <h4>🧲 Electrodynamics Parameters</h4>
-            <label class="slider-label">Magnetic Field (B): <input type="range" id="magB" min="0.5" max="5" value="2"></label>
-            <label class="slider-label">Particle Charge (q): <input type="range" id="partQ" min="-2" max="2" value="1"></label>
+            <h4>🌡️ Maxwell-Boltzmann Kinetic Theory</h4>
+            <label class="slider-label">Temperature: <input type="range" id="thermoT" min="50" max="1000" value="300"><span class="val-tag">300 K</span></label>
         `;
     }
 
-    // Magnetic Bottle Coils
-    for (let x of [-6, 6]) {
-        const coilGeo = new THREE.TorusGeometry(3.5, 0.3, 16, 32);
-        const coilMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8 });
-        const coil = new THREE.Mesh(coilGeo, coilMat);
-        coil.position.x = x;
-        coil.rotation.y = Math.PI / 2;
-        group.add(coil);
+    const boxGeo = new THREE.BoxGeometry(8, 8, 8);
+    const boxMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.25, roughness: 0.1 });
+    group.add(new THREE.Mesh(boxGeo, boxMat));
+
+    const gGeo = new THREE.BufferGeometry();
+    const gPos = new Float32Array(200 * 3);
+    for (let i = 0; i < 200; i++) {
+        gPos[i * 3] = (Math.random() - 0.5) * 7.5;
+        gPos[i * 3 + 1] = (Math.random() - 0.5) * 7.5;
+        gPos[i * 3 + 2] = (Math.random() - 0.5) * 7.5;
     }
+    gGeo.setAttribute('position', new THREE.BufferAttribute(gPos, 3));
+    const gPts = new THREE.Points(gGeo, new THREE.PointsMaterial({ color: 0xef4444, size: 0.35 }));
+    group.add(gPts);
+    physicsParticles = [gPts];
 }
 
-// Fallback constructors for other experiments
-function buildPhotoelectricExp(g, c) { if (c) c.innerHTML = '<h4>⚡ Planck Photoelectric Engine</h4><p class="panel-note">Work function Φ vs Photon energy E=hν.</p>'; }
-function buildRutherfordExp(g, c) { if (c) c.innerHTML = '<h4>🎯 Alpha Scattering</h4><p class="panel-note">Alpha particle backscattering off atomic nucleus.</p>'; }
-function buildSuperconductivityExp(g, c) { if (c) c.innerHTML = '<h4>❄️ Quantum Meissner Levitation</h4><p class="panel-note">Flux pinning of Type-II superconductor.</p>'; }
-function buildMillikanExp(g, c) { if (c) c.innerHTML = '<h4>💧 Millikan Oil Drop</h4><p class="panel-note">Balancing electric force qE against gravity mg.</p>'; }
-function buildSpecialRelativityExp(g, c) { if (c) c.innerHTML = '<h4>🚀 Lorentz Relativistic Transformation</h4><p class="panel-note">Time dilation and length contraction as v → c.</p>'; }
-function buildOrbitalGravityExp(g, c) { if (c) c.innerHTML = '<h4>🪐 N-Body Orbital Mechanics</h4><p class="panel-note">Keplerian elliptic trajectories.</p>'; }
-function buildInterferometerExp(g, c) { if (c) c.innerHTML = '<h4>🔬 Laser Interferometer</h4><p class="panel-note">Michelson constructive & destructive fringes.</p>'; }
-function buildOpticsPrismExp(g, c) { if (c) c.innerHTML = '<h4>🌈 Prism Chromatic Dispersion</h4><p class="panel-note">Snell law chromatic rainbow dispersion.</p>'; }
-function buildDopplerExp(g, c) { if (c) c.innerHTML = '<h4>📢 Doppler & Supersonic Mach Cone</h4><p class="panel-note">Sonic boom shockwave angle sin(μ) = 1/M.</p>'; }
-function buildFluidVortexExp(g, c) { if (c) c.innerHTML = '<h4>🌊 Kármán Vortex Street</h4><p class="panel-note">Alternating periodic vortices around cylinder obstacle.</p>'; }
-function buildThermodynamicsExp(g, c) { if (c) c.innerHTML = '<h4>🌡️ Maxwell-Boltzmann Kinetic Theory</h4><p class="panel-note">Atomic velocity distribution f(v) in gas chamber.</p>'; }
-function buildWaveMotionExp(g, c) { if (c) c.innerHTML = '<h4>〰️ Standing Waves & Harmonics</h4><p class="panel-note">Harmonic mode nodes and antinodes.</p>'; }
+// 18. Wave Motion
+function buildWaveMotionExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>〰️ Standing Waves & Harmonics</h4>
+            <label class="slider-label">Harmonic Mode (n): <input type="range" id="waveMode" min="1" max="5" value="2"></label>
+        `;
+    }
+
+    const pts = [];
+    for (let x = -8; x <= 8; x += 0.2) {
+        pts.push(new THREE.Vector3(x, Math.sin(x) * 1.5, 0));
+    }
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const waveTube = new THREE.Mesh(new THREE.TubeGeometry(curve, 100, 0.15, 8, false), new THREE.MeshStandardMaterial({ color: 0x00f0ff }));
+    group.add(waveTube);
+}
 
 function updatePhysicsSimulation(timeWarp) {
     if (currentExperiment === 'slit' && physicsParticles[0]) {
@@ -1958,6 +2219,18 @@ function updatePhysicsSimulation(timeWarp) {
             if (pos[i] > 8) pos[i] = -12;
         }
         physicsParticles[0].geometry.attributes.position.needsUpdate = true;
+    } else if (currentExperiment === 'superconduct') {
+        const pellet = scene.getObjectByName('levitatingPellet');
+        if (pellet) {
+            const angle = simTime * 1.2;
+            pellet.position.set(Math.cos(angle) * 6, 1.2, Math.sin(angle) * 6);
+        }
+    } else if (currentExperiment === 'gravity') {
+        const sat = scene.getObjectByName('gravitySatellite');
+        if (sat) {
+            const a = simTime * 1.5;
+            sat.position.set(Math.cos(a) * 7, 0, Math.sin(a) * 7);
+        }
     }
 }
 
@@ -2061,14 +2334,12 @@ function buildRobotArm() {
     armMeshGroup = new THREE.Group();
     armMeshGroup.name = 'robotModel';
 
-    // Pedestal Base
     const baseGeo = new THREE.CylinderGeometry(2, 2.4, 0.8, 32);
     const metalMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4 });
     const orangeMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.3 });
     const baseMesh = new THREE.Mesh(baseGeo, metalMat);
     armMeshGroup.add(baseMesh);
 
-    // J1 Base Swivel Pivot
     const j1 = new THREE.Group();
     j1.position.y = 0.4;
     j1.name = 'j1Pivot';
@@ -2076,7 +2347,6 @@ function buildRobotArm() {
     const j1Geo = new THREE.CylinderGeometry(1.4, 1.4, 1.2, 32);
     j1.add(new THREE.Mesh(j1Geo, orangeMat));
 
-    // J2 Shoulder Pivot
     const j2 = new THREE.Group();
     j2.position.y = 1.2;
     j2.name = 'j2Pivot';
@@ -2086,7 +2356,6 @@ function buildRobotArm() {
     arm1Mesh.position.y = 2.1;
     j2.add(arm1Mesh);
 
-    // J3 Elbow Pivot
     const j3 = new THREE.Group();
     j3.position.y = 4.2;
     j3.name = 'j3Pivot';
@@ -2096,7 +2365,6 @@ function buildRobotArm() {
     arm2Mesh.position.y = 1.75;
     j3.add(arm2Mesh);
 
-    // J4 Wrist & Gripper
     const j4 = new THREE.Group();
     j4.position.y = 3.5;
     j4.name = 'j4Pivot';
@@ -2161,6 +2429,83 @@ function setRobotMode(mode) {
     if (armCtrl) armCtrl.style.display = mode === 'arm' ? 'block' : 'none';
     if (pidCtrl) pidCtrl.style.display = mode === 'pid' ? 'block' : 'none';
     if (droneCtrl) droneCtrl.style.display = mode === 'drone' ? 'block' : 'none';
+
+    disposeHierarchy(scene.getObjectByName('robotModel'));
+
+    if (mode === 'arm') {
+        buildRobotArm();
+    } else if (mode === 'pid') {
+        buildPidCartScene();
+    } else if (mode === 'drone') {
+        buildDroneScene();
+    } else if (mode === 'motor') {
+        buildMotorsShowroom();
+    } else if (mode === 'board') {
+        buildBoardsShowroom();
+    }
+}
+
+function buildPidCartScene() {
+    const group = new THREE.Group();
+    group.name = 'robotModel';
+
+    const track = new THREE.Mesh(new THREE.BoxGeometry(16, 0.3, 2), new THREE.MeshStandardMaterial({ color: 0x334155 }));
+    group.add(track);
+
+    const cart = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.2, 1.8), new THREE.MeshStandardMaterial({ color: 0x00f0ff }));
+    cart.position.y = 0.75;
+    group.add(cart);
+
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 5, 16), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+    pole.position.set(0, 3.25, 0);
+    cart.add(pole);
+
+    scene.add(group);
+}
+
+function buildDroneScene() {
+    const group = new THREE.Group();
+    group.name = 'robotModel';
+
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(4, 0.2, 4), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+    group.add(frame);
+
+    for (let [x, z] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) {
+        const prop = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.05, 16), new THREE.MeshStandardMaterial({ color: 0x38bdf8 }));
+        prop.position.set(x, 0.2, z);
+        group.add(prop);
+    }
+    scene.add(group);
+}
+
+function buildMotorsShowroom() {
+    const group = new THREE.Group();
+    group.name = 'robotModel';
+
+    const motor = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 3, 32), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
+    motor.rotation.x = Math.PI / 2;
+    group.add(motor);
+
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 2, 16), new THREE.MeshStandardMaterial({ color: 0xcbd5e1 }));
+    shaft.position.z = 2;
+    shaft.rotation.x = Math.PI / 2;
+    group.add(shaft);
+
+    scene.add(group);
+}
+
+function buildBoardsShowroom() {
+    const group = new THREE.Group();
+    group.name = 'robotModel';
+
+    const pcb = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 4), new THREE.MeshStandardMaterial({ color: 0x15803d }));
+    group.add(pcb);
+
+    const chip = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.4, 1.5), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
+    chip.position.y = 0.3;
+    group.add(chip);
+
+    scene.add(group);
 }
 
 function applyPidPerturbation() {
@@ -2169,7 +2514,7 @@ function applyPidPerturbation() {
 }
 
 // ==========================================================================
-// 12. MODULE 7: 3D SCIENCE ARCADE SUITE (4 COMPREHENSIVE GAMES)
+// 12. MODULE 7: 3D SCIENCE ARCADE (4 INTERACTIVE GAMES)
 // ==========================================================================
 let gameState = {
     running: false,
@@ -2197,7 +2542,6 @@ function initGames() {
     initGameInputHandlers();
     buildSpaceFighter();
 
-    // High Score from localStorage
     gameState.highScore = parseInt(localStorage.getItem('sciLab_highScore') || '0');
     const hsEl = document.getElementById('highScore');
     if (hsEl) hsEl.textContent = gameState.highScore;
@@ -2231,14 +2575,12 @@ function buildSpaceFighter() {
     const ship = new THREE.Group();
     ship.name = 'playerShip';
 
-    // Fuselage
     const bodyGeo = new THREE.ConeGeometry(0.8, 2.5, 8);
     const bodyMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, metalness: 0.8, roughness: 0.2 });
     const body = new THREE.Mesh(bodyGeo, bodyMat);
     body.rotation.x = Math.PI / 2;
     ship.add(body);
 
-    // Wings
     const wingGeo = new THREE.BoxGeometry(3.5, 0.1, 1.2);
     const wingMat = new THREE.MeshStandardMaterial({ color: 0x4361ee, roughness: 0.3 });
     const wings = new THREE.Mesh(wingGeo, wingMat);
@@ -2278,19 +2620,16 @@ function spawnAsteroidEnemy() {
 function updateGamePhysics() {
     if (!gameState.player) return;
 
-    // Movement (WASD / Arrows)
     const moveSpeed = 0.25;
     if (gameState.keys['KeyA'] || gameState.keys['ArrowLeft']) gameState.player.position.x = Math.max(-10, gameState.player.position.x - moveSpeed);
     if (gameState.keys['KeyD'] || gameState.keys['ArrowRight']) gameState.player.position.x = Math.min(10, gameState.player.position.x + moveSpeed);
     if (gameState.keys['KeyW'] || gameState.keys['ArrowUp']) gameState.player.position.z = Math.max(-5, gameState.player.position.z - moveSpeed);
     if (gameState.keys['KeyS'] || gameState.keys['ArrowDown']) gameState.player.position.z = Math.min(10, gameState.player.position.z + moveSpeed);
 
-    // Spawn Enemy Waves
     if (Math.random() < 0.035 * gameState.wave) {
         spawnAsteroidEnemy();
     }
 
-    // Update Lasers
     for (let i = gameState.lasers.length - 1; i >= 0; i--) {
         const l = gameState.lasers[i];
         l.position.z -= 0.8;
@@ -2300,14 +2639,12 @@ function updateGamePhysics() {
         }
     }
 
-    // Update Enemies & Collision Detection
     for (let j = gameState.enemies.length - 1; j >= 0; j--) {
         const e = gameState.enemies[j];
         e.position.z += e.userData.speed;
         e.rotation.x += e.userData.rotX;
         e.rotation.y += e.userData.rotY;
 
-        // Player Collision
         if (e.position.distanceTo(gameState.player.position) < 1.6) {
             sound.playExplosion();
             scene.remove(e);
@@ -2321,7 +2658,6 @@ function updateGamePhysics() {
             continue;
         }
 
-        // Laser Collision
         for (let k = gameState.lasers.length - 1; k >= 0; k--) {
             const l = gameState.lasers[k];
             if (l.position.distanceTo(e.position) < 1.4) {
@@ -2371,7 +2707,7 @@ function startActiveGame() {
     if (goModal) goModal.style.display = 'none';
 
     sound.playClick();
-    showToast('🚀 Kinetic Asteroid Deflector Mission Started! Defend Earth!');
+    showToast('🚀 Mission Started! Engage Arcade Simulation!');
 }
 
 function endActiveGame() {
@@ -2385,7 +2721,6 @@ function endActiveGame() {
 }
 
 function restartActiveGame() {
-    // Clear all existing enemies & lasers
     gameState.enemies.forEach(e => scene.remove(e));
     gameState.lasers.forEach(l => scene.remove(l));
     gameState.enemies = [];
