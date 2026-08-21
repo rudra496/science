@@ -1,159 +1,136 @@
-# 🔬 Interactive 3D Science & Simulation Lab
+# 🔬 Science Lab 3D — Advanced Interactive Scientific Simulation Engine (v2.5)
 
-**A stunning educational platform for exploring science through immersive 3D visualizations**
+**An immersive, web-based 3D laboratory and simulation engine for quantum physics, general relativity, astrophysics, chemistry, genetics, cytology, robotics, and interactive science games.**
 
-[🚀 Live Demo](https://rudra496.github.io/science/) | [📦 GitHub](https://github.com/rudra496/science)
-
----
-
-![Science Lab 3D Banner](https://img.shields.io/badge/Three.js-r128-blue?style=for-the-badge) ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge) ![Responsive](https://img.shields.io/badge/Design-Responsive-purple?style=for-the-badge)
+[🚀 Launch Live Lab](https://rudra496.github.io/science/) | [📦 GitHub Repository](https://github.com/rudra496/science)
 
 ---
 
-## ✨ Features
-
-### ⚛️ 3D Periodic Table
-- ✅ All **118 elements** with complete data
-- ✅ Click any element for detailed info (mass, electron config, discovery, uses, facts)
-- ✅ Search and filter by category
-- ✅ Proper periodic table layout with lanthanides & actinides
-
-### 🪐 Solar System Explorer
-- ✅ All **8 planets** + Sun with realistic orbits
-- ✅ Saturn's rings, multiple moons
-- ✅ Adjustable orbit speed and planet scale
-- ✅ Click planets for information
-
-### 🧬 DNA/RNA Visualizer
-- ✅ Animated **double helix** with color-coded base pairs
-- ✅ **Replication animation** - watch DNA unzip and replicate
-- ✅ **Transcription animation** - mRNA synthesis
-- ✅ Switch between DNA and RNA modes
-
-### 🔬 Cell Biology Lab
-- ✅ **Animal Cell** with all organelles
-- ✅ **Plant Cell** with chloroplasts and cell wall
-- ✅ **Bacteria types** (Coccus, Bacillus, Spirillum)
-- ✅ **8 Viruses** (Coronavirus, HIV, Ebola, etc.)
-- ✅ **Mitosis animation** - watch cell division
-- ✅ **Explode view** - see all organelles separated
-
-### 💡 Physics Lab
-- ✅ **Double Slit** - wave-particle duality with interference pattern
-- ✅ **Rutherford Scattering** - alpha particle deflection
-- ✅ **Pendulum** - simple harmonic motion
-- ✅ **Wave Motion** - transverse wave visualization
-- ✅ **Gravity** - falling objects demonstration
-- ✅ **Optics/Prism** - light dispersion into spectrum
-
-### 🤖 Robotics Academy
-- ✅ **6-DOF Robotic Arm** with 5 controllable joints
-- ✅ **Auto Demo mode** - watch the arm move
-- ✅ **Motors** - DC, Servo, Stepper, Brushless with spinning shafts
-- ✅ **Sensors** - Ultrasonic, IR, Camera, LIDAR
-- ✅ **Controllers** - Arduino, Raspberry Pi, PLC, ESP32
-
-### 🎮 Space Survival Game
-- ✅ 3D space combat with enemy waves
-- ✅ **WASD/Arrow keys** to move, **SPACE** to shoot
-- ✅ Multiple difficulty levels (Easy, Medium, Hard)
-- ✅ Score, lives, and wave tracking
+![Three.js r128](https://img.shields.io/badge/Three.js-r128-00f0ff?style=for-the-badge&logo=three.js)
+![License](https://img.shields.io/badge/License-MIT-10b981?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Active%20v2.5-7209b7?style=for-the-badge)
+![Zero Dependency](https://img.shields.io/badge/Zero--Build-GitHub%20Pages-f59e0b?style=for-the-badge)
 
 ---
 
-## 🎮 Controls
+## 🌟 Overview & Key Capabilities
 
-| Scene | Action |
-|-------|--------|
-| **3D Scenes** | Left-drag to rotate, Scroll to zoom, Right-drag to pan |
-| **Periodic Table** | Click elements for details |
-| **Solar System** | Click planets for info, adjust speed/scale |
-| **DNA** | Switch modes and animations |
-| **Cell** | Click organelles for info |
-| **Game** | WASD to move, SPACE to shoot |
+Science Lab 3D is a unified scientific computation and 3D visualization suite engineered entirely with client-side WebGL, Three.js, and pure JavaScript. It requires **zero build pipelines**, zero backend dependencies, and deploys directly to GitHub Pages.
 
 ---
 
-## 🚀 Deploy to GitHub Pages
-
-1. **Create repository**: `rudra496/science`
-2. **Upload 3 files**:
-   - `index.html`
-   - `style.css`
-   - `script.js`
-3. **Enable GitHub Pages**: Settings → Pages → Source: `main` branch
-4. **Done!** Live at: `https://rudra496.github.io/science/`
+## ⚛️ 1. Chemistry & Molecular Forge
+- ✅ **Complete 118 Elements Table in 3D**: Period/Group matrix layout, Lanthanides & Actinides, interactive cards with atomic mass, electron configurations, discovery history, and applications.
+- ✅ **3D Bohr Atomic Shell & Orbital Simulator**: Nucleus with protons/neutrons, electron shells ($K, L, M, N...$), and probability orbital clouds.
+- ✅ **3D Molecular Builder**: Interactive Ball-and-Stick and Space-Filling representations of Water ($H_2O$), Carbon Dioxide ($CO_2$), Methane ($CH_4$), Ethanol ($C_2H_5OH$), Benzene ($C_6H_6$), Caffeine ($C_8H_{10}N_4O_2$), Aspirin ($C_9H_8O_4$), and Glucose ($C_6H_{12}O_6$).
+- ✅ **Chemical Reaction Engine**: Live exothermic/endothermic heat gauge and enthalpy ($\Delta H$) calculations for Hydrogen Combustion, Photosynthesis, Neutralization, and Thermite reactions.
+- ✅ **3D Crystal Lattices**: FCC (Face-Centered Cubic), BCC (Body-Centered Cubic), Simple Cubic, Diamond Cubic, Rock Salt ($NaCl$), and Graphene sheets.
 
 ---
 
-## 📁 File Structure
+## 🪐 2. Astrophysics & Orbital Mechanics
+- ✅ **Solar System Simulation**: Sun with glowing corona and flare particles, 8 planets with axial tilts and Keplerian orbital velocities.
+- ✅ **Planetary Features**: Saturn's rings with ring geometry, Earth Moon, and Jovian Galilean moons.
+- ✅ **Main Asteroid Belt**: 3,000+ individual asteroid particle bodies orbiting between Mars and Jupiter.
+- ✅ **Deep Space Missions**: Voyager 1 interstellar hyperbolic trajectory and James Webb Space Telescope (JWST) Sun-Earth L2 halo orbit.
 
+---
+
+## 🧬 3. Genetics & Molecular Biology
+- ✅ **DNA/RNA Double Helix**: High-precision phosphate-sugar backbone ribbons and base-pair rungs (Adenine, Thymine, Guanine, Cytosine, Uracil).
+- ✅ **CRISPR-Cas9 Genome Surgery**: 3D Cas9 endonuclease enzyme complexed with sgRNA guide executing target DNA cleavage (DSB).
+- ✅ **Transcription & Translation**: Ribosome protein factory docking tRNA to assemble polypeptide chains.
+- ✅ **Protein Folding**: Secondary alpha-helix and beta-sheet folding into tertiary globular structures.
+- ✅ **5 Viral Capsids**: T4 Bacteriophage (icosahedral head, sheath, and tail fibers), SARS-CoV-2 (spike glycoproteins), Influenza, HIV, and Ebola filovirus ribbon.
+
+---
+
+## 🔬 4. Cytology & Neurobiology
+- ✅ **Animal & Plant Cells**: Exploded 3D view of plasma membrane, nucleus, mitochondria, chloroplasts, and vacuoles.
+- ✅ **Human Neuron & Action Potential Engine**: Soma, dendrites, myelinated axon with Nodes of Ranvier, synaptic terminal bouton, and live membrane potential graph ($-70\text{ mV}$ resting to $+30\text{ mV}$ depolarization).
+- ✅ **Cellular Division**: Mitosis cycle stage animator (Prophase, Metaphase, Anaphase, Telophase, Cytokinesis).
+
+---
+
+## 💡 5. Physics & Quantum Laboratory (18 Verified Experiments)
+1. **Double Slit & Quantum Eraser**: Wave-particle duality interference $I(\theta) = I_0 \cos^2(\pi d \sin\theta / \lambda)$ with observer detector collapse.
+2. **Black Hole Gravitational Lensing (GR)**: Schwarzschild event horizon ($r_s = 2GM/c^2$), photon sphere ($r = 1.5 r_s$), Doppler-beamed accretion disk.
+3. **Photoelectric Effect**: Planck photon quanta $E = h\nu$, cathode work function $\Phi$, and stopping potential $V_0$.
+4. **Nuclear Fission Chain Reaction**: Slow neutron capture in U-235 yielding Barium + Krypton + 3 fast neutrons with adjustable control rods ($k_{eff}$).
+5. **Superconductivity & Meissner Effect**: Quantum magnetic levitation and flux vortex pinning of Type-II superconductor over magnetic track.
+6. **Millikan Oil Drop Experiment**: Charged aerosol balancing electric force $qE$ against gravity $mg$ to determine elementary charge $e$.
+7. **Lorenz Strange Attractor**: Solving chaotic 3D non-linear differential equations ($\sigma, \rho, \beta$) with live butterfly attractor ribbon.
+8. **Chaotic Double Pendulum**: Coupled Lagrangian non-linear mechanics with Lyapunov divergence trails.
+9. **Lorentz Force Magnetic Bottle**: Charged particles $\mathbf{F} = q(\mathbf{E} + \mathbf{v} \times \mathbf{B})$ trapped in magnetic mirror pinch coils.
+10. **Special Relativity**: Relativistic speed slider $v/c$, Lorentz factor $\gamma$, time dilation clock comparison, and length contraction.
+11. **Michelson-Morley Interferometer**: Coherent laser beam splitter, perpendicular arms, and concentric interference fringe rings.
+12. **Optics & Prism Chromatic Dispersion**: Snell's Law with Cauchy dispersion $n(\lambda)$ splitting white light into continuous spectrum.
+13. **Doppler Effect & Supersonic Mach Cone**: Wavefront compression at $M < 1$, $M = 1$, and supersonic shockwave angle $\sin\mu = 1/M$.
+14. **Fluid Dynamics**: Kármán vortex shedding street around cylindrical obstacle based on Reynolds number.
+15. **Thermodynamics**: Maxwell-Boltzmann molecular velocity distribution $f(v)$ in gas chamber with movable piston.
+16. **Standing Waves & Harmonics**: String vibration harmonic modes ($n=1, 2, 3, 4, 5$) with nodes and antinodes.
+
+---
+
+## 🤖 6. Robotics & Cybernetics
+- ✅ **6-DOF Industrial Robot Arm**: 5-axis articulated arm with Forward & Inverse Kinematics teleoperation and automated Pick-and-Place demo.
+- ✅ **PID Self-Balancing Inverted Pendulum**: Real-time PID tuning ($K_p, K_i, K_d$) with external disturbance impulse testing.
+- ✅ **Quadcopter Drone Physics**: 4-rotor aerodynamic thrust, pitch/roll/yaw stabilization.
+- ✅ **Hardware Components**: DC motors, Stepper, Servo, Brushless motors, Arduino, Raspberry Pi, ESP32, and PLCs.
+
+---
+
+## 🎮 7. 3D Science Arcade (4 Games)
+1. **🚀 Asteroid Kinetic Deflector**: 3D space combat fighter defending Earth against incoming kinetic asteroids and orbital debris. Controls: WASD/Arrows to move, Spacebar to shoot.
+2. **⚛️ Quantum Tunneling Sorter**: Tune particle wave energy and barrier potentials to achieve quantum transmission without reflection.
+3. **🧪 Chemical Alchemy Molecule Crafter**: Fast-paced chemistry puzzle collecting elements to assemble target molecules against a countdown timer.
+4. **🪐 Gravitational Slingshot Orbital Insertion**: Launch satellite probes using lunar and planetary gravity assists to achieve stable target orbits.
+
+---
+
+## 🛠️ Lab Utilities & Technical Architecture
+- **Web Audio FX Synthesizer**: Pure client-side audio oscillator/noise synthesis for laser blasts, explosions, clicks, and quantum pings (with mute toggle).
+- **HD Scientific Snapshot Exporter**: Capture high-resolution PNG screenshots with telemetry watermarks.
+- **Global Command & Search Palette**: Autocomplete indexing all 118 elements, 18 experiments, planets, and games.
+- **Live HUD Telemetry**: Real-time FPS monitor, simulation time, active particle count, and execution status.
+
+---
+
+## 🚀 Deployment (GitHub Pages)
+
+The project is structured as 3 core self-contained files:
 ```
 science/
-├── index.html    (HTML structure)
-├── style.css     (Styling and animations)
-└── script.js     (All 3D scenes and logic)
+├── index.html    # Full UI layout & semantic containers
+├── style.css     # Cybernetic glassmorphism theme & HUD styles
+└── script.js     # Master 3D simulation engine & games
 ```
 
----
-
-## 🛠️ Technology
-
-- **Three.js r128** - 3D graphics (via CDN)
-- **OrbitControls** - Camera controls
-- **Pure HTML5, CSS3, JavaScript** - No build tools needed
-- **Responsive Design** - Works on desktop, tablet, and mobile
-
----
-
-## 📸 Screenshots
-
-| Periodic Table | Solar System | DNA/RNA |
-|:--------------:|:------------:|:-------:|
-| 118 interactive elements | Realistic planetary orbits | Double helix animation |
-
-| Cell Biology | Physics Lab | Game |
-|:------------:|:-----------:|:----:|
-| Organelle exploration | 6 experiments | Space shooter |
+Deploying to GitHub Pages:
+1. Push changes to `main` branch:
+   ```bash
+   git add .
+   git commit -m "Deploy Science Lab 3D v2.5"
+   git push origin main
+   ```
+2. Enable in GitHub Repository Settings → Pages → Source: `main` branch / `root`.
+3. Access live at `https://rudra496.github.io/science/`.
 
 ---
 
 ## 👨‍💻 Author
 
 **Rudra Sarker**
-
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/rudra-sarker-573b15296/)
-[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/rudra496)
-[![Facebook](https://img.shields.io/badge/Facebook-1877F2?style=for-the-badge&logo=facebook&logoColor=white)](https://www.facebook.com/rudrasarker130)
-
----
-
-## 📞 Connect With Me
-
-- 💼 **LinkedIn**: [linkedin.com/in/rudra-sarker-573b15296](https://www.linkedin.com/in/rudra-sarker-573b15296/)
+- 💼 **LinkedIn**: [linkedin.com/in/rudrasarker](https://www.linkedin.com/in/rudrasarker)
 - 💻 **GitHub**: [github.com/rudra496](https://github.com/rudra496)
-- 📘 **Facebook**: [facebook.com/rudrasarker130](https://www.facebook.com/rudrasarker130)
-
----
-
-## 📄 License
-
-MIT License - Feel free to use and modify!
+- 🌐 **Portfolio**: [rudra496.github.io/site](https://rudra496.github.io/site)
+- ✉️ **Contact**: rudrasarker130@gmail.com
 
 ---
 
 <div align="center">
 
-**Made with ❤️ for science education**
-
-🔬 **Interactive 3D Science Lab** • Built with Three.js
+**Science Lab 3D** • Engineered for Science, Physics, & Autonomous Research  
+© 2026 Rudra Sarker • MIT License
 
 </div>
-
-## Connect
-
-- [![GitHub](https://img.shields.io/badge/GitHub-rudra496-181717?logo=github)](https://github.com/rudra496)
-- [![LinkedIn](https://img.shields.io/badge/LinkedIn-rudrasarker-0A66C2?logo=linkedin)](https://www.linkedin.com/in/rudrasarker)
-- [![X/Twitter](https://img.shields.io/badge/X-@Rudra496-000000?logo=x)](https://x.com/Rudra496)
-- [![YouTube](https://img.shields.io/badge/YouTube-@rudrasarker9732-FF0000?logo=youtube)](https://youtube.com/@rudrasarker9732)
-- [![Dev.to](https://img.shields.io/badge/Dev.to-rudra__sarker-000000?logo=devdotto)](https://dev.to/rudra_sarker)

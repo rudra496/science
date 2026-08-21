@@ -2,374 +2,722 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive 3D Science Lab</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha512-gShpdSQhVoEMnKoSEFUrbPoKA6RZ+/aFCzp268VPMaSg9Lh5kTRqxCVwedC4b7zOadPZ0a6Oac869wKzL3+Vxg==" crossorigin="anonymous"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Science Lab 3D — Advanced Interactive Science & Simulation Engine</title>
+    <meta name="description" content="Immersive 3D interactive laboratory for physics, chemistry, astrophysics, genetics, cellular biology, and robotics with realistic real-time simulation engines and interactive games.">
+    <meta name="keywords" content="science lab, threejs, 3d physics, periodic table, astrophysics, double slit, quantum mechanics, robotics, chemistry simulations">
+    <meta name="author" content="Rudra Sarker">
+    
+    <!-- OpenGraph / Social Meta -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://rudra496.github.io/science/">
+    <meta property="og:title" content="Science Lab 3D — Interactive Science Simulation Hub">
+    <meta property="og:description" content="Explore 118 elements, 16+ physics experiments, planetary astrophysics, CRISPR gene editing, neuron action potentials, 6-DOF robotics, and interactive science games in 3D.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Robust Three.js CDN with failover check -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
     <link rel="stylesheet" href="style.css">
-    <script defer src="https://analytics.129-159-229-170.sslip.io/script.js" data-website-id="61211ab6-385e-4db0-931e-6d6fc1626863"></script>
 </head>
 <body>
+    <!-- Background Starfield Particle Canvas -->
     <canvas id="stars"></canvas>
-    
+
+    <!-- Top Navigation Bar -->
     <header class="header">
         <div class="header-inner">
-            <div class="logo" onclick="goHome()">
-                <span class="logo-icon">⚛️</span>
-                <span class="logo-text">Science Lab 3D</span>
+            <div class="logo" onclick="goHome()" title="Return to Lab Command Hub">
+                <div class="logo-icon-wrap">
+                    <span class="logo-icon">⚛️</span>
+                    <div class="logo-glow"></div>
+                </div>
+                <div class="logo-meta">
+                    <span class="logo-text">SCIENCE LAB <span class="badge-3d">3D v2.5</span></span>
+                    <span class="logo-sub">Autonomous Scientific Simulation Engine</span>
+                </div>
             </div>
+
+            <!-- Global Search & Command Palette -->
+            <div class="global-search-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="globalSearch" placeholder="Search elements, experiments, simulations (e.g., 'Black Hole', 'Gold', 'CRISPR')..." autocomplete="off">
+                <div class="search-results-dropdown" id="searchResults"></div>
+            </div>
+
             <nav class="nav" id="nav">
-                <button class="nav-item active" data-page="home">🏠 Home</button>
-                <button class="nav-item" data-page="elements">⚛️ Elements</button>
-                <button class="nav-item" data-page="solar">🪐 Solar</button>
-                <button class="nav-item" data-page="dna">🧬 DNA</button>
-                <button class="nav-item" data-page="cell">🔬 Cell</button>
-                <button class="nav-item" data-page="physics">💡 Physics</button>
-                <button class="nav-item" data-page="robot">🤖 Robot</button>
-                <button class="nav-item" data-page="game">🎮 Game</button>
+                <button class="nav-item active" data-page="home"><span class="icon">🏠</span> Hub</button>
+                <button class="nav-item" data-page="elements"><span class="icon">⚛️</span> Elements & Molecules</button>
+                <button class="nav-item" data-page="solar"><span class="icon">🪐</span> Astrophysics</button>
+                <button class="nav-item" data-page="dna"><span class="icon">🧬</span> Genetics</button>
+                <button class="nav-item" data-page="cell"><span class="icon">🔬</span> Cytology & Neuro</button>
+                <button class="nav-item" data-page="physics"><span class="icon">💡</span> Physics Lab <span class="badge-count">16+</span></button>
+                <button class="nav-item" data-page="robot"><span class="icon">🤖</span> Robotics</button>
+                <button class="nav-item" data-page="games"><span class="icon">🎮</span> Science Games <span class="badge-count">4</span></button>
             </nav>
-            <button class="menu-btn" id="menuBtn">☰</button>
+
+            <div class="header-actions">
+                <button class="action-btn" id="audioToggle" title="Toggle Synthesizer Sound FX (Web Audio)">🔊</button>
+                <button class="action-btn" id="fsToggle" title="Toggle Fullscreen View">⛶</button>
+                <button class="action-btn" id="snapBtn" title="Export HD Scientific Snapshot (PNG)">📷</button>
+                <button class="menu-btn" id="menuBtn" title="Toggle Navigation Menu">☰</button>
+            </div>
         </div>
     </header>
 
+    <!-- Mobile Slide Drawer -->
     <div class="mobile-nav" id="mobileNav">
-        <button class="mobile-close" id="mobileClose">✕</button>
-        <button class="mobile-item active" data-page="home">🏠 Home</button>
-        <button class="mobile-item" data-page="elements">⚛️ Elements</button>
-        <button class="mobile-item" data-page="solar">🪐 Solar System</button>
-        <button class="mobile-item" data-page="dna">🧬 DNA/RNA</button>
-        <button class="mobile-item" data-page="cell">🔬 Cell Biology</button>
-        <button class="mobile-item" data-page="physics">💡 Physics Lab</button>
-        <button class="mobile-item" data-page="robot">🤖 Robotics</button>
-        <button class="mobile-item" data-page="game">🎮 Game</button>
+        <div class="mobile-header">
+            <span class="logo-text">SCIENCE LAB 3D</span>
+            <button class="mobile-close" id="mobileClose">✕</button>
+        </div>
+        <div class="mobile-menu-list">
+            <button class="mobile-item active" data-page="home">🏠 Command Hub</button>
+            <button class="mobile-item" data-page="elements">⚛️ Elements & Molecule Forge</button>
+            <button class="mobile-item" data-page="solar">🪐 Astrophysics & Orbits</button>
+            <button class="mobile-item" data-page="dna">🧬 Genetics & CRISPR</button>
+            <button class="mobile-item" data-page="cell">🔬 Cytology & Neuron Lab</button>
+            <button class="mobile-item" data-page="physics">💡 Physics Lab (16+ Simulations)</button>
+            <button class="mobile-item" data-page="robot">🤖 Robotics & Kinematics</button>
+            <button class="mobile-item" data-page="games">🎮 3D Science Arcade (4 Games)</button>
+        </div>
     </div>
     <div class="overlay" id="overlay"></div>
 
+    <!-- HUD Telemetry & Simulation Overlay -->
+    <div class="hud-telemetry" id="hudTelemetry">
+        <div class="hud-item"><span class="hud-label">FPS:</span> <span class="hud-val" id="hudFps">60</span></div>
+        <div class="hud-item"><span class="hud-label">SIM TIME:</span> <span class="hud-val" id="hudTime">0.00s</span></div>
+        <div class="hud-item"><span class="hud-label">PARTICLES:</span> <span class="hud-val" id="hudParticles">0</span></div>
+        <div class="hud-item"><span class="hud-label">STATE:</span> <span class="hud-val status-running" id="hudStatus">ACTIVE</span></div>
+    </div>
+
+    <!-- MAIN VIEW CONTAINER -->
     <main class="main">
-        <!-- HOME -->
+        <!-- ======================= 1. HOME HUB ======================= -->
         <section class="page active" id="home">
             <div class="hero">
-                <h1 class="hero-title">Explore Science in 3D</h1>
-                <p class="hero-desc">Interactive simulations for chemistry, biology, physics, and more</p>
+                <div class="hero-badge">⚡ ADVANCED SCIENTIFIC SIMULATION ENGINE • WEBGL 3D</div>
+                <h1 class="hero-title">Discover the Universe in <span class="text-gradient">Interactive 3D</span></h1>
+                <p class="hero-desc">Explore 118 chemical elements, 16+ verified physics experiments, general relativity black holes, CRISPR-Cas9 genome surgery, neuron action potentials, 6-DOF robotics, and interactive science games.</p>
+                
                 <div class="hero-btns">
-                    <button class="btn btn-primary" onclick="showPage('elements')">Explore Elements</button>
-                    <button class="btn btn-secondary" onclick="showPage('physics')">Physics Lab</button>
+                    <button class="btn btn-primary glow-btn" onclick="showPage('physics')">💡 Launch Physics Experiments (16+)</button>
+                    <button class="btn btn-cyan" onclick="showPage('elements')">⚛️ 3D Periodic & Molecule Forge</button>
+                    <button class="btn btn-secondary" onclick="showPage('games')">🎮 3D Science Arcade Games</button>
                 </div>
             </div>
-            
-            <div class="stats">
-                <div class="stat">
+
+            <!-- Key Metric Counters -->
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-icon">⚛️</div>
                     <span class="stat-num">118</span>
-                    <span class="stat-label">Elements</span>
+                    <span class="stat-label">Chemical Elements & Orbitals</span>
                 </div>
-                <div class="stat">
-                    <span class="stat-num">8</span>
-                    <span class="stat-label">Planets</span>
+                <div class="stat-card">
+                    <div class="stat-icon">💡</div>
+                    <span class="stat-num">16+</span>
+                    <span class="stat-label">Physics & Quantum Experiments</span>
                 </div>
-                <div class="stat">
-                    <span class="stat-num">8</span>
-                    <span class="stat-label">Experiments</span>
+                <div class="stat-card">
+                    <div class="stat-icon">🪐</div>
+                    <span class="stat-num">10+</span>
+                    <span class="stat-label">Celestial Bodies & Spacecraft</span>
                 </div>
-                <div class="stat">
-                    <span class="stat-num">100%</span>
-                    <span class="stat-label">Interactive</span>
+                <div class="stat-card">
+                    <div class="stat-icon">🧬</div>
+                    <span class="stat-num">6</span>
+                    <span class="stat-label">Genetics & Viral Architectures</span>
                 </div>
-            </div>
-
-            <div class="features">
-                <div class="feature" onclick="showPage('elements')">
-                    <span class="feat-icon">⚛️</span>
-                    <h3>Periodic Table</h3>
-                    <p>All 118 elements with 3D visualization</p>
-                </div>
-                <div class="feature" onclick="showPage('solar')">
-                    <span class="feat-icon">🪐</span>
-                    <h3>Solar System</h3>
-                    <p>Realistic planetary orbits</p>
-                </div>
-                <div class="feature" onclick="showPage('dna')">
-                    <span class="feat-icon">🧬</span>
-                    <h3>DNA/RNA</h3>
-                    <p>Double helix animations</p>
-                </div>
-                <div class="feature" onclick="showPage('cell')">
-                    <span class="feat-icon">🔬</span>
-                    <h3>Cell Biology</h3>
-                    <p>Cells, bacteria, viruses</p>
-                </div>
-                <div class="feature" onclick="showPage('physics')">
-                    <span class="feat-icon">💡</span>
-                    <h3>Physics Lab</h3>
-                    <p>Interactive experiments</p>
-                </div>
-                <div class="feature" onclick="showPage('robot')">
-                    <span class="feat-icon">🤖</span>
-                    <h3>Robotics</h3>
-                    <p>6-DOF robot arm</p>
-                </div>
-                <div class="feature" onclick="showPage('game')">
-                    <span class="feat-icon">🎮</span>
-                    <h3>Space Game</h3>
-                    <p>3D space shooter</p>
+                <div class="stat-card">
+                    <div class="stat-icon">🎮</div>
+                    <span class="stat-num">4</span>
+                    <span class="stat-label">Interactive 3D Science Games</span>
                 </div>
             </div>
 
-<footer class="footer">
-    <div class="footer-links">
-        <a href="https://github.com/rudra496" target="_blank" rel="noopener">
-            📦 GitHub
-        </a>
-        <a href="https://www.linkedin.com/in/rudra-sarker-573b15296/" target="_blank" rel="noopener">
-            💼 LinkedIn
-        </a>
-        <a href="https://www.facebook.com/rudrasarker130" target="_blank" rel="noopener">
-            📘 Facebook
-        </a>
-    </div>
-    <p>Built with Three.js • Made for science education</p>
-    <p>© 2026 Science Lab 3D • Rudra Sarker</p>
-</footer>        
+            <!-- Hub Quick Navigation Grid -->
+            <div class="section-heading">
+                <h2>🚀 Simulation Domains</h2>
+                <p>Select any scientific domain to launch dedicated interactive real-time 3D simulation modules.</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card" onclick="showPage('elements')">
+                    <div class="feat-badge">CHEMISTRY</div>
+                    <div class="feat-icon">⚛️</div>
+                    <h3>Periodic Table & Molecule Forge</h3>
+                    <p>All 118 elements in 3D, electron Bohr orbital shells, crystal lattices, 3D molecular builder, and exothermic chemical reactions.</p>
+                    <span class="feat-link">Explore Elements →</span>
+                </div>
+
+                <div class="feature-card" onclick="showPage('physics')">
+                    <div class="feat-badge hot">QUANTUM & RELATIVITY</div>
+                    <div class="feat-icon">💡</div>
+                    <h3>Physics & Quantum Laboratory</h3>
+                    <p>16+ simulations: Black Hole Lensing, Double Slit Wave-Particle Duality, Chaotic Lorenz Attractor, Nuclear Fission, Photoelectric Effect, and Superconductivity.</p>
+                    <span class="feat-link">Launch Experiments →</span>
+                </div>
+
+                <div class="feature-card" onclick="showPage('solar')">
+                    <div class="feat-badge">ASTROPHYSICS</div>
+                    <div class="feat-icon">🪐</div>
+                    <h3>Astrophysics & Solar System</h3>
+                    <p>Accurate Keplerian planetary orbits, asteroid belt particle system, solar flares, Saturn rings, moons, and deep space probes (Voyager 1 & JWST).</p>
+                    <span class="feat-link">Explore Cosmos →</span>
+                </div>
+
+                <div class="feature-card" onclick="showPage('dna')">
+                    <div class="feat-badge">GENETICS</div>
+                    <div class="feat-icon">🧬</div>
+                    <h3>Genetics & CRISPR-Cas9</h3>
+                    <p>DNA/RNA double helix, CRISPR gene surgery enzyme, transcription & translation protein factory, and viral capsid structures.</p>
+                    <span class="feat-link">Inspect DNA →</span>
+                </div>
+
+                <div class="feature-card" onclick="showPage('cell')">
+                    <div class="feat-badge">CYTOLOGY</div>
+                    <div class="feat-icon">🔬</div>
+                    <h3>Cellular Biology & Neuron Lab</h3>
+                    <p>3D Animal, Plant, Bacteria, and firing Action Potential Human Neuron with neurotransmitter synapse discharge & mitosis stages.</p>
+                    <span class="feat-link">Inspect Cells →</span>
+                </div>
+
+                <div class="feature-card" onclick="showPage('robot')">
+                    <div class="feat-badge">ENGINEERING</div>
+                    <div class="feat-icon">🤖</div>
+                    <h3>Robotics & Cybernetics</h3>
+                    <p>6-DOF Industrial Arm with Forward/Inverse Kinematics solver, Palletizing automation, PID self-balancing inverted pendulum, and Quadcopter drone.</p>
+                    <span class="feat-link">Operate Robotics →</span>
+                </div>
+
+                <div class="feature-card special-card" onclick="showPage('games')">
+                    <div class="feat-badge game">ARCADE</div>
+                    <div class="feat-icon">🎮</div>
+                    <h3>3D Science Arcade (4 Games)</h3>
+                    <p>Play Orbital Asteroid Deflector, Quantum Tunneling Wave Sorter, Chemical Alchemy Compound Crafter, and Gravitational Slingshot!</p>
+                    <span class="feat-link">Play Games Now →</span>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="footer-links">
+                    <a href="https://github.com/rudra496/science" target="_blank" rel="noopener">📦 GitHub Repository</a>
+                    <a href="https://rudra496.github.io/site" target="_blank" rel="noopener">🌐 Portfolio</a>
+                    <a href="https://linkedin.com/in/rudrasarker" target="_blank" rel="noopener">💼 LinkedIn</a>
+                    <a href="mailto:rudrasarker130@gmail.com">✉️ Contact</a>
+                </div>
+                <p class="footer-copy">Engineered with Three.js r128 & WebGL • Designed for Science & Research • Open Source MIT</p>
+                <p class="footer-sub">© 2026 Science Lab 3D • Created by Rudra Sarker</p>
+            </footer>
         </section>
 
-        <!-- ELEMENTS -->
+        <!-- ======================= 2. ELEMENTS & MOLECULE FORGE ======================= -->
         <section class="page" id="elements">
             <div class="scene-wrap">
                 <div class="scene" id="elementsScene"></div>
             </div>
+
             <div class="panel panel-left">
-                <div class="panel-section">
-                    <h3>🔍 Search</h3>
-                    <input type="text" id="elementSearch" placeholder="Search element...">
+                <div class="panel-header">
+                    <h3>⚛️ Elements & Molecules</h3>
+                    <span class="panel-tag">CHEMISTRY</span>
                 </div>
+
                 <div class="panel-section">
-                    <h3>📂 Categories</h3>
-                    <div class="cats" id="cats">
-                        <button class="cat active" data-cat="all">All</button>
-                        <button class="cat" data-cat="alkali">Alkali</button>
-                        <button class="cat" data-cat="alkaline">Alkaline</button>
-                        <button class="cat" data-cat="transition">Transition</button>
-                        <button class="cat" data-cat="post">Post-Trans</button>
-                        <button class="cat" data-cat="metalloid">Metalloid</button>
-                        <button class="cat" data-cat="nonmetal">Nonmetal</button>
-                        <button class="cat" data-cat="halogen">Halogen</button>
-                        <button class="cat" data-cat="noble">Noble Gas</button>
-                        <button class="cat" data-cat="lanthanide">Lanthanide</button>
-                        <button class="cat" data-cat="actinide">Actinide</button>
+                    <h4>🛠️ Visualization Mode</h4>
+                    <div class="btn-group-grid">
+                        <button class="mode-btn active" id="elemModeTable" onclick="setElemMode('table')">📊 3D Table</button>
+                        <button class="mode-btn" id="elemModeAtom" onclick="setElemMode('atom')">⚛️ Bohr Atom</button>
+                        <button class="mode-btn" id="elemModeMolecule" onclick="setElemMode('molecule')">🧪 Molecule 3D</button>
+                        <button class="mode-btn" id="elemModeReaction" onclick="setElemMode('reaction')">💥 Reactions</button>
+                        <button class="mode-btn" id="elemModeLattice" onclick="setElemMode('lattice')">💎 Crystals</button>
                     </div>
                 </div>
+
+                <!-- Sub-panel for Table Filter -->
+                <div class="panel-section" id="elemTableControls">
+                    <h4>📂 Element Search & Categories</h4>
+                    <input type="text" id="elementSearch" class="panel-input" placeholder="Search element by name or symbol (e.g. Au, Fe)...">
+                    <div class="chip-container" id="cats">
+                        <button class="chip active" data-cat="all">All (118)</button>
+                        <button class="chip" data-cat="alkali">Alkali</button>
+                        <button class="chip" data-cat="alkaline">Alkaline</button>
+                        <button class="chip" data-cat="transition">Transition</button>
+                        <button class="chip" data-cat="post">Post-Trans</button>
+                        <button class="chip" data-cat="metalloid">Metalloid</button>
+                        <button class="chip" data-cat="nonmetal">Nonmetal</button>
+                        <button class="chip" data-cat="halogen">Halogen</button>
+                        <button class="chip" data-cat="noble">Noble Gas</button>
+                        <button class="chip" data-cat="lanthanide">Lanthanide</button>
+                        <button class="chip" data-cat="actinide">Actinide</button>
+                    </div>
+                </div>
+
+                <!-- Sub-panel for Atom Mode -->
+                <div class="panel-section" id="elemAtomControls" style="display:none;">
+                    <h4>🎯 Active Element Atom</h4>
+                    <select id="atomSelect" class="panel-select"></select>
+                    <label class="slider-label">Orbit Speed: <input type="range" id="atomSpeed" min="0.1" max="4" step="0.1" value="1"></label>
+                    <label class="slider-label">Electron Cloud Density: <input type="range" id="atomCloud" min="0" max="100" value="50"></label>
+                    <label><input type="checkbox" id="showOrbitalLines" checked> Show Orbital Shells</label>
+                </div>
+
+                <!-- Sub-panel for Molecules -->
+                <div class="panel-section" id="elemMoleculeControls" style="display:none;">
+                    <h4>🧪 Compound Preset</h4>
+                    <select id="moleculeSelect" class="panel-select">
+                        <option value="water">Water (H₂O) — Polar Solvent</option>
+                        <option value="co2">Carbon Dioxide (CO₂) — Linear Gas</option>
+                        <option value="methane">Methane (CH₄) — Tetrahedral</option>
+                        <option value="ethanol">Ethanol (C₂H₅OH) — Alcohol</option>
+                        <option value="benzene">Benzene (C₆H₆) — Aromatic Ring</option>
+                        <option value="caffeine">Caffeine (C₈H₁₀N₄O₂) — Stimulant</option>
+                        <option value="aspirin">Aspirin (C₉H₈O₄) — Acetylsalicylic</option>
+                        <option value="glucose">Glucose (C₆H₁₂O₆) — Sugar</option>
+                        <option value="dna_base">Adenine-Thymine Pair (A-T)</option>
+                    </select>
+                    <div class="btn-group-grid">
+                        <button class="ctrl-btn" id="molStyleBall" onclick="setMoleculeStyle('ball')">Ball & Stick</button>
+                        <button class="ctrl-btn" id="molStyleSpace" onclick="setMoleculeStyle('space')">Space-Filling</button>
+                    </div>
+                </div>
+
+                <!-- Sub-panel for Reactions -->
+                <div class="panel-section" id="elemReactionControls" style="display:none;">
+                    <h4>💥 Chemical Reaction Lab</h4>
+                    <select id="reactionSelect" class="panel-select">
+                        <option value="h2_o2">2H₂ + O₂ → 2H₂O (Hydrogen Combustion, Exothermic)</option>
+                        <option value="photosynthesis">6CO₂ + 6H₂O → C₆H₁₂O₆ + 6O₂ (Photosynthesis)</option>
+                        <option value="acid_base">HCl + NaOH → NaCl + H₂O (Neutralization)</option>
+                        <option value="thermite">Fe₂O₃ + 2Al → 2Fe + Al₂O₃ (Thermite Reaction, 2500°C)</option>
+                        <option value="haber">N₂ + 3H₂ ⇌ 2NH₃ (Haber Ammonia Synthesis)</option>
+                    </select>
+                    <button class="btn btn-primary" id="triggerReactionBtn" onclick="runChemicalReaction()">🔥 Trigger Reaction</button>
+                    <div class="reaction-metric" id="reactionMetric">
+                        <div>Enthalpy ΔH: <span id="rxnEnthalpy" class="text-cyan">-483.6 kJ/mol</span></div>
+                        <div>Temperature: <span id="rxnTemp" class="text-amber">298 K</span></div>
+                    </div>
+                </div>
+
+                <!-- Sub-panel for Crystal Lattice -->
+                <div class="panel-section" id="elemLatticeControls" style="display:none;">
+                    <h4>💎 Crystal Lattice Type</h4>
+                    <select id="latticeSelect" class="panel-select">
+                        <option value="fcc">Face-Centered Cubic (FCC) — Gold, Copper</option>
+                        <option value="bcc">Body-Centered Cubic (BCC) — Iron, Chromium</option>
+                        <option value="sc">Simple Cubic (SC) — Polonium</option>
+                        <option value="diamond">Diamond Cubic — Carbon, Silicon</option>
+                        <option value="nacl">Rock Salt (NaCl) — Ionic Halite</option>
+                        <option value="graphene">Graphene Hexagonal Sheet</option>
+                    </select>
+                    <label class="slider-label">Lattice Repeat (Unit Cells): <input type="range" id="latticeSize" min="1" max="4" value="2"></label>
+                </div>
+
                 <div class="panel-section">
-                    <h3>⚙️ Settings</h3>
-                    <label>Rotation: <input type="range" id="elemRotate" min="0" max="2" step="0.1" value="0.5"></label>
+                    <h4>⚙️ View Options</h4>
+                    <label class="slider-label">Auto-Rotation: <input type="range" id="elemRotate" min="0" max="2" step="0.1" value="0.5"></label>
+                    <button class="ctrl-btn" onclick="resetCurrentCamera()">🔄 Reset Camera View</button>
                 </div>
             </div>
-            <div class="info-box" id="elemInfo" style="display:none">
+
+            <!-- Element Info Modal Card -->
+            <div class="info-box glass-card" id="elemInfo" style="display:none">
                 <button class="close-btn" onclick="closeInfo('elemInfo')">✕</button>
                 <div id="elemInfoContent"></div>
             </div>
-            <button class="back-btn" onclick="goHome()">← Back</button>
+
+            <button class="back-btn" onclick="goHome()">← Command Hub</button>
         </section>
 
-        <!-- SOLAR -->
+        <!-- ======================= 3. ASTROPHYSICS & SOLAR SYSTEM ======================= -->
         <section class="page" id="solar">
             <div class="scene-wrap">
                 <div class="scene" id="solarScene"></div>
             </div>
+
             <div class="panel panel-left">
-                <div class="panel-section">
-                    <h3>🎮 Controls</h3>
-                    <button class="ctrl" id="solarPlay">⏸ Pause</button>
-                    <button class="ctrl" id="solarReset">🔄 Reset</button>
+                <div class="panel-header">
+                    <h3>🪐 Astrophysics Lab</h3>
+                    <span class="panel-tag">CELESTIAL MECHANICS</span>
                 </div>
+
                 <div class="panel-section">
-                    <h3>⚙️ Settings</h3>
-                    <label>Speed: <input type="range" id="solarSpeed" min="0" max="5" value="1"></label>
-                    <label>Scale: <input type="range" id="solarScale" min="0.5" max="2" step="0.1" value="1"></label>
+                    <h4>🎮 Simulation Controls</h4>
+                    <div class="btn-group-grid">
+                        <button class="ctrl-btn" id="solarPlay" onclick="toggleSolarPlay()">⏸ Pause</button>
+                        <button class="ctrl-btn" id="solarReset" onclick="resetSolar()">🔄 Reset</button>
+                    </div>
                 </div>
+
                 <div class="panel-section">
-                    <h3>👁️ View</h3>
-                    <label><input type="checkbox" id="showOrbits" checked> Orbits</label>
-                    <label><input type="checkbox" id="showLabels" checked> Labels</label>
+                    <h4>🎯 Focus Celestial Body</h4>
+                    <select id="solarFocus" class="panel-select" onchange="focusCelestial(this.value)">
+                        <option value="overview">🌌 Full Solar System Overview</option>
+                        <option value="Sun">☀️ Sun (Heliosphere & Coronal Flares)</option>
+                        <option value="Mercury">🌑 Mercury</option>
+                        <option value="Venus">🌕 Venus</option>
+                        <option value="Earth">🌍 Earth & Moon</option>
+                        <option value="Mars">🔴 Mars & Phobos/Deimos</option>
+                        <option value="Jupiter">🪐 Jupiter & Galilean Moons</option>
+                        <option value="Saturn">🪐 Saturn & Ring System</option>
+                        <option value="Uranus">🔵 Uranus</option>
+                        <option value="Neptune">🔵 Neptune</option>
+                        <option value="voyager">🛰️ Voyager 1 Interstellar Trajectory</option>
+                        <option value="jwst">🔭 James Webb Space Telescope (L2 Halo)</option>
+                    </select>
+                </div>
+
+                <div class="panel-section">
+                    <h4>⚙️ Orbital Dynamics</h4>
+                    <label class="slider-label">Orbital Speed: <input type="range" id="solarSpeed" min="0" max="5" step="0.1" value="1"></label>
+                    <label class="slider-label">Planet Size Scale: <input type="range" id="solarScale" min="0.5" max="3" step="0.1" value="1"></label>
+                    <label><input type="checkbox" id="showOrbits" checked> Keplerian Orbit Paths</label>
+                    <label><input type="checkbox" id="showLabels" checked> Celestial Labels</label>
+                    <label><input type="checkbox" id="showAsteroidBelt" checked> Main Asteroid Belt (3,000+ Bodies)</label>
+                    <label><input type="checkbox" id="showSunCorona" checked> Solar Flare Prominence Particles</label>
                 </div>
             </div>
-            <div class="info-box" id="solarInfo" style="display:none">
+
+            <!-- Planet Detail Card -->
+            <div class="info-box glass-card" id="solarInfo" style="display:none">
                 <button class="close-btn" onclick="closeInfo('solarInfo')">✕</button>
                 <div id="solarInfoContent"></div>
             </div>
-            <button class="back-btn" onclick="goHome()">← Back</button>
+
+            <button class="back-btn" onclick="goHome()">← Command Hub</button>
         </section>
 
-        <!-- DNA -->
+        <!-- ======================= 4. GENETICS & CRISPR-CAS9 ======================= -->
         <section class="page" id="dna">
             <div class="scene-wrap">
                 <div class="scene" id="dnaScene"></div>
             </div>
+
             <div class="panel panel-left">
-                <div class="panel-section">
-                    <h3>🧬 Mode</h3>
-                    <button class="mode active" data-mode="dna">DNA</button>
-                    <button class="mode" data-mode="rna">RNA</button>
+                <div class="panel-header">
+                    <h3>🧬 Genetics & Molecular Bio</h3>
+                    <span class="panel-tag">GENOMICS</span>
                 </div>
+
                 <div class="panel-section">
-                    <h3>🎬 Animation</h3>
-                    <button class="anim active" data-anim="rotate">Rotate</button>
-                    <button class="anim" data-anim="replicate">Replication</button>
-                    <button class="anim" data-anim="transcribe">Transcription</button>
+                    <h4>🧬 Genetic Mode</h4>
+                    <div class="btn-group-grid">
+                        <button class="mode-btn active" id="dnaModeDna" onclick="setDnaMode('dna')">DNA Helix</button>
+                        <button class="mode-btn" id="dnaModeRna" onclick="setDnaMode('rna')">RNA Single Strand</button>
+                        <button class="mode-btn" id="dnaModeCrispr" onclick="setDnaMode('crispr')">✂️ CRISPR-Cas9</button>
+                        <button class="mode-btn" id="dnaModeTranslation" onclick="setDnaMode('translation')">🏭 Ribosome Factory</button>
+                        <button class="mode-btn" id="dnaModeFolding" onclick="setDnaMode('folding')">🌀 Protein Folding</button>
+                        <button class="mode-btn" id="dnaModeVirus" onclick="setDnaMode('virus')">🦠 Viral Capsids</button>
+                    </div>
                 </div>
-                <div class="panel-section">
-                    <h3>⚙️ Settings</h3>
-                    <label>Speed: <input type="range" id="dnaSpeed" min="0" max="3" step="0.1" value="1"></label>
-                    <label>Turns: <input type="range" id="dnaTurns" min="1" max="4" value="2"></label>
+
+                <!-- Sub-panel for CRISPR -->
+                <div class="panel-section" id="dnaCrisprControls" style="display:none;">
+                    <h4>✂️ CRISPR Gene Surgery</h4>
+                    <p class="panel-note">Cas9 endonuclease complexes with sgRNA guide to cleave target DNA sequence.</p>
+                    <button class="btn btn-primary" id="crisprCutBtn" onclick="runCrisprCut()">✂️ Execute Cas9 Cleavage</button>
                 </div>
+
+                <!-- Sub-panel for Viral Capsids -->
+                <div class="panel-section" id="dnaVirusControls" style="display:none;">
+                    <h4>🦠 Viral Capsid Type</h4>
+                    <select id="virusSelect" class="panel-select" onchange="setVirusType(this.value)">
+                        <option value="Bacteriophage">T4 Bacteriophage (Infects Bacteria, Tail fibers)</option>
+                        <option value="Coronavirus">SARS-CoV-2 (Icosahedral + S-Spikes)</option>
+                        <option value="Influenza">Influenza (HA/NA Spikes)</option>
+                        <option value="HIV">HIV Retrovirus Capsid</option>
+                        <option value="Ebola">Ebola Filovirus (Helical Ribbon)</option>
+                    </select>
+                </div>
+
                 <div class="panel-section">
-                    <h3>🎨 Bases</h3>
-                    <div class="legend">
-                        <span style="color:#ff6b6b">●</span> Adenine
-                        <span style="color:#4ecdc4">●</span> Thymine
-                        <span style="color:#45b7d1">●</span> Guanine
-                        <span style="color:#ffa726">●</span> Cytosine
-                        <span style="color:#ab47bc">●</span> Uracil
+                    <h4>🎬 Animation Dynamics</h4>
+                    <div class="btn-group-grid">
+                        <button class="ctrl-btn active" id="dnaAnimRotate" onclick="setDnaAnim('rotate')">Rotate</button>
+                        <button class="ctrl-btn" id="dnaAnimReplicate" onclick="setDnaAnim('replicate')">Replication</button>
+                        <button class="ctrl-btn" id="dnaAnimTranscribe" onclick="setDnaAnim('transcribe')">Transcription</button>
+                    </div>
+                    <label class="slider-label">Helix Speed: <input type="range" id="dnaSpeed" min="0" max="3" step="0.1" value="1"></label>
+                    <label class="slider-label">Helical Turns: <input type="range" id="dnaTurns" min="1" max="6" value="3"></label>
+                </div>
+
+                <div class="panel-section">
+                    <h4>🎨 Nucleotide Base Pair Legend</h4>
+                    <div class="legend-grid">
+                        <div class="legend-item"><span class="dot" style="background:#ff5252"></span> Adenine (A)</div>
+                        <div class="legend-item"><span class="dot" style="background:#40c4ff"></span> Thymine (T)</div>
+                        <div class="legend-item"><span class="dot" style="background:#69f0ae"></span> Guanine (G)</div>
+                        <div class="legend-item"><span class="dot" style="background:#ffd740"></span> Cytosine (C)</div>
+                        <div class="legend-item"><span class="dot" style="background:#e040fb"></span> Uracil (U) [RNA]</div>
                     </div>
                 </div>
             </div>
+
             <div class="status-msg" id="dnaStatus" style="display:none"></div>
-            <button class="back-btn" onclick="goHome()">← Back</button>
+            <button class="back-btn" onclick="goHome()">← Command Hub</button>
         </section>
 
-        <!-- CELL -->
+        <!-- ======================= 5. CELLULAR BIOLOGY & NEURON ======================= -->
         <section class="page" id="cell">
             <div class="scene-wrap">
                 <div class="scene" id="cellScene"></div>
             </div>
+
             <div class="panel panel-left">
-                <div class="panel-section">
-                    <h3>🔬 Type</h3>
-                    <button class="ctype active" data-type="animal">Animal</button>
-                    <button class="ctype" data-type="plant">Plant</button>
-                    <button class="ctype" data-type="bacteria">Bacteria</button>
-                    <button class="ctype" data-type="virus">Virus</button>
+                <div class="panel-header">
+                    <h3>🔬 Cytology & Neurobiology</h3>
+                    <span class="panel-tag">CELL BIOLOGY</span>
                 </div>
+
                 <div class="panel-section">
-                    <h3>🎬 Animation</h3>
-                    <button class="canim active" data-anim="rotate">Rotate</button>
-                    <button class="canim" data-anim="mitosis">Mitosis</button>
-                    <button class="canim" data-anim="explode">Explode</button>
+                    <h4>🔬 Specimen Type</h4>
+                    <div class="btn-group-grid">
+                        <button class="mode-btn active" id="cellTypeAnimal" onclick="setCellType('animal')">Animal Cell</button>
+                        <button class="mode-btn" id="cellTypePlant" onclick="setCellType('plant')">Plant Cell</button>
+                        <button class="mode-btn" id="cellTypeNeuron" onclick="setCellType('neuron')">⚡ Human Neuron</button>
+                        <button class="mode-btn" id="cellTypeBacteria" onclick="setCellType('bacteria')">Bacteria Cell</button>
+                        <button class="mode-btn" id="cellTypeMitochondria" onclick="setCellType('mitochondria')">⚡ Mitochondria ATP</button>
+                    </div>
                 </div>
+
+                <!-- Neuron Specific Controls -->
+                <div class="panel-section" id="cellNeuronControls" style="display:none;">
+                    <h4>⚡ Action Potential Trigger</h4>
+                    <p class="panel-note">Fire electrical depolarization wave through soma, axon, and synaptic terminal.</p>
+                    <button class="btn btn-primary" id="fireNeuronBtn" onclick="fireNeuronActionPotential()">⚡ Stimulate Action Potential</button>
+                    <div class="reaction-metric">
+                        <div>Membrane Potential: <span id="membraneVoltage" class="text-cyan">-70 mV</span></div>
+                        <div>Neurotransmitter: <span id="synapseStatus" class="text-emerald">Dopamine / ACh</span></div>
+                    </div>
+                </div>
+
                 <div class="panel-section">
-                    <h3>⚙️ Settings</h3>
-                    <label>Speed: <input type="range" id="cellSpeed" min="0" max="2" step="0.1" value="0.5"></label>
+                    <h4>🎬 Structural View</h4>
+                    <div class="btn-group-grid">
+                        <button class="ctrl-btn active" id="cellAnimRotate" onclick="setCellAnim('rotate')">Normal View</button>
+                        <button class="ctrl-btn" id="cellAnimExplode" onclick="setCellAnim('explode')">💥 Exploded 3D</button>
+                        <button class="ctrl-btn" id="cellAnimMitosis" onclick="setCellAnim('mitosis')">🔄 Mitosis Cycle</button>
+                    </div>
+                    <label class="slider-label">Rotation Rate: <input type="range" id="cellSpeed" min="0" max="2" step="0.1" value="0.5"></label>
                 </div>
             </div>
-            <div class="info-box" id="cellInfo" style="display:none">
+
+            <div class="info-box glass-card" id="cellInfo" style="display:none">
                 <button class="close-btn" onclick="closeInfo('cellInfo')">✕</button>
                 <div id="cellInfoContent"></div>
             </div>
-            <button class="back-btn" onclick="goHome()">← Back</button>
+
+            <button class="back-btn" onclick="goHome()">← Command Hub</button>
         </section>
 
-        <!-- PHYSICS -->
+        <!-- ======================= 6. PHYSICS & QUANTUM LAB (16+ EXPERIMENTS) ======================= -->
         <section class="page" id="physics">
             <div class="scene-wrap">
                 <div class="scene" id="physicsScene"></div>
             </div>
-            <div class="panel panel-left">
-                <div class="panel-section">
-                    <h3>⚗️ Experiments</h3>
-                    <button class="exp active" data-exp="slit">Double Slit</button>
-                    <button class="exp" data-exp="rutherford">Rutherford</button>
-                    <button class="exp" data-exp="pendulum">Pendulum</button>
-                    <button class="exp" data-exp="wave">Wave</button>
-                    <button class="exp" data-exp="gravity">Gravity</button>
-                    <button class="exp" data-exp="optics">Optics</button>
+
+            <div class="panel panel-left wide-panel">
+                <div class="panel-header">
+                    <h3>💡 Advanced Physics Laboratory</h3>
+                    <span class="panel-tag">16+ SIMULATIONS</span>
                 </div>
+
                 <div class="panel-section">
-                    <h3>🎮 Control</h3>
-                    <button class="ctrl" id="physPlay">⏸ Pause</button>
-                    <button class="ctrl" id="physReset">🔄 Reset</button>
+                    <h4>⚗️ Select Experiment</h4>
+                    <select id="physicsExpSelect" class="panel-select-lg" onchange="loadPhysicsExp(this.value)">
+                        <optgroup label="── 1. Quantum & Particle Physics ──">
+                            <option value="slit">1. Double Slit & Quantum Eraser (Wave-Particle Duality)</option>
+                            <option value="photoelectric">2. Photoelectric Effect & Work Function (Planck E=hν)</option>
+                            <option value="rutherford">3. Rutherford Alpha Scattering (Atomic Nucleus)</option>
+                            <option value="fission">4. Nuclear Fission Chain Reaction (U-235 Control Rods)</option>
+                            <option value="superconduct">5. Superconductivity & Meissner Effect (Quantum Levitation)</option>
+                            <option value="millikan">6. Millikan Oil Drop Experiment (Quantized Charge e)</option>
+                        </optgroup>
+                        <optgroup label="── 2. Relativity & Astrophysics ──">
+                            <option value="blackhole">7. Black Hole Gravitational Lensing & Accretion Disk (GR)</option>
+                            <option value="relativity">8. Special Relativity Time Dilation & Lorentz Contraction</option>
+                            <option value="gravity">9. Orbital Gravity & N-Body Satellite Insertion</option>
+                        </optgroup>
+                        <optgroup label="── 3. Electromagnetism & Optics ──">
+                            <option value="lorentz">10. Lorentz Force Magnetic Bottle & Cyclotron Helix</option>
+                            <option value="interferometer">11. Michelson-Morley Laser Interferometer (Fringes)</option>
+                            <option value="optics">12. Prism Chromatic Dispersion & Snell's Law</option>
+                            <option value="doppler">13. Doppler Effect & Supersonic Mach Shockwave Cone</option>
+                        </optgroup>
+                        <optgroup label="── 4. Classical Mechanics, Chaos & Fluids ──">
+                            <option value="double_pendulum">14. Chaotic Double Pendulum (Non-Linear Hamiltonian)</option>
+                            <option value="lorenz">15. Lorenz Strange Attractor (Butterfly Chaos Theory)</option>
+                            <option value="fluid">16. Fluid Dynamics & Kármán Vortex Shedding</option>
+                            <option value="thermo">17. Thermodynamics & Maxwell-Boltzmann Distribution</option>
+                            <option value="wave">18. Wave Motion, Standing Waves & Harmonics</option>
+                        </optgroup>
+                    </select>
                 </div>
+
+                <!-- Dynamic Controls Container for Selected Experiment -->
+                <div class="panel-section" id="physicsDynamicControls">
+                    <!-- Injected dynamically via JS based on experiment -->
+                </div>
+
                 <div class="panel-section">
-                    <h3>⚙️ Settings</h3>
-                    <label>Speed: <input type="range" id="physSpeed" min="0.1" max="3" step="0.1" value="1"></label>
+                    <h4>🎮 Execution Controls</h4>
+                    <div class="btn-group-grid">
+                        <button class="ctrl-btn" id="physPlay" onclick="togglePhysicsPlay()">⏸ Pause</button>
+                        <button class="ctrl-btn" id="physReset" onclick="resetPhysics()">🔄 Reset</button>
+                        <button class="ctrl-btn" id="physTheoryBtn" onclick="togglePhysicsTheory()">📜 Theory & Formulas</button>
+                    </div>
+                    <label class="slider-label">Time Warp Factor: <input type="range" id="physSpeed" min="0.1" max="3" step="0.1" value="1"></label>
                 </div>
             </div>
-            <div class="info-box" id="physInfo" style="display:none">
+
+            <!-- Physics Theory & Formula Box -->
+            <div class="info-box glass-card" id="physInfo" style="display:none">
                 <button class="close-btn" onclick="closeInfo('physInfo')">✕</button>
                 <div id="physInfoContent"></div>
             </div>
-            <button class="back-btn" onclick="goHome()">← Back</button>
+
+            <button class="back-btn" onclick="goHome()">← Command Hub</button>
         </section>
 
-        <!-- ROBOT -->
+        <!-- ======================= 7. ROBOTICS & CYBERNETICS ======================= -->
         <section class="page" id="robot">
             <div class="scene-wrap">
                 <div class="scene" id="robotScene"></div>
             </div>
+
             <div class="panel panel-left">
-                <div class="panel-section">
-                    <h3>🤖 Component</h3>
-                    <button class="comp active" data-comp="arm">Arm</button>
-                    <button class="comp" data-comp="motor">Motors</button>
-                    <button class="comp" data-comp="sensor">Sensors</button>
-                    <button class="comp" data-comp="board">Boards</button>
+                <div class="panel-header">
+                    <h3>🤖 Robotics & Cybernetics Lab</h3>
+                    <span class="panel-tag">KINEMATICS</span>
                 </div>
+
+                <div class="panel-section">
+                    <h4>🤖 Kinematics Domain</h4>
+                    <div class="btn-group-grid">
+                        <button class="mode-btn active" id="robotModeArm" onclick="setRobotMode('arm')">6-DOF Robot Arm</button>
+                        <button class="mode-btn" id="robotModePid" onclick="setRobotMode('pid')">⚖️ PID Balance Bot</button>
+                        <button class="mode-btn" id="robotModeDrone" onclick="setRobotMode('drone')">🚁 Quadcopter</button>
+                        <button class="mode-btn" id="robotModeMotors" onclick="setRobotMode('motor')">⚡ Actuators & Motors</button>
+                        <button class="mode-btn" id="robotModeBoards" onclick="setRobotMode('board')">📟 Embedded Boards</button>
+                    </div>
+                </div>
+
+                <!-- 6-DOF Arm Joint Controls -->
                 <div class="panel-section" id="armControls">
-                    <h3>🦾 Joints</h3>
-                    <label>Base: <input type="range" id="baseRot" min="-180" max="180" value="0"><span id="baseVal">0°</span></label>
-                    <label>Shoulder: <input type="range" id="shoulderRot" min="-90" max="90" value="0"><span id="shoulderVal">0°</span></label>
-                    <label>Elbow: <input type="range" id="elbowRot" min="-120" max="120" value="0"><span id="elbowVal">0°</span></label>
-                    <label>Wrist: <input type="range" id="wristRot" min="-90" max="90" value="0"><span id="wristVal">0°</span></label>
-                    <label>Gripper: <input type="range" id="gripRot" min="0" max="100" value="50"><span id="gripVal">50%</span></label>
+                    <h4>🦾 6-Axis Joint Teleoperation</h4>
+                    <label class="slider-label">J1 Base Yaw: <input type="range" id="baseRot" min="-180" max="180" value="0"><span id="baseVal" class="val-tag">0°</span></label>
+                    <label class="slider-label">J2 Shoulder Pitch: <input type="range" id="shoulderRot" min="-90" max="90" value="0"><span id="shoulderVal" class="val-tag">0°</span></label>
+                    <label class="slider-label">J3 Elbow Pitch: <input type="range" id="elbowRot" min="-120" max="120" value="0"><span id="elbowVal" class="val-tag">0°</span></label>
+                    <label class="slider-label">J4 Wrist Roll: <input type="range" id="wristRot" min="-90" max="90" value="0"><span id="wristVal" class="val-tag">0°</span></label>
+                    <label class="slider-label">J5 Gripper Clamp: <input type="range" id="gripRot" min="0" max="100" value="50"><span id="gripVal" class="val-tag">50%</span></label>
+                    
+                    <div class="btn-group-grid" style="margin-top:10px;">
+                        <button class="ctrl-btn active" id="autoDemo" onclick="toggleArmAutoDemo()">▶ Auto Pick & Place Demo</button>
+                        <button class="ctrl-btn" id="resetArm" onclick="resetArmJoints()">🔄 Home (0° Pose)</button>
+                    </div>
                 </div>
-                <div class="panel-section">
-                    <button class="ctrl active" id="autoDemo">▶ Auto Demo</button>
-                    <button class="ctrl" id="resetArm">🔄 Reset</button>
+
+                <!-- PID Balancer Controls -->
+                <div class="panel-section" id="pidControls" style="display:none;">
+                    <h4>⚖️ PID Inverted Pendulum Tuning</h4>
+                    <label class="slider-label">Proportional Gain (Kp): <input type="range" id="pidKp" min="0" max="100" value="45"><span id="kpVal" class="val-tag">45</span></label>
+                    <label class="slider-label">Integral Gain (Ki): <input type="range" id="pidKi" min="0" max="20" step="0.1" value="1.2"><span id="kiVal" class="val-tag">1.2</span></label>
+                    <label class="slider-label">Derivative Gain (Kd): <input type="range" id="pidKd" min="0" max="50" value="18"><span id="kdVal" class="val-tag">18</span></label>
+                    <button class="btn btn-primary" onclick="applyPidPerturbation()">💥 Apply Disturbance Force</button>
+                </div>
+
+                <!-- Quadcopter Controls -->
+                <div class="panel-section" id="droneControls" style="display:none;">
+                    <h4>🚁 Drone Flight Physics</h4>
+                    <label class="slider-label">Throttle Thrust: <input type="range" id="droneThrottle" min="0" max="100" value="50"></label>
+                    <label class="slider-label">Pitch Angle: <input type="range" id="dronePitch" min="-30" max="30" value="0"></label>
+                    <label class="slider-label">Roll Angle: <input type="range" id="droneRoll" min="-30" max="30" value="0"></label>
                 </div>
             </div>
-            <div class="info-box" id="robotInfo" style="display:none">
+
+            <div class="info-box glass-card" id="robotInfo" style="display:none">
                 <button class="close-btn" onclick="closeInfo('robotInfo')">✕</button>
                 <div id="robotInfoContent"></div>
             </div>
-            <button class="back-btn" onclick="goHome()">← Back</button>
+
+            <button class="back-btn" onclick="goHome()">← Command Hub</button>
         </section>
 
-        <!-- GAME -->
-        <section class="page" id="game">
+        <!-- ======================= 8. 3D SCIENCE ARCADE (4 GAMES) ======================= -->
+        <section class="page" id="games">
             <div class="scene-wrap">
                 <div class="scene" id="gameScene"></div>
             </div>
-            <div class="game-hud">
-                <div>SCORE: <span id="score">0</span></div>
-                <div>LIVES: <span id="lives">❤️❤️❤️</span></div>
-                <div>WAVE: <span id="wave">1</span></div>
+
+            <!-- Arcade HUD Overlay -->
+            <div class="game-hud" id="gameHud">
+                <div class="hud-box"><span class="hud-title">SCORE</span><span id="score" class="hud-num">0</span></div>
+                <div class="hud-box"><span class="hud-title">SHIELD / LIVES</span><span id="lives" class="hud-num">❤️❤️❤️</span></div>
+                <div class="hud-box"><span class="hud-title">WAVE / LEVEL</span><span id="wave" class="hud-num">1</span></div>
+                <div class="hud-box"><span class="hud-title">HIGH SCORE</span><span id="highScore" class="hud-num">0</span></div>
             </div>
+
             <div class="panel panel-left">
-                <div class="panel-section">
-                    <h3>🎮 Controls</h3>
-                    <p style="font-size:12px;color:#aaa">WASD or Arrow keys to move<br>SPACE to shoot</p>
+                <div class="panel-header">
+                    <h3>🎮 3D Science Arcade</h3>
+                    <span class="panel-tag">4 GAMES</span>
                 </div>
+
                 <div class="panel-section">
-                    <h3>Difficulty</h3>
-                    <select id="difficulty">
-                        <option value="easy">Easy</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="hard">Hard</option>
+                    <h4>🕹️ Select Game</h4>
+                    <select id="gameSelect" class="panel-select" onchange="switchGame(this.value)">
+                        <option value="space">1. 🚀 Asteroid Kinetic Deflector (Space Combat)</option>
+                        <option value="quantum">2. ⚛️ Quantum Tunneling Barrier Sorter</option>
+                        <option value="alchemy">3. 🧪 Chemical Alchemy Molecule Crafter</option>
+                        <option value="slingshot">4. 🪐 Gravitational Slingshot Orbital Insertion</option>
                     </select>
                 </div>
+
+                <div class="panel-section" id="gameInstructions">
+                    <h4>📖 Game Controls</h4>
+                    <p id="gameHelpText" class="panel-note">WASD / Arrow Keys to move starfighter.<br>SPACEBAR to fire quantum laser cannons.<br>Destroy incoming kinetic asteroids before they impact Earth!</p>
+                </div>
+
                 <div class="panel-section">
-                    <button class="ctrl" id="startGame">▶ Start</button>
-                    <button class="ctrl" id="restartGame">🔄 Restart</button>
+                    <h4>⚙️ Difficulty</h4>
+                    <select id="difficulty" class="panel-select">
+                        <option value="easy">Cadet (Easy)</option>
+                        <option value="medium" selected>Scientist (Medium)</option>
+                        <option value="hard">Quantum Master (Hard)</option>
+                    </select>
+                </div>
+
+                <div class="panel-section">
+                    <div class="btn-group-grid">
+                        <button class="btn btn-primary" id="startGame" onclick="startActiveGame()">▶ Start Game</button>
+                        <button class="ctrl-btn" id="restartGame" onclick="restartActiveGame()">🔄 Restart</button>
+                    </div>
                 </div>
             </div>
-            <div class="game-over" id="gameOver" style="display:none">
-                <h2>GAME OVER</h2>
-                <p>Score: <span id="finalScore">0</span></p>
-                <button class="btn btn-primary" onclick="restartGame()">Play Again</button>
+
+            <!-- Game Over / Victory Modal -->
+            <div class="game-over glass-card" id="gameOver" style="display:none">
+                <h2 id="gameOverTitle">MISSION TERMINATED</h2>
+                <p id="gameOverMsg">Final Score: <span id="finalScore" class="text-cyan">0</span></p>
+                <button class="btn btn-primary glow-btn" onclick="restartActiveGame()">Play Again</button>
             </div>
-            <button class="back-btn" onclick="goHome()">← Back</button>
+
+            <button class="back-btn" onclick="goHome()">← Command Hub</button>
         </section>
     </main>
 
+    <!-- Global Toast Alert Banner -->
     <div class="toast" id="toast"></div>
+
+    <!-- Application Script -->
     <script src="script.js"></script>
 </body>
 </html>

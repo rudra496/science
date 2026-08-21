@@ -1,190 +1,420 @@
-// ================== GLOBALS ==================
+/**
+ * SCIENCE LAB 3D — MASTER AUTONOMOUS SIMULATION & EXPERIMENT ENGINE (v2.5)
+ * Pure Client-Side Architecture for GitHub Pages / WebGL / Three.js r128
+ * Built for Rudra Sarker (rudra496.github.io/science)
+ */
+
+// ==========================================================================
+// 1. GLOBAL STATE & SYSTEM INITIALIZATION
+// ==========================================================================
 let currentPage = 'home';
 let scene, camera, renderer, controls;
 let animationId = null;
 let isPaused = false;
 let simTime = 0;
+let lastFrameTime = performance.now();
+let frameCount = 0;
+let currentFps = 60;
+let activeParticleCount = 0;
+let currentSubMode = '';
+let currentExperiment = 'slit';
+let currentGame = 'space';
+let resizeHandler = null;
 
-// ================== ELEMENTS DATA ==================
+// Sound FX Engine via Web Audio API (100% Client-Side, No External Audio Files)
+class SoundEngine {
+    constructor() {
+        this.ctx = null;
+        this.muted = false;
+    }
+
+    init() {
+        if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+
+    playLaser() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(880, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(110, this.ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.15);
+    }
+
+    playExplosion() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const dur = 0.35;
+        const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * dur, this.ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < buf.length; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.1));
+        }
+        const src = this.ctx.createBufferSource();
+        src.buffer = buf;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(300, this.ctx.currentTime);
+        filter.frequency.linearRampToValueAtTime(50, this.ctx.currentTime + dur);
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + dur);
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        src.start();
+    }
+
+    playQuantumPing() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, this.ctx.currentTime); // C5
+        osc.frequency.exponentialRampToValueAtTime(1046.5, this.ctx.currentTime + 0.2); // C6
+        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.25);
+    }
+
+    playClick() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.04);
+    }
+}
+const sound = new SoundEngine();
+
+// ==========================================================================
+// 2. 118 CHEMICAL ELEMENTS DATASET (COMPLETE)
+// ==========================================================================
 const ELEMENTS = [
-    {n:1,s:'H',name:'Hydrogen',cat:'nonmetal',color:'#90CAF9',mass:1.008,p:1,g:1,config:'1s¹',found:'1766',use:'Fuel cells',fact:'Most abundant'},
-    {n:2,s:'He',name:'Helium',cat:'noble',color:'#E8F5E9',mass:4.003,p:1,g:18,config:'1s²',found:'1868',use:'Balloons',fact:'Doesn\'t solidify'},
-    {n:3,s:'Li',name:'Lithium',cat:'alkali',color:'#FF8A65',mass:6.941,p:2,g:1,config:'[He]2s¹',found:'1817',use:'Batteries',fact:'Lightest metal'},
-    {n:4,s:'Be',name:'Beryllium',cat:'alkaline',color:'#FFCC80',mass:9.012,p:2,g:2,config:'[He]2s²',found:'1798',use:'Aerospace',fact:'Toxic dust'},
-    {n:5,s:'B',name:'Boron',cat:'metalloid',color:'#A1887F',mass:10.81,p:2,g:13,config:'[He]2s²2p¹',found:'1808',use:'Glass',fact:'Essential for plants'},
-    {n:6,s:'C',name:'Carbon',cat:'nonmetal',color:'#616161',mass:12.01,p:2,g:14,config:'[He]2s²2p²',found:'Ancient',use:'Organic chem',fact:'Basis of life'},
-    {n:7,s:'N',name:'Nitrogen',cat:'nonmetal',color:'#90CAF9',mass:14.01,p:2,g:15,config:'[He]2s²2p³',found:'1772',use:'Fertilizers',fact:'78% atmosphere'},
-    {n:8,s:'O',name:'Oxygen',cat:'nonmetal',color:'#EF5350',mass:16.00,p:2,g:16,config:'[He]2s²2p⁴',found:'1774',use:'Respiration',fact:'21% atmosphere'},
-    {n:9,s:'F',name:'Fluorine',cat:'halogen',color:'#A5D6A7',mass:19.00,p:2,g:17,config:'[He]2s²2p⁵',found:'1886',use:'Toothpaste',fact:'Most reactive'},
-    {n:10,s:'Ne',name:'Neon',cat:'noble',color:'#F48FB1',mass:20.18,p:2,g:18,config:'[He]2s²2p⁶',found:'1898',use:'Neon signs',fact:'Red-orange glow'},
-    {n:11,s:'Na',name:'Sodium',cat:'alkali',color:'#FF8A65',mass:22.99,p:3,g:1,config:'[Ne]3s¹',found:'1807',use:'Table salt',fact:'Reactive with water'},
-    {n:12,s:'Mg',name:'Magnesium',cat:'alkaline',color:'#FFCC80',mass:24.31,p:3,g:2,config:'[Ne]3s²',found:'1755',use:'Alloys',fact:'Bright white flame'},
-    {n:13,s:'Al',name:'Aluminum',cat:'post',color:'#B0BEC5',mass:26.98,p:3,g:13,config:'[Ne]3s²3p¹',found:'1825',use:'Cans, foil',fact:'Most abundant metal'},
-    {n:14,s:'Si',name:'Silicon',cat:'metalloid',color:'#A1887F',mass:28.09,p:3,g:14,config:'[Ne]3s²3p²',found:'1824',use:'Chips, glass',fact:'2nd most abundant'},
-    {n:15,s:'P',name:'Phosphorus',cat:'nonmetal',color:'#FFD54F',mass:30.97,p:3,g:15,config:'[Ne]3s²3p³',found:'1669',use:'Fertilizers',fact:'Glows'},
-    {n:16,s:'S',name:'Sulfur',cat:'nonmetal',color:'#FFF176',mass:32.07,p:3,g:16,config:'[Ne]3s²3p⁴',found:'Ancient',use:'Sulfuric acid',fact:'Brimstone'},
-    {n:17,s:'Cl',name:'Chlorine',cat:'halogen',color:'#A5D6A7',mass:35.45,p:3,g:17,config:'[Ne]3s²3p⁵',found:'1774',use:'Disinfectant',fact:'Yellow-green gas'},
-    {n:18,s:'Ar',name:'Argon',cat:'noble',color:'#E0E0E0',mass:39.95,p:3,g:18,config:'[Ne]3s²3p⁶',found:'1894',use:'Welding',fact:'1% atmosphere'},
-    {n:19,s:'K',name:'Potassium',cat:'alkali',color:'#FF8A65',mass:39.10,p:4,g:1,config:'[Ar]4s¹',found:'1807',use:'Fertilizers',fact:'Violent with water'},
-    {n:20,s:'Ca',name:'Calcium',cat:'alkaline',color:'#FFCC80',mass:40.08,p:4,g:2,config:'[Ar]4s²',found:'1808',use:'Bones, cement',fact:'In human body'},
-    {n:21,s:'Sc',name:'Scandium',cat:'transition',color:'#CE93D8',mass:44.96,p:4,g:3,config:'[Ar]3d¹4s²',found:'1879',use:'Aerospace',fact:'Scandinavia'},
-    {n:22,s:'Ti',name:'Titanium',cat:'transition',color:'#B0BEC5',mass:47.87,p:4,g:4,config:'[Ar]3d²4s²',found:'1791',use:'Aircraft',fact:'Strong & light'},
-    {n:23,s:'V',name:'Vanadium',cat:'transition',color:'#FF8A65',mass:50.94,p:4,g:5,config:'[Ar]3d³4s²',found:'1801',use:'Steel tools',fact:'Named after Vanadis'},
-    {n:24,s:'Cr',name:'Chromium',cat:'transition',color:'#90A4AE',mass:52.00,p:4,g:6,config:'[Ar]3d⁵4s¹',found:'1797',use:'Chrome plating',fact:'Means color'},
-    {n:25,s:'Mn',name:'Manganese',cat:'transition',color:'#7E57C2',mass:54.94,p:4,g:7,config:'[Ar]3d⁵4s²',found:'1774',use:'Steel',fact:'Trace element'},
-    {n:26,s:'Fe',name:'Iron',cat:'transition',color:'#9E9E9E',mass:55.85,p:4,g:8,config:'[Ar]3d⁶4s²',found:'Ancient',use:'Steel',fact:'Most common metal'},
-    {n:27,s:'Co',name:'Cobalt',cat:'transition',color:'#42A5F5',mass:58.93,p:4,g:9,config:'[Ar]3d⁷4s²',found:'1735',use:'Batteries',fact:'Blue pigment'},
-    {n:28,s:'Ni',name:'Nickel',cat:'transition',color:'#B0BEC5',mass:58.69,p:4,g:10,config:'[Ar]3d⁸4s²',found:'1751',use:'Coins',fact:'Coins worldwide'},
-    {n:29,s:'Cu',name:'Copper',cat:'transition',color:'#FF8A65',mass:63.55,p:4,g:11,config:'[Ar]3d¹⁰4s¹',found:'Ancient',use:'Wires',fact:'Best conductor'},
-    {n:30,s:'Zn',name:'Zinc',cat:'transition',color:'#B0BEC5',mass:65.38,p:4,g:12,config:'[Ar]3d¹⁰4s²',found:'Ancient',use:'Galvanization',fact:'Immune system'},
-    {n:31,s:'Ga',name:'Gallium',cat:'post',color:'#B0BEC5',mass:69.72,p:4,g:13,config:'[Ar]3d¹⁰4s²4p¹',found:'1875',use:'LEDs',fact:'Melts in hand'},
-    {n:32,s:'Ge',name:'Germanium',cat:'metalloid',color:'#81C784',mass:72.63,p:4,g:14,config:'[Ar]3d¹⁰4s²4p²',found:'1886',use:'Fiber optics',fact:'Germany'},
-    {n:33,s:'As',name:'Arsenic',cat:'metalloid',color:'#808080',mass:74.92,p:4,g:15,config:'[Ar]3d¹⁰4s²4p³',found:'Ancient',use:'Semiconductors',fact:'Poison'},
-    {n:34,s:'Se',name:'Selenium',cat:'nonmetal',color:'#FFD54F',mass:78.97,p:4,g:16,config:'[Ar]3d¹⁰4s²4p⁴',found:'1817',use:'Electronics',fact:'Moon (Selene)'},
-    {n:35,s:'Br',name:'Bromine',cat:'halogen',color:'#8D6E63',mass:79.90,p:4,g:17,config:'[Ar]3d¹⁰4s²4p⁵',found:'1826',use:'Flame retardant',fact:'Liquid nonmetal'},
-    {n:36,s:'Kr',name:'Krypton',cat:'noble',color:'#CE93D8',mass:83.80,p:4,g:18,config:'[Ar]3d¹⁰4s²4p⁶',found:'1898',use:'Lighting',fact:'Not Superman'},
-    {n:37,s:'Rb',name:'Rubidium',cat:'alkali',color:'#FF8A65',mass:85.47,p:5,g:1,config:'[Kr]5s¹',found:'1861',use:'Atomic clocks',fact:'Ignites in air'},
-    {n:38,s:'Sr',name:'Strontium',cat:'alkaline',color:'#FFCC80',mass:87.62,p:5,g:2,config:'[Kr]5s²',found:'1790',use:'Fireworks',fact:'Red color'},
-    {n:39,s:'Y',name:'Yttrium',cat:'transition',color:'#4DD0E1',mass:88.91,p:5,g:3,config:'[Kr]4d¹5s²',found:'1794',use:'LEDs',fact:'Ytterby'},
-    {n:40,s:'Zr',name:'Zirconium',cat:'transition',color:'#B0BEC5',mass:91.22,p:5,g:4,config:'[Kr]4d²5s²',found:'1789',use:'Nuclear reactors',fact:'Diamond simulant'},
-    {n:41,s:'Nb',name:'Niobium',cat:'transition',color:'#CE93D8',mass:92.91,p:5,g:5,config:'[Kr]4d⁴5s¹',found:'1801',use:'Superconductors',fact:'Niobe'},
-    {n:42,s:'Mo',name:'Molybdenum',cat:'transition',color:'#78909C',mass:95.95,p:5,g:6,config:'[Kr]4d⁵5s¹',found:'1781',use:'Steel',fact:'High melting point'},
-    {n:43,s:'Tc',name:'Technetium',cat:'transition',color:'#E0E0E0',mass:98,p:5,g:7,config:'[Kr]4d⁵5s²',found:'1937',use:'Medical imaging',fact:'First artificial'},
-    {n:44,s:'Ru',name:'Ruthenium',cat:'transition',color:'#B0BEC5',mass:101.07,p:5,g:8,config:'[Kr]4d⁷5s¹',found:'1844',use:'Electronics',fact:'Russia'},
-    {n:45,s:'Rh',name:'Rhodium',cat:'transition',color:'#E0E0E0',mass:102.91,p:5,g:9,config:'[Kr]4d⁸5s¹',found:'1803',use:'Catalytic converters',fact:'Most expensive'},
-    {n:46,s:'Pd',name:'Palladium',cat:'transition',color:'#E0E0E0',mass:106.42,p:5,g:10,config:'[Kr]4d¹⁰',found:'1803',use:'Jewelry',fact:'Asteroid Pallas'},
-    {n:47,s:'Ag',name:'Silver',cat:'transition',color:'#E0E0E0',mass:107.87,p:5,g:11,config:'[Kr]4d¹⁰5s¹',found:'Ancient',use:'Jewelry',fact:'Best conductor'},
-    {n:48,s:'Cd',name:'Cadmium',cat:'transition',color:'#FFD54F',mass:112.41,p:5,g:12,config:'[Kr]4d¹⁰5s²',found:'1817',use:'Batteries',fact:'Toxic'},
-    {n:49,s:'In',name:'Indium',cat:'post',color:'#7986CB',mass:114.82,p:5,g:13,config:'[Kr]4d¹⁰5s²5p¹',found:'1863',use:'LCD',fact:'Indigo line'},
-    {n:50,s:'Sn',name:'Tin',cat:'post',color:'#B0BEC5',mass:118.71,p:5,g:14,config:'[Kr]4d¹⁰5s²5p²',found:'Ancient',use:'Solder',fact:'Bronze Age'},
-    {n:51,s:'Sb',name:'Antimony',cat:'metalloid',color:'#B39DDB',mass:121.76,p:5,g:15,config:'[Kr]4d¹⁰5s²5p³',found:'Ancient',use:'Batteries',fact:'Egyptian mascara'},
-    {n:52,s:'Te',name:'Tellurium',cat:'metalloid',color:'#FFB74D',mass:127.60,p:5,g:16,config:'[Kr]4d¹⁰5s²5p⁴',found:'1783',use:'Solar cells',fact:'Earth (Tellus)'},
-    {n:53,s:'I',name:'Iodine',cat:'halogen',color:'#7E57C2',mass:126.90,p:5,g:17,config:'[Kr]4d¹⁰5s²5p⁵',found:'1811',use:'Disinfectant',fact:'Thyroid'},
-    {n:54,s:'Xe',name:'Xenon',cat:'noble',color:'#42A5F5',mass:131.29,p:5,g:18,config:'[Kr]4d¹⁰5s²5p⁶',found:'1898',use:'Anesthesia',fact:'Stranger'},
-    {n:55,s:'Cs',name:'Cesium',cat:'alkali',color:'#FF8A65',mass:132.91,p:6,g:1,config:'[Xe]6s¹',found:'1860',use:'Atomic clocks',fact:'Most electropositive'},
-    {n:56,s:'Ba',name:'Barium',cat:'alkaline',color:'#FFCC80',mass:137.33,p:6,g:2,config:'[Xe]6s²',found:'1808',use:'Medical imaging',fact:'Heavy'},
-    {n:57,s:'La',name:'Lanthanum',cat:'lanthanide',color:'#81C784',mass:138.91,p:6,g:3,config:'[Xe]5d¹6s²',found:'1839',use:'Lenses',fact:'Hidden'},
-    {n:58,s:'Ce',name:'Cerium',cat:'lanthanide',color:'#A5D6A7',mass:140.12,p:6,g:3,config:'[Xe]4f¹5d¹6s²',found:'1803',use:'Lighters',fact:'Most abundant rare earth'},
-    {n:59,s:'Pr',name:'Praseodymium',cat:'lanthanide',color:'#C5E1A5',mass:140.91,p:6,g:3,config:'[Xe]4f³6s²',found:'1885',use:'Magnets',fact:'Green twin'},
-    {n:60,s:'Nd',name:'Neodymium',cat:'lanthanide',color:'#DCEDC8',mass:144.24,p:6,g:3,config:'[Xe]4f⁴6s²',found:'1885',use:'Strong magnets',fact:'Strongest magnets'},
-    {n:61,s:'Pm',name:'Promethium',cat:'lanthanide',color:'#F48FB1',mass:145,p:6,g:3,config:'[Xe]4f⁵6s²',found:'1945',use:'Nuclear batteries',fact:'Prometheus'},
-    {n:62,s:'Sm',name:'Samarium',cat:'lanthanide',color:'#FFF59D',mass:150.36,p:6,g:3,config:'[Xe]4f⁶6s²',found:'1879',use:'Cancer treatment',fact:'Samarskite'},
-    {n:63,s:'Eu',name:'Europium',cat:'lanthanide',color:'#FF8A65',mass:151.96,p:6,g:3,config:'[Xe]4f⁷6s²',found:'1901',use:'LEDs',fact:'Most reactive rare earth'},
-    {n:64,s:'Gd',name:'Gadolinium',cat:'lanthanide',color:'#FFCC80',mass:157.25,p:6,g:3,config:'[Xe]4f⁷5d¹6s²',found:'1880',use:'MRI',fact:'Johan Gadolin'},
-    {n:65,s:'Tb',name:'Terbium',cat:'lanthanide',color:'#80DEEA',mass:158.93,p:6,g:3,config:'[Xe]4f⁹6s²',found:'1843',use:'Phosphors',fact:'Ytterby'},
-    {n:66,s:'Dy',name:'Dysprosium',cat:'lanthanide',color:'#B2FF59',mass:162.50,p:6,g:3,config:'[Xe]4f¹⁰6s²',found:'1886',use:'Magnets',fact:'Hard to get'},
-    {n:67,s:'Ho',name:'Holmium',cat:'lanthanide',color:'#69F0AE',mass:164.93,p:6,g:3,config:'[Xe]4f¹¹6s²',found:'1878',use:'Lasers',fact:'Stockholm'},
-    {n:68,s:'Er',name:'Erbium',cat:'lanthanide',color:'#EA80FC',mass:167.26,p:6,g:3,config:'[Xe]4f¹²6s²',found:'1843',use:'Fiber optics',fact:'Ytterby'},
-    {n:69,s:'Tm',name:'Thulium',cat:'lanthanide',color:'#7C4DFF',mass:168.93,p:6,g:3,config:'[Xe]4f¹³6s²',found:'1879',use:'X-ray',fact:'Thule'},
-    {n:70,s:'Yb',name:'Ytterbium',cat:'lanthanide',color:'#448AFF',mass:173.05,p:6,g:3,config:'[Xe]4f¹⁴6s²',found:'1878',use:'Lasers',fact:'4th Ytterby'},
-    {n:71,s:'Lu',name:'Lutetium',cat:'lanthanide',color:'#18FFFF',mass:174.97,p:6,g:3,config:'[Xe]4f¹⁴5d¹6s²',found:'1907',use:'PET scans',fact:'Paris'},
-    {n:72,s:'Hf',name:'Hafnium',cat:'transition',color:'#B0BEC5',mass:178.49,p:6,g:4,config:'[Xe]4f¹⁴5d²6s²',found:'1923',use:'Nuclear',fact:'Copenhagen'},
-    {n:73,s:'Ta',name:'Tantalum',cat:'transition',color:'#90A4AE',mass:180.95,p:6,g:5,config:'[Xe]4f¹⁴5d³6s²',found:'1802',use:'Implants',fact:'Tantalus'},
-    {n:74,s:'W',name:'Tungsten',cat:'transition',color:'#78909C',mass:183.84,p:6,g:6,config:'[Xe]4f¹⁴5d⁴6s²',found:'1783',use:'Light bulbs',fact:'Highest melting point'},
-    {n:75,s:'Re',name:'Rhenium',cat:'transition',color:'#B0BEC5',mass:186.21,p:6,g:7,config:'[Xe]4f¹⁴5d⁵6s²',found:'1925',use:'Jet engines',fact:'Rarest'},
-    {n:76,s:'Os',name:'Osmium',cat:'transition',color:'#455A64',mass:190.23,p:6,g:8,config:'[Xe]4f¹⁴5d⁶6s²',found:'1803',use:'Pen tips',fact:'Densest'},
-    {n:77,s:'Ir',name:'Iridium',cat:'transition',color:'#CFD8DC',mass:192.22,p:6,g:9,config:'[Xe]4f¹⁴5d⁷6s²',found:'1803',use:'Spark plugs',fact:'Most corrosion resistant'},
-    {n:78,s:'Pt',name:'Platinum',cat:'transition',color:'#ECEFF1',mass:195.08,p:6,g:10,config:'[Xe]4f¹⁴5d⁹6s¹',found:'1735',use:'Jewelry',fact:'Little silver'},
-    {n:79,s:'Au',name:'Gold',cat:'transition',color:'#FFD700',mass:196.97,p:6,g:11,config:'[Xe]4f¹⁴5d¹⁰6s¹',found:'Ancient',use:'Jewelry',fact:'Most malleable'},
-    {n:80,s:'Hg',name:'Mercury',cat:'transition',color:'#B0BEC5',mass:200.59,p:6,g:12,config:'[Xe]4f¹⁴5d¹⁰6s²',found:'Ancient',use:'Thermometers',fact:'Liquid metal'},
-    {n:81,s:'Tl',name:'Thallium',cat:'post',color:'#808080',mass:204.38,p:6,g:13,config:'[Xe]4f¹⁴5d¹⁰6s²6p¹',found:'1861',use:'Electronics',fact:'Green shoot'},
-    {n:82,s:'Pb',name:'Lead',cat:'post',color:'#616161',mass:207.2,p:6,g:14,config:'[Xe]4f¹⁴5d¹⁰6s²6p²',found:'Ancient',use:'Batteries',fact:'Dense, soft'},
-    {n:83,s:'Bi',name:'Bismuth',cat:'post',color:'#E040FB',mass:208.98,p:6,g:15,config:'[Xe]4f¹⁴5d¹⁰6s²6p³',found:'Ancient',use:'Medicine',fact:'Rainbow crystals'},
-    {n:84,s:'Po',name:'Polonium',cat:'metalloid',color:'#CE93D8',mass:209,p:6,g:16,config:'[Xe]4f¹⁴5d¹⁰6s²6p⁴',found:'1898',use:'Heat source',fact:'Poland'},
-    {n:85,s:'At',name:'Astatine',cat:'halogen',color:'#000000',mass:210,p:6,g:17,config:'[Xe]4f¹⁴5d¹⁰6s²6p⁵',found:'1940',use:'Research',fact:'Rarest'},
-    {n:86,s:'Rn',name:'Radon',cat:'noble',color:'#FF5252',mass:222,p:6,g:18,config:'[Xe]4f¹⁴5d¹⁰6s²6p⁶',found:'1900',use:'Cancer therapy',fact:'Radioactive gas'},
-    {n:87,s:'Fr',name:'Francium',cat:'alkali',color:'#FF8A65',mass:223,p:7,g:1,config:'[Rn]7s¹',found:'1939',use:'Research',fact:'2nd rarest'},
-    {n:88,s:'Ra',name:'Radium',cat:'alkaline',color:'#C5E1A5',mass:226,p:7,g:2,config:'[Rn]7s²',found:'1898',use:'Glow paint',fact:'Glows blue'},
-    {n:89,s:'Ac',name:'Actinium',cat:'actinide',color:'#80CBC4',mass:227,p:7,g:3,config:'[Rn]6d¹7s²',found:'1899',use:'Neutron source',fact:'Glows blue'},
-    {n:90,s:'Th',name:'Thorium',cat:'actinide',color:'#FFCC80',mass:232.04,p:7,g:3,config:'[Rn]6d²7s²',found:'1829',use:'Nuclear fuel',fact:'Thor god'},
-    {n:91,s:'Pa',name:'Protactinium',cat:'actinide',color:'#BCAAA4',mass:231.04,p:7,g:3,config:'[Rn]5f²6d¹7s²',found:'1913',use:'Research',fact:'Parent of actinium'},
-    {n:92,s:'U',name:'Uranium',cat:'actinide',color:'#81C784',mass:238.03,p:7,g:3,config:'[Rn]5f³6d¹7s²',found:'1789',use:'Nuclear',fact:'Uranus planet'},
-    {n:93,s:'Np',name:'Neptunium',cat:'actinide',color:'#4DD0E1',mass:237,p:7,g:3,config:'[Rn]5f⁴6d¹7s²',found:'1940',use:'Research',fact:'1st transuranium'},
-    {n:94,s:'Pu',name:'Plutonium',cat:'actinide',color:'#CE93D8',mass:244,p:7,g:3,config:'[Rn]5f⁶7s²',found:'1940',use:'Nuclear weapons',fact:'Pluto'},
-    {n:95,s:'Am',name:'Americium',cat:'actinide',color:'#90CAF9',mass:243,p:7,g:3,config:'[Rn]5f⁷7s²',found:'1944',use:'Smoke detectors',fact:'Americas'},
-    {n:96,s:'Cm',name:'Curium',cat:'actinide',color:'#80DEEA',mass:247,p:7,g:3,config:'[Rn]5f⁷6d¹7s²',found:'1944',use:'Spacecraft',fact:'Curies'},
-    {n:97,s:'Bk',name:'Berkelium',cat:'actinide',color:'#B2FF59',mass:247,p:7,g:3,config:'[Rn]5f⁹7s²',found:'1949',use:'Research',fact:'Berkeley'},
-    {n:98,s:'Cf',name:'Californium',cat:'actinide',color:'#FF5722',mass:251,p:7,g:3,config:'[Rn]5f¹⁰7s²',found:'1950',use:'Cancer treatment',fact:'California'},
-    {n:99,s:'Es',name:'Einsteinium',cat:'actinide',color:'#9C27B0',mass:252,p:7,g:3,config:'[Rn]5f¹¹7s²',found:'1952',use:'Research',fact:'Einstein'},
-    {n:100,s:'Fm',name:'Fermium',cat:'actinide',color:'#4CAF50',mass:257,p:7,g:3,config:'[Rn]5f¹²7s²',found:'1952',use:'Research',fact:'Fermi'},
-    {n:101,s:'Md',name:'Mendelevium',cat:'actinide',color:'#E91E63',mass:258,p:7,g:3,config:'[Rn]5f¹³7s²',found:'1955',use:'Research',fact:'Mendeleev'},
-    {n:102,s:'No',name:'Nobelium',cat:'actinide',color:'#2196F3',mass:259,p:7,g:3,config:'[Rn]5f¹⁴7s²',found:'1958',use:'Research',fact:'Nobel'},
-    {n:103,s:'Lr',name:'Lawrencium',cat:'actinide',color:'#FF9800',mass:266,p:7,g:3,config:'[Rn]5f¹⁴7p¹7s²',found:'1961',use:'Research',fact:'Lawrence'},
-    {n:104,s:'Rf',name:'Rutherfordium',cat:'transition',color:'#FFC107',mass:267,p:7,g:4,config:'[Rn]5f¹⁴6d²7s²',found:'1964',use:'Research',fact:'Rutherford'},
-    {n:105,s:'Db',name:'Dubnium',cat:'transition',color:'#00BCD4',mass:268,p:7,g:5,config:'[Rn]5f¹⁴6d³7s²',found:'1967',use:'Research',fact:'Dubna'},
-    {n:106,s:'Sg',name:'Seaborgium',cat:'transition',color:'#673AB7',mass:269,p:7,g:6,config:'[Rn]5f¹⁴6d⁴7s²',found:'1974',use:'Research',fact:'Seaborg'},
-    {n:107,s:'Bh',name:'Bohrium',cat:'transition',color:'#9C27B0',mass:270,p:7,g:7,config:'[Rn]5f¹⁴6d⁵7s²',found:'1981',use:'Research',fact:'Bohr'},
-    {n:108,s:'Hs',name:'Hassium',cat:'transition',color:'#795548',mass:269,p:7,g:8,config:'[Rn]5f¹⁴6d⁶7s²',found:'1984',use:'Research',fact:'Hesse'},
-    {n:109,s:'Mt',name:'Meitnerium',cat:'transition',color:'#607D8B',mass:278,p:7,g:9,config:'[Rn]5f¹⁴6d⁷7s²',found:'1982',use:'Research',fact:'Meitner'},
-    {n:110,s:'Ds',name:'Darmstadtium',cat:'transition',color:'#8BC34A',mass:281,p:7,g:10,config:'[Rn]5f¹⁴6d⁸7s²',found:'1994',use:'Research',fact:'Darmstadt'},
-    {n:111,s:'Rg',name:'Roentgenium',cat:'transition',color:'#FF5722',mass:282,p:7,g:11,config:'[Rn]5f¹⁴6d⁹7s²',found:'1994',use:'Research',fact:'Röntgen'},
-    {n:112,s:'Cn',name:'Copernicium',cat:'transition',color:'#03A9F4',mass:285,p:7,g:12,config:'[Rn]5f¹⁴6d¹⁰7s²',found:'1996',use:'Research',fact:'Copernicus'},
-    {n:113,s:'Nh',name:'Nihonium',cat:'post',color:'#E91E63',mass:286,p:7,g:13,config:'[Rn]5f¹⁴6d¹⁰7s²7p¹',found:'2004',use:'Research',fact:'Japan'},
-    {n:114,s:'Fl',name:'Flerovium',cat:'post',color:'#9E9E9E',mass:289,p:7,g:14,config:'[Rn]5f¹⁴6d¹⁰7s²7p²',found:'1998',use:'Research',fact:'Flerov'},
-    {n:115,s:'Mc',name:'Moscovium',cat:'post',color:'#673AB7',mass:290,p:7,g:15,config:'[Rn]5f¹⁴6d¹⁰7s²7p³',found:'2003',use:'Research',fact:'Moscow'},
-    {n:116,s:'Lv',name:'Livermorium',cat:'post',color:'#4CAF50',mass:293,p:7,g:16,config:'[Rn]5f¹⁴6d¹⁰7s²7p⁴',found:'2000',use:'Research',fact:'Livermore'},
-    {n:117,s:'Ts',name:'Tennessine',cat:'halogen',color:'#FF9800',mass:294,p:7,g:17,config:'[Rn]5f¹⁴6d¹⁰7s²7p⁵',found:'2010',use:'Research',fact:'Tennessee'},
-    {n:118,s:'Og',name:'Oganesson',cat:'noble',color:'#F44336',mass:294,p:7,g:18,config:'[Rn]5f¹⁴6d¹⁰7s²7p⁶',found:'2002',use:'Research',fact:'Oganessian'}
+    {n:1,s:'H',name:'Hydrogen',cat:'nonmetal',color:'#90CAF9',mass:1.008,p:1,g:1,config:'1s¹',found:'1766',use:'Rocket fuel, ammonia, fuel cells',fact:'Most abundant cosmic element (75% universe mass)'},
+    {n:2,s:'He',name:'Helium',cat:'noble',color:'#E8F5E9',mass:4.003,p:1,g:18,config:'1s²',found:'1868',use:'Cryogenics, MRI cooling, airships',fact:'Second most abundant element; never solidifies at 1 atm'},
+    {n:3,s:'Li',name:'Lithium',cat:'alkali',color:'#FF8A65',mass:6.941,p:2,g:1,config:'[He]2s¹',found:'1817',use:'Li-ion batteries, ceramics, mood stabilizer',fact:'Least dense solid metal; floats on water and reacts'},
+    {n:4,s:'Be',name:'Beryllium',cat:'alkaline',color:'#FFCC80',mass:9.012,p:2,g:2,config:'[He]2s²',found:'1798',use:'JWST mirrors, aerospace alloys, X-ray windows',fact:'Transparent to X-rays and highly rigid'},
+    {n:5,s:'B',name:'Boron',cat:'metalloid',color:'#A1887F',mass:10.81,p:2,g:13,config:'[He]2s²2p¹',found:'1808',use:'Borosilicate glass, semiconductors, plant nutrition',fact:'High tensile strength; used in body armor'},
+    {n:6,s:'C',name:'Carbon',cat:'nonmetal',color:'#616161',mass:12.01,p:2,g:14,config:'[He]2s²2p²',found:'Ancient',use:'Organic life, steel, graphene, carbon fiber',fact:'Forms millions of organic compounds; basis of all Earth life'},
+    {n:7,s:'N',name:'Nitrogen',cat:'nonmetal',color:'#90CAF9',mass:14.01,p:2,g:15,config:'[He]2s²2p³',found:'1772',use:'Fertilizers, liquid nitrogen cryo, food packaging',fact:'Makes up 78% of Earth atmosphere'},
+    {n:8,s:'O',name:'Oxygen',cat:'nonmetal',color:'#EF5350',mass:16.00,p:2,g:16,config:'[He]2s²2p⁴',found:'1774',use:'Cellular respiration, steelmaking, rocket oxidizer',fact:'Makes up 21% atmosphere and 46% of Earth crust'},
+    {n:9,s:'F',name:'Fluorine',cat:'halogen',color:'#A5D6A7',mass:19.00,p:2,g:17,config:'[He]2s²2p⁵',found:'1886',use:'Toothpaste fluoride, Teflon (PTFE), pharmaceuticals',fact:'Most electronegative and chemically reactive element'},
+    {n:10,s:'Ne',name:'Neon',cat:'noble',color:'#F48FB1',mass:20.18,p:2,g:18,config:'[He]2s²2p⁶',found:'1898',use:'Neon signs, high-voltage indicators, lasers',fact:'Emits unmistakable reddish-orange glow in discharge tubes'},
+    {n:11,s:'Na',name:'Sodium',cat:'alkali',color:'#FF8A65',mass:22.99,p:3,g:1,config:'[Ne]3s¹',found:'1807',use:'Table salt (NaCl), nerve conduction, sodium lamps',fact:'Soft metal that ignites violently in contact with water'},
+    {n:12,s:'Mg',name:'Magnesium',cat:'alkaline',color:'#FFCC80',mass:24.31,p:3,g:2,config:'[Ne]3s²',found:'1755',use:'Lightweight alloys, chlorophyll core, flares',fact:'Burns with intense dazzling white light at 3100°C'},
+    {n:13,s:'Al',name:'Aluminum',cat:'post',color:'#B0BEC5',mass:26.98,p:3,g:13,config:'[Ne]3s²3p¹',found:'1825',use:'Aircraft fuselage, foil, power lines, electronics',fact:'Most abundant metal in Earth crust (8.1% mass)'},
+    {n:14,s:'Si',name:'Silicon',cat:'metalloid',color:'#A1887F',mass:28.09,p:3,g:14,config:'[Ne]3s²3p²',found:'1824',use:'Semiconductor microchips, solar cells, silicone',fact:'Backbone of modern computation and second most abundant in crust'},
+    {n:15,s:'P',name:'Phosphorus',cat:'nonmetal',color:'#FFD54F',mass:30.97,p:3,g:15,config:'[Ne]3s²3p³',found:'1669',use:'Fertilizers, DNA/RNA backbone, ATP energy currency',fact:'Discovered from urine by alchemist Hennig Brand; glows in dark'},
+    {n:16,s:'S',name:'Sulfur',cat:'nonmetal',color:'#FFF176',mass:32.07,p:3,g:16,config:'[Ne]3s²3p⁴',found:'Ancient',use:'Sulfuric acid, vulcanized rubber, gunpowder',fact:'Known as brimstone; burns with vivid blue flame'},
+    {n:17,s:'Cl',name:'Chlorine',cat:'halogen',color:'#A5D6A7',mass:35.45,p:3,g:17,config:'[Ne]3s²3p⁵',found:'1774',use:'Water purification, PVC plastic, bleach',fact:'Dense greenish-yellow halogen gas with suffocating odor'},
+    {n:18,s:'Ar',name:'Argon',cat:'noble',color:'#E0E0E0',mass:39.95,p:3,g:18,config:'[Ne]3s²3p⁶',found:'1894',use:'Shielding gas for welding, incandescent light bulbs',fact:'Third most abundant gas in Earth atmosphere (0.93%)'},
+    {n:19,s:'K',name:'Potassium',cat:'alkali',color:'#FF8A65',mass:39.10,p:4,g:1,config:'[Ar]4s¹',found:'1807',use:'Fertilizers, neuron action potentials, soaps',fact:'Burns with lilac-purple flame; reacts violently with water'},
+    {n:20,s:'Ca',name:'Calcium',cat:'alkaline',color:'#FFCC80',mass:40.08,p:4,g:2,config:'[Ar]4s²',found:'1808',use:'Bones, teeth, cement/concrete, muscle contraction',fact:'Fifth most abundant element in Earth crust and body'},
+    {n:21,s:'Sc',name:'Scandium',cat:'transition',color:'#CE93D8',mass:44.96,p:4,g:3,config:'[Ar]3d¹4s²',found:'1879',use:'Aerospace Al-Sc alloys, stadium lighting',fact:'Named after Scandinavia; very light and strong'},
+    {n:22,s:'Ti',name:'Titanium',cat:'transition',color:'#B0BEC5',mass:47.87,p:4,g:4,config:'[Ar]3d²4s²',found:'1791',use:'Jet engines, biomedical implants, golf clubs',fact:'High strength-to-weight ratio; highly corrosion resistant'},
+    {n:23,s:'V',name:'Vanadium',cat:'transition',color:'#FF8A65',mass:50.94,p:4,g:5,config:'[Ar]3d³4s²',found:'1801',use:'High-strength steel alloys, redox flow batteries',fact:'Named after Norse goddess of beauty Vanadis'},
+    {n:24,s:'Cr',name:'Chromium',cat:'transition',color:'#90A4AE',mass:52.00,p:4,g:6,config:'[Ar]3d⁵4s¹',found:'1797',use:'Stainless steel, chrome plating, ruby coloration',fact:'Gives rubies their brilliant red color and emeralds green'},
+    {n:25,s:'Mn',name:'Manganese',cat:'transition',color:'#7E57C2',mass:54.94,p:4,g:7,config:'[Ar]3d⁵4s²',found:'1774',use:'Steel deoxidizer, aluminum beverage cans, batteries',fact:'Essential cofactor in photosynthesis oxygen-evolving complex'},
+    {n:26,s:'Fe',name:'Iron',cat:'transition',color:'#9E9E9E',mass:55.85,p:4,g:8,config:'[Ar]3d⁶4s²',found:'Ancient',use:'Structural steel, hemoglobin blood oxygen transport',fact:'Most abundant element by mass of total Earth planet'},
+    {n:27,s:'Co',name:'Cobalt',cat:'transition',color:'#42A5F5',mass:58.93,p:4,g:9,config:'[Ar]3d⁷4s²',found:'1735',use:'EV Li-ion batteries, superalloys, cobalt blue glass',fact:'Core atom in Vitamin B12 (cobalamin)'},
+    {n:28,s:'Ni',name:'Nickel',cat:'transition',color:'#B0BEC5',mass:58.69,p:4,g:10,config:'[Ar]3d⁸4s²',found:'1751',use:'Stainless steel, rechargeable batteries, coinage',fact:'Earth inner core is predominantly iron-nickel alloy'},
+    {n:29,s:'Cu',name:'Copper',cat:'transition',color:'#FF8A65',mass:63.55,p:4,g:11,config:'[Ar]3d¹⁰4s¹',found:'Ancient',use:'Electrical wiring, plumbing, brass/bronze alloys',fact:'One of the few metals with natural distinct reddish color'},
+    {n:30,s:'Zn',name:'Zinc',cat:'transition',color:'#B0BEC5',mass:65.38,p:4,g:12,config:'[Ar]3d¹⁰4s²',found:'Ancient',use:'Galvanized anti-rust steel, brass, immune enzymes',fact:'Critical trace element for over 300 biological enzymes'},
+    {n:31,s:'Ga',name:'Gallium',cat:'post',color:'#B0BEC5',mass:69.72,p:4,g:13,config:'[Ar]3d¹⁰4s²4p¹',found:'1875',use:'Semiconductor GaAs, blue LEDs, thermometers',fact:'Melts in human hand at 29.76°C (85.57°F)'},
+    {n:32,s:'Ge',name:'Germanium',cat:'metalloid',color:'#81C784',mass:72.63,p:4,g:14,config:'[Ar]3d¹⁰4s²4p²',found:'1886',use:'Fiber optics, night vision infrared lenses',fact:'Used in first operational transistor in 1947'},
+    {n:33,s:'As',name:'Arsenic',cat:'metalloid',color:'#808080',mass:74.92,p:4,g:15,config:'[Ar]3d¹⁰4s²4p³',found:'Ancient',use:'Semiconductor doping, wood preservatives',fact:'Historically famous poison; sublimates at 614°C'},
+    {n:34,s:'Se',name:'Selenium',cat:'nonmetal',color:'#FFD54F',mass:78.97,p:4,g:16,config:'[Ar]3d¹⁰4s²4p⁴',found:'1817',use:'Photocopiers, solar panels, glass decolorizer',fact:'Named after Greek moon goddess Selene; photoconductive'},
+    {n:35,s:'Br',name:'Bromine',cat:'halogen',color:'#8D6E63',mass:79.90,p:4,g:17,config:'[Ar]3d¹⁰4s²4p⁵',found:'1826',use:'Flame retardants, pharmaceuticals, photography',fact:'Only nonmetallic element that is liquid at standard room temp'},
+    {n:36,s:'Kr',name:'Krypton',cat:'noble',color:'#CE93D8',mass:83.80,p:4,g:18,config:'[Ar]3d¹⁰4s²4p⁶',found:'1898',use:'High-speed photography strobe flashes, lasers',fact:'Defined the meter standard length between 1960 and 1983'},
+    {n:37,s:'Rb',name:'Rubidium',cat:'alkali',color:'#FF8A65',mass:85.47,p:5,g:1,config:'[Kr]5s¹',found:'1861',use:'Atomic clocks, quantum laser cooling, fireworks',fact:'Ignites spontaneously in air and melts at 39.3°C'},
+    {n:38,s:'Sr',name:'Strontium',cat:'alkaline',color:'#FFCC80',mass:87.62,p:5,g:2,config:'[Kr]5s²',found:'1790',use:'Red emergency flares, fireworks, precision atomic clocks',fact:'Produces brilliant deep red flame spectrum'},
+    {n:39,s:'Y',name:'Yttrium',cat:'transition',color:'#4DD0E1',mass:88.91,p:5,g:3,config:'[Kr]4d¹5s²',found:'1794',use:'YBCO high-temperature superconductors, LEDs, lasers',fact:'Discovered in Swedish village Ytterby along with 3 other elements'},
+    {n:40,s:'Zr',name:'Zirconium',cat:'transition',color:'#B0BEC5',mass:91.22,p:5,g:4,config:'[Kr]4d²5s²',found:'1789',use:'Nuclear reactor fuel rod cladding, cubic zirconia',fact:'Low neutron absorption cross-section makes it vital for nuclear reactors'},
+    {n:41,s:'Nb',name:'Niobium',cat:'transition',color:'#CE93D8',mass:92.91,p:5,g:5,config:'[Kr]4d⁴5s¹',found:'1801',use:'MRI superconducting magnets, rocket nozzles',fact:'Used in Large Hadron Collider superconducting cavities'},
+    {n:42,s:'Mo',name:'Molybdenum',cat:'transition',color:'#78909C',mass:95.95,p:5,g:6,config:'[Kr]4d⁵5s¹',found:'1781',use:'High-strength armor plate, enzyme nitrogen fixation',fact:'Extremely high melting point (2623°C)'},
+    {n:43,s:'Tc',name:'Technetium',cat:'transition',color:'#E0E0E0',mass:98,p:5,g:7,config:'[Kr]4d⁵5s²',found:'1937',use:'Medical gamma imaging (Tc-99m scans)',fact:'First artificially synthesized element in history'},
+    {n:44,s:'Ru',name:'Ruthenium',cat:'transition',color:'#B0BEC5',mass:101.07,p:5,g:8,config:'[Kr]4d⁷5s¹',found:'1844',use:'Hard disk drive platters, solar dye cells',fact:'Named after Ruthenia (Latin name for Russia)'},
+    {n:45,s:'Rh',name:'Rhodium',cat:'transition',color:'#E0E0E0',mass:102.91,p:5,g:9,config:'[Kr]4d⁸5s¹',found:'1803',use:'Automotive catalytic converters, optical mirrors',fact:'One of the rarest and most expensive precious metals on Earth'},
+    {n:46,s:'Pd',name:'Palladium',cat:'transition',color:'#E0E0E0',mass:106.42,p:5,g:10,config:'[Kr]4d¹⁰',found:'1803',use:'Catalytic converters, hydrogen absorption filters',fact:'Can absorb up to 900 times its own volume of hydrogen gas'},
+    {n:47,s:'Ag',name:'Silver',cat:'transition',color:'#E0E0E0',mass:107.87,p:5,g:11,config:'[Kr]4d¹⁰5s¹',found:'Ancient',use:'Jewelry, solar panels, best electrical conductor',fact:'Highest electrical and thermal conductivity of all elements'},
+    {n:48,s:'Cd',name:'Cadmium',cat:'transition',color:'#FFD54F',mass:112.41,p:5,g:12,config:'[Kr]4d¹⁰5s²',found:'1817',use:'NiCd batteries, nuclear control rods, pigments',fact:'Strongly absorbs neutrons; toxic heavy metal'},
+    {n:49,s:'In',name:'Indium',cat:'post',color:'#7986CB',mass:114.82,p:5,g:13,config:'[Kr]4d¹⁰5s²5p¹',found:'1863',use:'Indium Tin Oxide (ITO) touchscreens, solders',fact:'Emits an audible squeak or "tin cry" when bent'},
+    {n:50,s:'Sn',name:'Tin',cat:'post',color:'#B0BEC5',mass:118.71,p:5,g:14,config:'[Kr]4d¹⁰5s²5p²',found:'Ancient',use:'Solder alloys, tin plating for food cans, bronze',fact:'Alloyed with copper to initiate the historic Bronze Age'},
+    {n:51,s:'Sb',name:'Antimony',cat:'metalloid',color:'#B39DDB',mass:121.76,p:5,g:15,config:'[Kr]4d¹⁰5s²5p³',found:'Ancient',use:'Lead-acid battery plates, flame retardants',fact:'Expands upon freezing/solidifying'},
+    {n:52,s:'Te',name:'Tellurium',cat:'metalloid',color:'#FFB74D',mass:127.60,p:5,g:16,config:'[Kr]4d¹⁰5s²5p⁴',found:'1783',use:'Cadmium telluride solar panels, thermoelectric coolers',fact:'Named after Latin word Tellus meaning Earth'},
+    {n:53,s:'I',name:'Iodine',cat:'halogen',color:'#7E57C2',mass:126.90,p:5,g:17,config:'[Kr]4d¹⁰5s²5p⁵',found:'1811',use:'Antiseptic disinfectant, thyroid hormone synthesis',fact:'Sublimates directly into dense violet vapor when heated'},
+    {n:54,s:'Xe',name:'Xenon',cat:'noble',color:'#42A5F5',mass:131.29,p:5,g:18,config:'[Kr]4d¹⁰5s²5p⁶',found:'1898',use:'Ion thruster engines on satellites, medical anesthesia',fact:'Powering NASA deep-space ion propulsion thrusters'},
+    {n:55,s:'Cs',name:'Cesium',cat:'alkali',color:'#FF8A65',mass:132.91,p:6,g:1,config:'[Xe]6s¹',found:'1860',use:'Cesium atomic clocks defining the SI second unit',fact:'9,192,631,770 transitions per second define 1 SI second'},
+    {n:56,s:'Ba',name:'Barium',cat:'alkaline',color:'#FFCC80',mass:137.33,p:6,g:2,config:'[Xe]6s²',found:'1808',use:'Medical gastrointestinal X-ray contrast, drilling mud',fact:'Gives fireworks vivid emerald-green colors'},
+    {n:57,s:'La',name:'Lanthanum',cat:'lanthanide',color:'#81C784',mass:138.91,p:6,g:3,config:'[Xe]5d¹6s²',found:'1839',use:'Camera lenses, hybrid car NiMH battery electrodes',fact:'First of the rare-earth lanthanide series; oxidizes rapidly'},
+    {n:58,s:'Ce',name:'Cerium',cat:'lanthanide',color:'#A5D6A7',mass:140.12,p:6,g:3,config:'[Xe]4f¹5d¹6s²',found:'1803',use:'Self-cleaning ovens catalyst, glass polishing',fact:'Most abundant rare earth element in Earth crust'},
+    {n:59,s:'Pr',name:'Praseodymium',cat:'lanthanide',color:'#C5E1A5',mass:140.91,p:6,g:3,config:'[Xe]4f³6s²',found:'1885',use:'Aircraft engine alloys, welder protective goggles',fact:'Name means "green twin" due to green salts'},
+    {n:60,s:'Nd',name:'Neodymium',cat:'lanthanide',color:'#DCEDC8',mass:144.24,p:6,g:3,config:'[Xe]4f⁴6s²',found:'1885',use:'NdFeB permanent supermagnets, EV drive motors',fact:'Creates the strongest known permanent magnets on Earth'},
+    {n:61,s:'Pm',name:'Promethium',cat:'lanthanide',color:'#F48FB1',mass:145,p:6,g:3,config:'[Xe]4f⁵6s²',found:'1945',use:'Nuclear batteries, luminous instrument dials',fact:'Extremely radioactive and rare; named after titan Prometheus'},
+    {n:62,s:'Sm',name:'Samarium',cat:'lanthanide',color:'#FFF59D',mass:150.36,p:6,g:3,config:'[Xe]4f⁶6s²',found:'1879',use:'Samarium-cobalt heat-resistant magnets, cancer therapy',fact:'Withstands extreme temperatures up to 300°C without demagnetizing'},
+    {n:63,s:'Eu',name:'Europium',cat:'lanthanide',color:'#FF8A65',mass:151.96,p:6,g:3,config:'[Xe]4f⁷6s²',found:'1901',use:'Euro banknote anti-counterfeiting phosphors, red LEDs',fact:'Most reactive rare earth element; phosphoresces under UV'},
+    {n:64,s:'Gd',name:'Gadolinium',cat:'lanthanide',color:'#FFCC80',mass:157.25,p:6,g:3,config:'[Xe]4f⁷5d¹6s²',found:'1880',use:'MRI scan intravenous contrast agents, neutron shielding',fact:'Highly paramagnetic at room temperature'},
+    {n:65,s:'Tb',name:'Terbium',cat:'lanthanide',color:'#80DEEA',mass:158.93,p:6,g:3,config:'[Xe]4f⁹6s²',found:'1843',use:'Terfenol-D magnetostrictive sonar transducers, phosphors',fact:'Changes mechanical length when exposed to magnetic fields'},
+    {n:66,s:'Dy',name:'Dysprosium',cat:'lanthanide',color:'#B2FF59',mass:162.50,p:6,g:3,config:'[Xe]4f¹⁰6s²',found:'1886',use:'Wind turbine magnets, nuclear reactor control rods',fact:'Name translates from Greek as "hard to get at"'},
+    {n:67,s:'Ho',name:'Holmium',cat:'lanthanide',color:'#69F0AE',mass:164.93,p:6,g:3,config:'[Xe]4f¹¹6s²',found:'1878',use:'Medical surgery lasers, magnetic flux concentrators',fact:'Has highest magnetic magnetic moment of any natural element'},
+    {n:68,s:'Er',name:'Erbium',cat:'lanthanide',color:'#EA80FC',mass:167.26,p:6,g:3,config:'[Xe]4f¹²6s²',found:'1843',use:'Erbium-doped fiber optic amplifiers (EDFA) powering internet',fact:'Amplifies global internet fiber signals around the world'},
+    {n:69,s:'Tm',name:'Thulium',cat:'lanthanide',color:'#7C4DFF',mass:168.93,p:6,g:3,config:'[Xe]4f¹³6s²',found:'1879',use:'Portable dental X-ray machines, surgical lasers',fact:'Second rarest natural lanthanide on Earth'},
+    {n:70,s:'Yb',name:'Ytterbium',cat:'lanthanide',color:'#448AFF',mass:173.05,p:6,g:3,config:'[Xe]4f¹⁴6s²',found:'1878',use:'Optical atomic clocks, high-power fiber lasers',fact:'Fourth element named after the single Swedish quarry Ytterby'},
+    {n:71,s:'Lu',name:'Lutetium',cat:'lanthanide',color:'#18FFFF',mass:174.97,p:6,g:3,config:'[Xe]4f¹⁴5d¹6s²',found:'1907',use:'PET scan cancer detectors, targeted radiotherapy',fact:'Densest and hardest of all the lanthanides'},
+    {n:72,s:'Hf',name:'Hafnium',cat:'transition',color:'#B0BEC5',mass:178.49,p:6,g:4,config:'[Xe]4f¹⁴5d²6s²',found:'1923',use:'Nuclear submarine control rods, microchip gate dielectric',fact:'Resists corrosion; named after Copenhagen (Hafnia)'},
+    {n:73,s:'Ta',name:'Tantalum',cat:'transition',color:'#90A4AE',mass:180.95,p:6,g:5,config:'[Xe]4f¹⁴5d³6s²',found:'1802',use:'Smartphone micro-capacitors, surgical bone implants',fact:'Immune to biological rejection in the human body'},
+    {n:74,s:'W',name:'Tungsten',cat:'transition',color:'#78909C',mass:183.84,p:6,g:6,config:'[Xe]4f¹⁴5d⁴6s²',found:'1783',use:'Incandescent filaments, kinetic penetrators, welding',fact:'Highest melting point of all elements on Earth (3422°C)'},
+    {n:75,s:'Re',name:'Rhenium',cat:'transition',color:'#B0BEC5',mass:186.21,p:6,g:7,config:'[Xe]4f¹⁴5d⁵6s²',found:'1925',use:'Jet engine combustion turbine blades, platinum catalysts',fact:'Third highest melting point and among the rarest crust elements'},
+    {n:76,s:'Os',name:'Osmium',cat:'transition',color:'#455A64',mass:190.23,p:6,g:8,config:'[Xe]4f¹⁴5d⁶6s²',found:'1803',use:'Fountain pen tips, electrical contacts, stain microscopy',fact:'Densest naturally occurring element (22.59 g/cm³)'},
+    {n:77,s:'Ir',name:'Iridium',cat:'transition',color:'#CFD8DC',mass:192.22,p:6,g:9,config:'[Xe]4f¹⁴5d⁷6s²',found:'1803',use:'Aviation spark plugs, crucibles, dinosaur asteroid layer',fact:'Iridium-rich geological layer marks the asteroid impact 66M yrs ago'},
+    {n:78,s:'Pt',name:'Platinum',cat:'transition',color:'#ECEFF1',mass:195.08,p:6,g:10,config:'[Xe]4f¹⁴5d⁹6s¹',found:'1735',use:'Fuel cell catalysts, catalytic converters, chemotherapy',fact:'Extremely noble metal; unaffected by air oxidation'},
+    {n:79,s:'Au',name:'Gold',cat:'transition',color:'#FFD700',mass:196.97,p:6,g:11,config:'[Xe]4f¹⁴5d¹⁰6s¹',found:'Ancient',use:'Jewelry, aerospace infrared heat shields, electronics',fact:'Most malleable metal; 1 gram can be beaten into 1 m² sheet'},
+    {n:80,s:'Hg',name:'Mercury',cat:'transition',color:'#B0BEC5',mass:200.59,p:6,g:12,config:'[Xe]4f¹⁴5d¹⁰6s²',found:'Ancient',use:'Fluorescent lights, barometer pressure sensors, dental',fact:'Only metallic element that is liquid at standard room temperature'},
+    {n:81,s:'Tl',name:'Thallium',cat:'post',color:'#808080',mass:204.38,p:6,g:13,config:'[Xe]4f¹⁴5d¹⁰6s²6p¹',found:'1861',use:'High-density optical glass, cardiac stress imaging',fact:'Discovered by bright green spectral emission line'},
+    {n:82,s:'Pb',name:'Lead',cat:'post',color:'#616161',mass:207.2,p:6,g:14,config:'[Xe]4f¹⁴5d¹⁰6s²6p²',found:'Ancient',use:'Car batteries, radiation shielding for X-rays/nuclear',fact:'Dense malleable post-transition metal and final stable decay product'},
+    {n:83,s:'Bi',name:'Bismuth',cat:'post',color:'#E040FB',mass:208.98,p:6,g:15,config:'[Xe]4f¹⁴5d¹⁰6s²6p³',found:'Ancient',use:'Stomach medicines (Pepto-Bismol), non-toxic shot',fact:'Forms iridescent stepped rainbow hopper crystals on surface'},
+    {n:84,s:'Po',name:'Polonium',cat:'metalloid',color:'#CE93D8',mass:209,p:6,g:16,config:'[Xe]4f¹⁴5d¹⁰6s²6p⁴',found:'1898',use:'Anti-static brushes, space satellite thermoelectric heaters',fact:'Discovered by Marie Curie and named in honor of Poland'},
+    {n:85,s:'At',name:'Astatine',cat:'halogen',color:'#000000',mass:210,p:6,g:17,config:'[Xe]4f¹⁴5d¹⁰6s²6p⁵',found:'1940',use:'Targeted alpha-particle cancer oncology research',fact:'Rarest natural element in Earth crust (<28 grams in entire planet)'},
+    {n:86,s:'Rn',name:'Radon',cat:'noble',color:'#FF5252',mass:222,p:6,g:18,config:'[Xe]4f¹⁴5d¹⁰6s²6p⁶',found:'1900',use:'Radiation therapy, geological earthquake tracking',fact:'Heavy radioactive gas produced by natural decay of radium in soil'},
+    {n:87,s:'Fr',name:'Francium',cat:'alkali',color:'#FF8A65',mass:223,p:7,g:1,config:'[Rn]7s¹',found:'1939',use:'Atomic structure physics experiments',fact:'Second rarest natural element; half-life of only 22 minutes'},
+    {n:88,s:'Ra',name:'Radium',cat:'alkaline',color:'#C5E1A5',mass:226,p:7,g:2,config:'[Rn]7s²',found:'1898',use:'Historic luminous watch dials, cancer radiation therapy',fact:'Discovered by Marie & Pierre Curie; glows faint blue in dark'},
+    {n:89,s:'Ac',name:'Actinium',cat:'actinide',color:'#80CBC4',mass:227,p:7,g:3,config:'[Rn]6d¹7s²',found:'1899',use:'Neutron radiation source, targeted cancer alpha therapy',fact:'Glows with eerie blue light in darkness due to air ionization'},
+    {n:90,s:'Th',name:'Thorium',cat:'actinide',color:'#FFCC80',mass:232.04,p:7,g:3,config:'[Rn]6d²7s²',found:'1829',use:'Thorium nuclear power fuel cycles, TIG welding',fact:'Named after Norse god of thunder Thor; cleaner nuclear fuel'},
+    {n:91,s:'Pa',name:'Protactinium',cat:'actinide',color:'#BCAAA4',mass:231.04,p:7,g:3,config:'[Rn]5f²6d¹7s²',found:'1913',use:'Deep-sea sediment oceanographic radiometric dating',fact:'Highly radioactive and toxic actinide'},
+    {n:92,s:'U',name:'Uranium',cat:'actinide',color:'#81C784',mass:238.03,p:7,g:3,config:'[Rn]5f³6d¹7s²',found:'1789',use:'Commercial nuclear power generation, military armor',fact:'U-235 undergoes nuclear fission; named after planet Uranus'},
+    {n:93,s:'Np',name:'Neptunium',cat:'actinide',color:'#4DD0E1',mass:237,p:7,g:3,config:'[Rn]5f⁴6d¹7s²',found:'1940',use:'Nuclear physics detectors, precursor for Pu-238',fact:'First transuranic synthesized element beyond uranium'},
+    {n:94,s:'Pu',name:'Plutonium',cat:'actinide',color:'#CE93D8',mass:244,p:7,g:3,config:'[Rn]5f⁶7s²',found:'1940',use:'NASA Voyager & Mars Rover RTG space batteries, weapons',fact:'Powers NASA Curiosity and Perseverance rovers on Mars'},
+    {n:95,s:'Am',name:'Americium',cat:'actinide',color:'#90CAF9',mass:243,p:7,g:3,config:'[Rn]5f⁷7s²',found:'1944',use:'Household ionization smoke detectors, industrial gauges',fact:'Found in millions of residential smoke alarms worldwide'},
+    {n:96,s:'Cm',name:'Curium',cat:'actinide',color:'#80DEEA',mass:247,p:7,g:3,config:'[Rn]5f⁷6d¹7s²',found:'1944',use:'Alpha-particle spectrometers on planetary Mars rovers',fact:'Named in honor of Marie and Pierre Curie'},
+    {n:97,s:'Bk',name:'Berkelium',cat:'actinide',color:'#B2FF59',mass:247,p:7,g:3,config:'[Rn]5f⁹7s²',found:'1949',use:'Synthesis target to discover element 117 Tennessine',fact:'Named after University of California, Berkeley'},
+    {n:98,s:'Cf',name:'Californium',cat:'actinide',color:'#FF5722',mass:251,p:7,g:3,config:'[Rn]5f¹⁰7s²',found:'1950',use:'Neutron startup sources for nuclear reactors, oil logging',fact:'Extremely strong neutron emitter; highly valuable'},
+    {n:99,s:'Es',name:'Einsteinium',cat:'actinide',color:'#9C27B0',mass:252,p:7,g:3,config:'[Rn]5f¹¹7s²',found:'1952',use:'Fundamental nuclear science research',fact:'Discovered in debris fallout of first thermonuclear bomb test Ivy Mike'},
+    {n:100,s:'Fm',name:'Fermium',cat:'actinide',color:'#4CAF50',mass:257,p:7,g:3,config:'[Rn]5f¹²7s²',found:'1952',use:'Scientific heavy element synthesis research',fact:'Named after Enrico Fermi, pioneer of controlled nuclear chain reactions'},
+    {n:101,s:'Md',name:'Mendelevium',cat:'actinide',color:'#E91E63',mass:258,p:7,g:3,config:'[Rn]5f¹³7s²',found:'1955',use:'Heavy ion nuclear discovery experiments',fact:'Named in honor of Dmitri Mendeleev, father of the Periodic Table'},
+    {n:102,s:'No',name:'Nobelium',cat:'actinide',color:'#2196F3',mass:259,p:7,g:3,config:'[Rn]5f¹⁴7s²',found:'1958',use:'Heavy-element chemistry research',fact:'Named in honor of Alfred Nobel, founder of the Nobel Prizes'},
+    {n:103,s:'Lr',name:'Lawrencium',cat:'actinide',color:'#FF9800',mass:266,p:7,g:3,config:'[Rn]5f¹⁴7p¹7s²',found:'1961',use:'Superheavy actinide research',fact:'Named after Ernest Lawrence, inventor of the cyclotron accelerator'},
+    {n:104,s:'Rf',name:'Rutherfordium',cat:'transition',color:'#FFC107',mass:267,p:7,g:4,config:'[Rn]5f¹⁴6d²7s²',found:'1964',use:'Transactinide nuclear research',fact:'Named after Ernest Rutherford, discoverer of atomic nucleus'},
+    {n:105,s:'Db',name:'Dubnium',cat:'transition',color:'#00BCD4',mass:268,p:7,g:5,config:'[Rn]5f¹⁴6d³7s²',found:'1967',use:'Relativistic quantum chemistry research',fact:'Named after Dubna, Russia, site of the Joint Institute for Nuclear Research'},
+    {n:106,s:'Sg',name:'Seaborgium',cat:'transition',color:'#673AB7',mass:269,p:7,g:6,config:'[Rn]5f¹⁴6d⁴7s²',found:'1974',use:'Superheavy element research',fact:'First element named after a living person (Glenn T. Seaborg)'},
+    {n:107,s:'Bh',name:'Bohrium',cat:'transition',color:'#9C27B0',mass:270,p:7,g:7,config:'[Rn]5f¹⁴6d⁵7s²',found:'1981',use:'Quantum shell structure experiments',fact:'Named after Danish physicist Niels Bohr, pioneer of atomic models'},
+    {n:108,s:'Hs',name:'Hassium',cat:'transition',color:'#795548',mass:269,p:7,g:8,config:'[Rn]5f¹⁴6d⁶7s²',found:'1984',use:'Gas-phase transactinide chemistry',fact:'Forms volatile tetroxide compound similar to osmium'},
+    {n:109,s:'Mt',name:'Meitnerium',cat:'transition',color:'#607D8B',mass:278,p:7,g:9,config:'[Rn]5f¹⁴6d⁷7s²',found:'1982',use:'Superheavy nuclear research',fact:'Named in honor of Lise Meitner, co-discoverer of nuclear fission'},
+    {n:110,s:'Ds',name:'Darmstadtium',cat:'transition',color:'#8BC34A',mass:281,p:7,g:10,config:'[Rn]5f¹⁴6d⁸7s²',found:'1994',use:'Superheavy physics research',fact:'Named after Darmstadt, Germany, home of GSI Helmholtz Centre'},
+    {n:111,s:'Rg',name:'Roentgenium',cat:'transition',color:'#FF5722',mass:282,p:7,g:11,config:'[Rn]5f¹⁴6d⁹7s²',found:'1994',use:'Relativistic superheavy chemistry',fact:'Named after Wilhelm Röntgen, discoverer of X-rays'},
+    {n:112,s:'Cn',name:'Copernicium',cat:'transition',color:'#03A9F4',mass:285,p:7,g:12,config:'[Rn]5f¹⁴6d¹⁰7s²',found:'1996',use:'Relativistic closed-shell metal experiments',fact:'Behaves as a volatile liquid metal due to relativistic electron speeds'},
+    {n:113,s:'Nh',name:'Nihonium',cat:'post',color:'#E91E63',mass:286,p:7,g:13,config:'[Rn]5f¹⁴6d¹⁰7s²7p¹',found:'2004',use:'Superheavy physics experiments',fact:'First chemical element discovered in an Asian nation (RIKEN, Japan)'},
+    {n:114,s:'Fl',name:'Flerovium',cat:'post',color:'#9E9E9E',mass:289,p:7,g:14,config:'[Rn]5f¹⁴6d¹⁰7s²7p²',found:'1998',use:'Island of Stability nuclear research',fact:'Predicted to sit close to the theoretical nuclear "Island of Stability"'},
+    {n:115,s:'Mc',name:'Moscovium',cat:'post',color:'#673AB7',mass:290,p:7,g:15,config:'[Rn]5f¹⁴6d¹⁰7s²7p³',found:'2003',use:'Superheavy transactinide synthesis',fact:'Named in honor of the Moscow region of Russia'},
+    {n:116,s:'Lv',name:'Livermorium',cat:'post',color:'#4CAF50',mass:293,p:7,g:16,config:'[Rn]5f¹⁴6d¹⁰7s²7p⁴',found:'2000',use:'Heavy ion nuclear experiments',fact:'Named after Lawrence Livermore National Laboratory in California'},
+    {n:117,s:'Ts',name:'Tennessine',cat:'halogen',color:'#FF9800',mass:294,p:7,g:17,config:'[Rn]5f¹⁴6d¹⁰7s²7p⁵',found:'2010',use:'Superheavy halogen physics research',fact:'Named after Tennessee, home of Oak Ridge National Laboratory'},
+    {n:118,s:'Og',name:'Oganesson',cat:'noble',color:'#F44336',mass:294,p:7,g:18,config:'[Rn]5f¹⁴6d¹⁰7s²7p⁶',found:'2002',use:'Transactinide quantum chemistry research',fact:'Heaviest known element in the universe; atomic number 118'}
 ];
 
-const PLANETS = [
-    {name:'Sun',r:2.5,dist:0,speed:0,rot:0.001,col:'#FDB813',glow:'#FFA500',info:'Star at center, 99.86% of system mass'},
-    {name:'Mercury',r:0.3,dist:5,speed:4.1,rot:0.005,col:'#8C8C8C',info:'Smallest, no atmosphere, -180°C to 430°C'},
-    {name:'Venus',r:0.6,dist:7,speed:1.6,rot:-0.002,col:'#E6C87A',info:'Hottest planet 465°C, retrograde rotation'},
-    {name:'Earth',r:0.65,dist:10,speed:1,rot:0.02,col:'#6B93D6',info:'Only planet with life, 71% water',moons:[{d:1.5,s:0.18,sp:0.8}]},
-    {name:'Mars',r:0.4,dist:13,speed:0.53,rot:0.018,col:'#C1440E',info:'Red planet, largest volcano',moons:[{d:1,s:0.06,sp:2.5},{d:1.5,s:0.04,sp:1.5}]},
-    {name:'Jupiter',r:1.8,dist:19,speed:0.084,rot:0.04,col:'#C88B3A',info:'Largest, Great Red Spot, 95 moons',moons:[{d:2.5,s:0.12,sp:3},{d:3,s:0.1,sp:2.2},{d:3.5,s:0.15,sp:1.6},{d:4.2,s:0.12,sp:1.2}]},
-    {name:'Saturn',r:1.5,dist:27,speed:0.034,rot:0.038,col:'#EAD6B8',info:'Famous rings, would float on water',rings:true,ringCol:'#C9B896',moons:[{d:3,s:0.15,sp:1.5}]},
-    {name:'Uranus',r:1.1,dist:35,speed:0.012,rot:-0.03,col:'#B5E3E3',info:'Tilted 98°, coldest -224°C',rings:true,ringCol:'#87CEEB',moons:[{d:1.8,s:0.05,sp:2}]},
-    {name:'Neptune',r:1.05,dist:42,speed:0.006,rot:0.032,col:'#4B70DD',info:'Windiest 2100 km/h, farthest',moons:[{d:1.8,s:0.1,sp:-1}]}
-];
+// Periodic Table Layout Grid Map (Period vs Group)
+function getPeriodicPosition(elem) {
+    let col = elem.g;
+    let row = elem.p;
+    // Lanthanides & Actinides positioning
+    if (elem.n >= 57 && elem.n <= 71) {
+        row = 8.5;
+        col = elem.n - 57 + 3;
+    } else if (elem.n >= 89 && elem.n <= 103) {
+        row = 9.8;
+        col = elem.n - 89 + 3;
+    }
+    const x = (col - 9.5) * 1.55;
+    const y = -(row - 5.5) * 1.6;
+    return { x, y, z: 0 };
+}
 
-const VIRUSES = [
-    {name:'Coronavirus',col:'#E53935',info:'COVID-19, RNA virus, spike proteins'},
-    {name:'Influenza',col:'#43A047',info:'Flu virus, RNA, H/N proteins'},
-    {name:'HIV',col:'#7B1FA2',info:'Retrovirus, attacks immune system'},
-    {name:'Bacteriophage',col:'#1E88E5',info:'Infects bacteria, has tail'},
-    {name:'Ebola',col:'#5D4037',info:'Hemorrhagic fever, thread-like'},
-    {name:'Adenovirus',col:'#FF5722',info:'Respiratory, used in vaccines'},
-    {name:'Herpes',col:'#E91E63',info:'DNA virus, lifelong infection'},
-    {name:'Zika',col:'#00BCD4',info:'Mosquito-borne, birth defects'}
-];
+// ==========================================================================
+// 3. SCENE LIFECYCLE & WEBGL ENGINE HELPERS
+// ==========================================================================
+function disposeHierarchy(obj) {
+    if (!obj) return;
+    for (let i = obj.children.length - 1; i >= 0; i--) {
+        disposeHierarchy(obj.children[i]);
+    }
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.material) {
+        if (Array.isArray(obj.material)) {
+            obj.material.forEach(m => {
+                if (m.map) m.map.dispose();
+                m.dispose();
+            });
+        } else {
+            if (obj.material.map) obj.material.map.dispose();
+            obj.material.dispose();
+        }
+    }
+    if (obj.parent) obj.parent.remove(obj);
+}
 
-// ================== INIT ==================
-document.addEventListener('DOMContentLoaded', () => {
-    initStars();
-    initNav();
-});
+function createScene(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return null;
 
+    // Clean up previous animation frame and listeners
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+    }
+    if (resizeHandler) {
+        window.removeEventListener('resize', resizeHandler);
+        resizeHandler = null;
+    }
+    if (renderer) {
+        disposeHierarchy(scene);
+        renderer.dispose();
+        if (renderer.domElement && renderer.domElement.parentNode) {
+            renderer.domElement.parentNode.removeChild(renderer.domElement);
+        }
+    }
+
+    container.innerHTML = '';
+    const width = container.clientWidth || window.innerWidth;
+    const height = container.clientHeight || (window.innerHeight - 64);
+
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 2000);
+    
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    container.appendChild(renderer.domElement);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxDistance = 1200;
+    controls.minDistance = 2;
+
+    resizeHandler = () => {
+        if (container && camera && renderer) {
+            const w = container.clientWidth || window.innerWidth;
+            const h = container.clientHeight || (window.innerHeight - 64);
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        }
+    };
+    window.addEventListener('resize', resizeHandler);
+
+    return { scene, camera, renderer, controls };
+}
+
+function updateTelemetry(particleCount = 0) {
+    const now = performance.now();
+    frameCount++;
+    if (now - lastFrameTime >= 500) {
+        currentFps = Math.round((frameCount * 1000) / (now - lastFrameTime));
+        frameCount = 0;
+        lastFrameTime = now;
+        const fpsEl = document.getElementById('hudFps');
+        if (fpsEl) fpsEl.textContent = currentFps;
+    }
+    const timeEl = document.getElementById('hudTime');
+    if (timeEl) timeEl.textContent = simTime.toFixed(2) + 's';
+    const partEl = document.getElementById('hudParticles');
+    if (partEl) partEl.textContent = particleCount;
+    const statusEl = document.getElementById('hudStatus');
+    if (statusEl) {
+        statusEl.textContent = isPaused ? 'PAUSED' : 'ACTIVE';
+        statusEl.className = isPaused ? 'hud-val text-amber' : 'hud-val status-running';
+    }
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    sound.playClick();
+    setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+function closeInfo(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+    sound.playClick();
+}
+
+function resetCurrentCamera() {
+    if (controls) controls.reset();
+    sound.playClick();
+    showToast('Camera orientation reset to default.');
+}
+
+// ==========================================================================
+// 4. STARFIELD BACKGROUND ENGINE
+// ==========================================================================
 function initStars() {
     const canvas = document.getElementById('stars');
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let stars = [];
-    
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+
     function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
         stars = [];
-        for(let i = 0; i < 200; i++) {
+        for (let i = 0; i < 240; i++) {
             stars.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                r: Math.random() * 1.5,
-                a: Math.random()
+                x: Math.random() * width,
+                y: Math.random() * height,
+                r: Math.random() * 1.6 + 0.3,
+                a: Math.random() * 0.8 + 0.2,
+                speed: Math.random() * 0.05 + 0.02,
+                twinkle: Math.random() * Math.PI * 2
             });
         }
     }
-    
     resize();
     window.addEventListener('resize', resize);
-    
+
     function draw() {
-        ctx.fillStyle = '#0a0a1a';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#05060f';
+        ctx.fillRect(0, 0, width, height);
+
         stars.forEach(s => {
+            s.twinkle += s.speed;
+            const alpha = s.a * (0.6 + 0.4 * Math.sin(s.twinkle));
             ctx.beginPath();
             ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255,255,255,${s.a * 0.8})`;
+            ctx.fillStyle = `rgba(200, 225, 255, ${alpha})`;
             ctx.fill();
         });
         requestAnimationFrame(draw);
@@ -192,47 +422,169 @@ function initStars() {
     draw();
 }
 
+// ==========================================================================
+// 5. GLOBAL NAVIGATION & SEARCH ROUTER
+// ==========================================================================
 function initNav() {
     document.querySelectorAll('.nav-item, .mobile-item').forEach(btn => {
         btn.addEventListener('click', () => {
-            showPage(btn.dataset.page);
-            document.getElementById('mobileNav').classList.remove('open');
-            document.getElementById('overlay').classList.remove('show');
+            const page = btn.dataset.page;
+            showPage(page);
+            const mobileNav = document.getElementById('mobileNav');
+            const overlay = document.getElementById('overlay');
+            if (mobileNav) mobileNav.classList.remove('open');
+            if (overlay) overlay.classList.remove('show');
         });
     });
-    
-    document.getElementById('menuBtn').addEventListener('click', () => {
-        document.getElementById('mobileNav').classList.add('open');
-        document.getElementById('overlay').classList.add('show');
+
+    const menuBtn = document.getElementById('menuBtn');
+    const mobileClose = document.getElementById('mobileClose');
+    const overlay = document.getElementById('overlay');
+    const mobileNav = document.getElementById('mobileNav');
+
+    if (menuBtn && mobileNav && overlay) {
+        menuBtn.addEventListener('click', () => {
+            mobileNav.classList.add('open');
+            overlay.classList.add('show');
+            sound.playClick();
+        });
+    }
+    if (mobileClose && mobileNav && overlay) {
+        mobileClose.addEventListener('click', () => {
+            mobileNav.classList.remove('open');
+            overlay.classList.remove('show');
+            sound.playClick();
+        });
+    }
+    if (overlay && mobileNav) {
+        overlay.addEventListener('click', () => {
+            mobileNav.classList.remove('open');
+            overlay.classList.remove('show');
+        });
+    }
+
+    // Audio Mute Toggle
+    const audioBtn = document.getElementById('audioToggle');
+    if (audioBtn) {
+        audioBtn.addEventListener('click', () => {
+            sound.muted = !sound.muted;
+            audioBtn.textContent = sound.muted ? '🔇' : '🔊';
+            showToast(sound.muted ? 'Sound FX Muted' : 'Sound FX Enabled');
+        });
+    }
+
+    // Fullscreen Toggle
+    const fsBtn = document.getElementById('fsToggle');
+    if (fsBtn) {
+        fsBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen().catch(() => {});
+            }
+        });
+    }
+
+    // High-Res HD Snapshot Export
+    const snapBtn = document.getElementById('snapBtn');
+    if (snapBtn) {
+        snapBtn.addEventListener('click', () => {
+            if (!renderer) {
+                showToast('Open any 3D simulation to capture snapshot.');
+                return;
+            }
+            renderer.render(scene, camera);
+            const dataUrl = renderer.domElement.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = `ScienceLab3D_${currentPage}_${Date.now()}.png`;
+            link.href = dataUrl;
+            link.click();
+            sound.playClick();
+            showToast('Scientific Snapshot PNG Exported!');
+        });
+    }
+
+    // Global Search Autocomplete Engine
+    initGlobalSearch();
+}
+
+function initGlobalSearch() {
+    const searchInput = document.getElementById('globalSearch');
+    const dropdown = document.getElementById('searchResults');
+    if (!searchInput || !dropdown) return;
+
+    const searchableItems = [
+        ...ELEMENTS.map(e => ({ title: `${e.name} (${e.s}) - #${e.n}`, cat: 'Element', page: 'elements', action: () => { showPage('elements'); selectElement(e); } })),
+        { title: 'Double Slit Wave-Particle Duality', cat: 'Physics Exp', page: 'physics', action: () => { showPage('physics'); loadPhysicsExp('slit'); } },
+        { title: 'Black Hole Gravitational Lensing (GR)', cat: 'Physics Exp', page: 'physics', action: () => { showPage('physics'); loadPhysicsExp('blackhole'); } },
+        { title: 'Photoelectric Effect (Planck E=hν)', cat: 'Physics Exp', page: 'physics', action: () => { showPage('physics'); loadPhysicsExp('photoelectric'); } },
+        { title: 'Nuclear Fission Chain Reaction (U-235)', cat: 'Physics Exp', page: 'physics', action: () => { showPage('physics'); loadPhysicsExp('fission'); } },
+        { title: 'Lorenz Strange Attractor Chaos', cat: 'Physics Exp', page: 'physics', action: () => { showPage('physics'); loadPhysicsExp('lorenz'); } },
+        { title: 'Chaotic Double Pendulum', cat: 'Physics Exp', page: 'physics', action: () => { showPage('physics'); loadPhysicsExp('double_pendulum'); } },
+        { title: 'Superconductivity & Quantum Levitation', cat: 'Physics Exp', page: 'physics', action: () => { showPage('physics'); loadPhysicsExp('superconduct'); } },
+        { title: 'CRISPR-Cas9 Gene Surgery', cat: 'Genetics', page: 'dna', action: () => { showPage('dna'); setDnaMode('crispr'); } },
+        { title: 'Human Neuron Action Potential', cat: 'Cytology', page: 'cell', action: () => { showPage('cell'); setCellType('neuron'); } },
+        { title: 'Solar System & Planetary Orbits', cat: 'Astrophysics', page: 'solar', action: () => { showPage('solar'); } },
+        { title: '6-DOF Robot Arm Kinematics', cat: 'Robotics', page: 'robot', action: () => { showPage('robot'); } },
+        { title: 'Asteroid Kinetic Deflector 3D Game', cat: 'Arcade', page: 'games', action: () => { showPage('games'); switchGame('space'); } },
+        { title: 'Quantum Tunneling Sorter Game', cat: 'Arcade', page: 'games', action: () => { showPage('games'); switchGame('quantum'); } },
+        { title: 'Chemical Molecule Forge 3D', cat: 'Chemistry', page: 'elements', action: () => { showPage('elements'); setElemMode('molecule'); } }
+    ];
+
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.trim().toLowerCase();
+        if (!query) {
+            dropdown.style.display = 'none';
+            return;
+        }
+        const matches = searchableItems.filter(item => item.title.toLowerCase().includes(query) || item.cat.toLowerCase().includes(query)).slice(0, 8);
+        if (matches.length === 0) {
+            dropdown.innerHTML = '<div style="padding:12px;color:#94a3b8;font-size:12px;">No scientific assets found.</div>';
+            dropdown.style.display = 'block';
+            return;
+        }
+        dropdown.innerHTML = matches.map((m, idx) => `
+            <div class="search-result-item" data-idx="${idx}">
+                <span class="search-item-title">${m.title}</span>
+                <span class="search-item-cat">${m.cat}</span>
+            </div>
+        `).join('');
+        dropdown.style.display = 'block';
+
+        dropdown.querySelectorAll('.search-result-item').forEach((el, idx) => {
+            el.addEventListener('click', () => {
+                matches[idx].action();
+                dropdown.style.display = 'none';
+                searchInput.value = '';
+                sound.playClick();
+            });
+        });
     });
-    
-    document.getElementById('mobileClose').addEventListener('click', () => {
-        document.getElementById('mobileNav').classList.remove('open');
-        document.getElementById('overlay').classList.remove('show');
-    });
-    
-    document.getElementById('overlay').addEventListener('click', () => {
-        document.getElementById('mobileNav').classList.remove('open');
-        document.getElementById('overlay').classList.remove('show');
+
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
     });
 }
 
 function showPage(page) {
-    if(animationId) {
+    if (animationId) {
         cancelAnimationFrame(animationId);
         animationId = null;
     }
-    
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-item, .mobile-item').forEach(n => n.classList.remove('active'));
-    
-    document.getElementById(page).classList.add('active');
+
+    const targetPage = document.getElementById(page);
+    if (targetPage) targetPage.classList.add('active');
     document.querySelectorAll(`[data-page="${page}"]`).forEach(n => n.classList.add('active'));
-    
+
     currentPage = page;
     simTime = 0;
     isPaused = false;
-    
+    sound.playClick();
+
     const inits = {
         elements: initElements,
         solar: initSolar,
@@ -240,2091 +592,1826 @@ function showPage(page) {
         cell: initCell,
         physics: initPhysics,
         robot: initRobot,
-        game: initGame
+        games: initGames
     };
-    
-    if(inits[page]) inits[page]();
+
+    if (inits[page]) inits[page]();
 }
 
 function goHome() {
     showPage('home');
 }
 
-function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3000);
-}
+// ==========================================================================
+// 6. MODULE 1: 3D PERIODIC TABLE & MOLECULAR FORGE
+// ==========================================================================
+let elemObjects = [];
+let currentElemMode = 'table';
+let selectedElementData = ELEMENTS[0];
 
-function closeInfo(id) {
-    document.getElementById(id).style.display = 'none';
-}
-
-// ================== SCENE HELPER ==================
-function createScene(containerId) {
-    const container = document.getElementById(containerId);
-    if(!container) return null;
-    
-    container.innerHTML = '';
-    
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    container.appendChild(renderer.domElement);
-    
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    
-    window.addEventListener('resize', () => {
-        if(container && camera && renderer) {
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-        }
-    });
-    
-    return { scene, camera, renderer, controls };
-}
-
-function addStarfield(s) {
-    const geo = new THREE.BufferGeometry();
-    const pos = [];
-    for(let i = 0; i < 1000; i++) {
-        pos.push((Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200);
-    }
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    s.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.5 })));
-}
-
-// ================== ELEMENTS ==================
 function initElements() {
     const setup = createScene('elementsScene');
-    if(!setup) return;
-    
-    camera.position.set(0, 8, 25);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    scene.add(new THREE.PointLight(0xffffff, 1, new THREE.Vector3(20, 20, 20)));
-    
-    addStarfield(scene);
-    
-    const group = new THREE.Group();
-    scene.add(group);
-    
-    let rotateSpeed = 0.5;
-    let activeCat = 'all';
-    
-    function createTable() {
-        while(group.children.length) group.remove(group.children[0]);
-        
-        ELEMENTS.forEach(el => {
-            if(activeCat !== 'all') {
-                const catMap = {
-                    'alkali': 'alkali', 'alkaline': 'alkaline', 'transition': 'transition',
-                    'post': 'post', 'metalloid': 'metalloid', 'nonmetal': 'nonmetal',
-                    'halogen': 'halogen', 'noble': 'noble', 'lanthanide': 'lanthanide', 'actinide': 'actinide'
-                };
-                if(el.cat !== catMap[activeCat]) return;
-            }
-            
-            let x, y;
-            const p = el.p, g = el.g;
-            
-            // Lanthanides row
-            if(el.n >= 57 && el.n <= 71) {
-                x = (el.n - 54) * 1.2 - 6;
-                y = -7;
-            }
-            // Actinides row
-            else if(el.n >= 89 && el.n <= 103) {
-                x = (el.n - 86) * 1.2 - 6;
-                y = -8.5;
-            }
-            // Normal position
-            else {
-                x = (g - 1) * 1.2 - 10;
-                y = -(p - 1) * 1.2 + 3;
-            }
-            
-            // Tile
-            const tile = new THREE.Mesh(
-                new THREE.BoxGeometry(1, 1, 0.1),
-                new THREE.MeshStandardMaterial({ color: el.color, emissive: el.color, emissiveIntensity: 0.2 })
-            );
-            tile.position.set(x, y, 0);
-            tile.userData = el;
-            group.add(tile);
-            
-            // Label sprite
-            const canvas = document.createElement('canvas');
-            canvas.width = 128; canvas.height = 128;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 36px Inter'; ctx.textAlign = 'center';
-            ctx.fillText(el.s, 64, 50);
-            ctx.font = '18px Inter';
-            ctx.fillText(el.n.toString(), 64, 75);
-            ctx.font = '14px Inter';
-            ctx.fillText(el.name.substring(0,8), 64, 95);
-            
-            const tex = new THREE.CanvasTexture(canvas);
-            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
-            sprite.position.set(x, y, 0.1);
-            sprite.scale.set(1, 1, 1);
-            group.add(sprite);
-        });
-    }
-    
-    createTable();
-    
-    // Search
-    document.getElementById('elementSearch').oninput = (e) => {
-        const q = e.target.value.toLowerCase();
-        group.children.forEach(c => {
-            if(c.userData && c.userData.name) {
-                c.visible = c.userData.name.toLowerCase().includes(q) || 
-                           c.userData.s.toLowerCase().includes(q) ||
-                           c.userData.n.toString().includes(q);
-            }
-        });
-    };
-    
-    // Categories
-    document.querySelectorAll('.cat').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.cat').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            activeCat = btn.dataset.cat;
-            createTable();
-        };
-    });
-    
-    // Rotation
-    document.getElementById('elemRotate').oninput = (e) => {
-        rotateSpeed = parseFloat(e.target.value);
-    };
-    
-    // Click
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    
-    renderer.domElement.addEventListener('click', (e) => {
-        const rect = renderer.domElement.getBoundingClientRect();
-        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-        
-        raycaster.setFromCamera(mouse, camera);
-        const hits = raycaster.intersectObjects(group.children.filter(c => c.type === 'Mesh'));
-        
-        if(hits.length > 0) {
-            const el = hits[0].object.userData;
-            document.getElementById('elemInfoContent').innerHTML = `
-                <h4 style="color:${el.color}">${el.s} - ${el.name}</h4>
-                <div class="info-row"><span>Number</span><span>${el.n}</span></div>
-                <div class="info-row"><span>Mass</span><span>${el.mass} u</span></div>
-                <div class="info-row"><span>Category</span><span>${el.cat}</span></div>
-                <div class="info-row"><span>Period</span><span>${el.p}</span></div>
-                <div class="info-row"><span>Group</span><span>${el.g}</span></div>
-                <div class="info-row"><span>Config</span><span>${el.config}</span></div>
-                <p><strong>Found:</strong> ${el.found}</p>
-                <p><strong>Uses:</strong> ${el.use}</p>
-                <p><strong>Fact:</strong> ${el.fact}</p>
-            `;
-            document.getElementById('elemInfo').style.display = 'block';
-        }
-    });
-    
+    if (!setup) return;
+
+    camera.position.set(0, 0, 32);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(20, 40, 30);
+    scene.add(dirLight);
+
+    initElementCategoryFilter();
+    populateAtomDropdown();
+    buildPeriodicTable3D();
+
     function animate() {
         animationId = requestAnimationFrame(animate);
-        group.rotation.y += 0.003 * rotateSpeed;
+        if (!isPaused) {
+            simTime += 0.016;
+            const rotSpeed = parseFloat(document.getElementById('elemRotate')?.value || 0.5);
+
+            if (currentElemMode === 'table') {
+                elemObjects.forEach(obj => {
+                    if (obj.userData.floatOffset !== undefined) {
+                        obj.position.z = Math.sin(simTime * 2 + obj.userData.floatOffset) * 0.15;
+                    }
+                });
+            } else if (currentElemMode === 'atom') {
+                const atomGroup = scene.getObjectByName('atomModelGroup');
+                if (atomGroup) {
+                    const speed = parseFloat(document.getElementById('atomSpeed')?.value || 1);
+                    atomGroup.children.forEach(child => {
+                        if (child.userData.isElectronRing) {
+                            child.rotation.z += 0.02 * speed * child.userData.dir;
+                            child.rotation.x += 0.01 * speed * child.userData.dir;
+                        }
+                    });
+                }
+            } else if (currentElemMode === 'molecule' || currentElemMode === 'lattice') {
+                const model = scene.getObjectByName('interactiveModel');
+                if (model) {
+                    model.rotation.y += 0.008 * rotSpeed;
+                    model.rotation.x += 0.003 * rotSpeed;
+                }
+            }
+        }
         controls.update();
         renderer.render(scene, camera);
+        updateTelemetry(elemObjects.length);
     }
     animate();
-    
-    showToast('Click elements for details');
 }
 
-// ================== SOLAR ==================
+function initElementCategoryFilter() {
+    const cats = document.getElementById('cats');
+    const search = document.getElementById('elementSearch');
+    if (!cats) return;
+
+    cats.querySelectorAll('.chip').forEach(chip => {
+        chip.onclick = () => {
+            cats.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            const cat = chip.dataset.cat;
+            filterElements(cat, search ? search.value.trim().toLowerCase() : '');
+            sound.playClick();
+        };
+    });
+
+    if (search) {
+        search.oninput = () => {
+            const activeChip = cats.querySelector('.chip.active');
+            const cat = activeChip ? activeChip.dataset.cat : 'all';
+            filterElements(cat, search.value.trim().toLowerCase());
+        };
+    }
+}
+
+function populateAtomDropdown() {
+    const select = document.getElementById('atomSelect');
+    if (!select) return;
+    select.innerHTML = ELEMENTS.map(e => `<option value="${e.n}">#${e.n} ${e.name} (${e.s})</option>`).join('');
+    select.onchange = () => {
+        const elem = ELEMENTS.find(e => e.n === parseInt(select.value));
+        if (elem) buildBohrAtom3D(elem);
+    };
+}
+
+function filterElements(category, query) {
+    elemObjects.forEach(obj => {
+        const data = obj.userData.element;
+        const matchesCat = category === 'all' || data.cat === category;
+        const matchesQuery = !query || data.name.toLowerCase().includes(query) || data.s.toLowerCase().includes(query) || data.n.toString() === query;
+        obj.visible = matchesCat && matchesQuery;
+    });
+}
+
+function buildPeriodicTable3D() {
+    disposeHierarchy(scene.getObjectByName('elementsContainer'));
+    const container = new THREE.Group();
+    container.name = 'elementsContainer';
+    elemObjects = [];
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    ELEMENTS.forEach(elem => {
+        const pos = getPeriodicPosition(elem);
+        const cardGroup = new THREE.Group();
+        cardGroup.position.set(pos.x, pos.y, pos.z);
+        cardGroup.userData = { element: elem, floatOffset: Math.random() * Math.PI * 2 };
+
+        // 3D Card Tile
+        const tileGeo = new THREE.BoxGeometry(1.35, 1.4, 0.08);
+        const tileMat = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(elem.color),
+            metalness: 0.2,
+            roughness: 0.35,
+            emissive: new THREE.Color(elem.color),
+            emissiveIntensity: 0.15
+        });
+        const tileMesh = new THREE.Mesh(tileGeo, tileMat);
+        cardGroup.add(tileMesh);
+
+        // Canvas Texture with Atomic Symbol & Number
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, 256, 256);
+        ctx.strokeStyle = elem.color;
+        ctx.lineWidth = 10;
+        ctx.strokeRect(6, 6, 244, 244);
+
+        // Atomic Number
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 36px monospace';
+        ctx.fillText(elem.n, 20, 50);
+
+        // Symbol
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 88px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(elem.s, 128, 145);
+
+        // Name
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '500 28px sans-serif';
+        ctx.fillText(elem.name, 128, 200);
+
+        // Atomic Weight
+        ctx.fillStyle = elem.color;
+        ctx.font = 'bold 22px monospace';
+        ctx.fillText(elem.mass.toFixed(2), 128, 235);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        const labelGeo = new THREE.PlaneGeometry(1.25, 1.3);
+        const labelMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+        const labelMesh = new THREE.Mesh(labelGeo, labelMat);
+        labelMesh.position.z = 0.05;
+        cardGroup.add(labelMesh);
+
+        container.add(cardGroup);
+        elemObjects.push(cardGroup);
+    });
+
+    scene.add(container);
+
+    // Interactive Click Handler on Elements
+    const dom = renderer.domElement;
+    dom.onpointerdown = (e) => {
+        const rect = dom.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(elemObjects, true);
+        if (intersects.length > 0) {
+            let p = intersects[0].object;
+            while (p && !p.userData.element && p.parent) p = p.parent;
+            if (p && p.userData.element) {
+                selectElement(p.userData.element);
+            }
+        }
+    };
+}
+
+function selectElement(elem) {
+    selectedElementData = elem;
+    sound.playQuantumPing();
+
+    const infoBox = document.getElementById('elemInfo');
+    const content = document.getElementById('elemInfoContent');
+    if (!infoBox || !content) return;
+
+    content.innerHTML = `
+        <div class="info-title-wrap">
+            <span class="info-title">${elem.name}</span>
+            <span class="info-symbol">[ ${elem.s} ]</span>
+        </div>
+        <span class="info-category">${elem.cat.toUpperCase()} • ATOMIC #${elem.n}</span>
+        
+        <div class="info-grid">
+            <div class="info-stat-card">
+                <div class="info-stat-label">Atomic Mass</div>
+                <div class="info-stat-value">${elem.mass} u</div>
+            </div>
+            <div class="info-stat-card">
+                <div class="info-stat-label">Electron Config</div>
+                <div class="info-stat-value">${elem.config}</div>
+            </div>
+            <div class="info-stat-card">
+                <div class="info-stat-label">Discovered</div>
+                <div class="info-stat-value">${elem.found}</div>
+            </div>
+            <div class="info-stat-card">
+                <div class="info-stat-label">Period / Group</div>
+                <div class="info-stat-value">P: ${elem.p} | G: ${elem.g}</div>
+            </div>
+        </div>
+
+        <div class="info-desc-box">
+            <strong>Key Applications:</strong> ${elem.use}<br><br>
+            <strong>Fascinating Fact:</strong> ${elem.fact}
+        </div>
+
+        <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="setElemMode('atom');buildBohrAtom3D(selectedElementData);">
+            ⚛️ Launch 3D Bohr Atom Model
+        </button>
+    `;
+    infoBox.style.display = 'block';
+}
+
+function setElemMode(mode) {
+    currentElemMode = mode;
+    sound.playClick();
+
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById(`elemMode${mode.charAt(0).toUpperCase() + mode.slice(1)}`);
+    if (btn) btn.classList.add('active');
+
+    const tableCtrl = document.getElementById('elemTableControls');
+    const atomCtrl = document.getElementById('elemAtomControls');
+    const molCtrl = document.getElementById('elemMoleculeControls');
+    const rxnCtrl = document.getElementById('elemReactionControls');
+    const latCtrl = document.getElementById('elemLatticeControls');
+
+    if (tableCtrl) tableCtrl.style.display = mode === 'table' ? 'block' : 'none';
+    if (atomCtrl) atomCtrl.style.display = mode === 'atom' ? 'block' : 'none';
+    if (molCtrl) molCtrl.style.display = mode === 'molecule' ? 'block' : 'none';
+    if (rxnCtrl) rxnCtrl.style.display = mode === 'reaction' ? 'block' : 'none';
+    if (latCtrl) latCtrl.style.display = mode === 'lattice' ? 'block' : 'none';
+
+    // Clear previous model containers
+    disposeHierarchy(scene.getObjectByName('elementsContainer'));
+    disposeHierarchy(scene.getObjectByName('atomModelGroup'));
+    disposeHierarchy(scene.getObjectByName('interactiveModel'));
+
+    if (mode === 'table') {
+        camera.position.set(0, 0, 32);
+        buildPeriodicTable3D();
+    } else if (mode === 'atom') {
+        camera.position.set(0, 0, 18);
+        buildBohrAtom3D(selectedElementData);
+    } else if (mode === 'molecule') {
+        camera.position.set(0, 0, 16);
+        const sel = document.getElementById('moleculeSelect');
+        buildMolecule3D(sel ? sel.value : 'water');
+    } else if (mode === 'reaction') {
+        camera.position.set(0, 0, 20);
+        buildChemicalReactionScene('h2_o2');
+    } else if (mode === 'lattice') {
+        camera.position.set(0, 0, 16);
+        buildCrystalLattice3D('fcc');
+    }
+}
+
+// Bohr 3D Atomic Orbital Engine
+function buildBohrAtom3D(elem) {
+    disposeHierarchy(scene.getObjectByName('atomModelGroup'));
+    const atomGroup = new THREE.Group();
+    atomGroup.name = 'atomModelGroup';
+
+    // Nucleus with protons (red) and neutrons (blue)
+    const nucleusGroup = new THREE.Group();
+    const nucleonCount = Math.min(elem.n * 2, 40);
+    const nucleonGeo = new THREE.SphereGeometry(0.28, 16, 16);
+    const pMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3, emissive: 0xef4444, emissiveIntensity: 0.3 });
+    const nMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3, emissive: 0x3b82f6, emissiveIntensity: 0.3 });
+
+    for (let i = 0; i < nucleonCount; i++) {
+        const mesh = new THREE.Mesh(nucleonGeo, i % 2 === 0 ? pMat : nMat);
+        const r = Math.pow(Math.random(), 0.5) * 0.9;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        mesh.position.set(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
+        nucleusGroup.add(mesh);
+    }
+    atomGroup.add(nucleusGroup);
+
+    // Shell configuration calculation (2, 8, 18, 32...)
+    let remaining = elem.n;
+    const shells = [];
+    const maxCapacity = [2, 8, 18, 32, 50];
+    for (let cap of maxCapacity) {
+        if (remaining <= 0) break;
+        const count = Math.min(remaining, cap);
+        shells.push(count);
+        remaining -= count;
+    }
+
+    const electronGeo = new THREE.SphereGeometry(0.16, 16, 16);
+    const electronMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00f0ff, emissiveIntensity: 0.8 });
+
+    shells.forEach((electronsInShell, idx) => {
+        const radius = 2.2 + idx * 1.6;
+        const ringGeo = new THREE.RingGeometry(radius - 0.02, radius + 0.02, 64);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.4 });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = Math.PI / 2 + (idx * 0.4);
+        ring.rotation.y = idx * 0.3;
+        ring.userData = { isElectronRing: true, dir: idx % 2 === 0 ? 1 : -1 };
+
+        for (let j = 0; j < electronsInShell; j++) {
+            const angle = (j / electronsInShell) * Math.PI * 2;
+            const eMesh = new THREE.Mesh(electronGeo, electronMat);
+            eMesh.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, 0);
+            ring.add(eMesh);
+        }
+        atomGroup.add(ring);
+    });
+
+    scene.add(atomGroup);
+    showToast(`Visualizing 3D Bohr Atomic Structure for ${elem.name} (#${elem.n})`);
+}
+
+// 3D Molecular Forge Engine
+function buildMolecule3D(type) {
+    disposeHierarchy(scene.getObjectByName('interactiveModel'));
+    const molGroup = new THREE.Group();
+    molGroup.name = 'interactiveModel';
+
+    const atomColors = { H: 0xffffff, C: 0x334155, O: 0xef4444, N: 0x3b82f6, S: 0xfacc15, Cl: 0x22c55e, P: 0xf97316 };
+    const atomSizes = { H: 0.4, C: 0.75, O: 0.65, N: 0.7, S: 0.9, Cl: 0.85, P: 0.85 };
+
+    const molecules = {
+        water: { atoms: [{ t: 'O', p: [0, 0, 0] }, { t: 'H', p: [1.1, 0.8, 0] }, { t: 'H', p: [-1.1, 0.8, 0] }], bonds: [[0, 1], [0, 2]] },
+        co2: { atoms: [{ t: 'C', p: [0, 0, 0] }, { t: 'O', p: [-1.8, 0, 0] }, { t: 'O', p: [1.8, 0, 0] }], bonds: [[0, 1], [0, 2]] },
+        methane: { atoms: [{ t: 'C', p: [0, 0, 0] }, { t: 'H', p: [1, 1, 1] }, { t: 'H', p: [-1, -1, 1] }, { t: 'H', p: [-1, 1, -1] }, { t: 'H', p: [1, -1, -1] }], bonds: [[0, 1], [0, 2], [0, 3], [0, 4]] },
+        ethanol: { atoms: [{ t: 'C', p: [-1.2, 0, 0] }, { t: 'C', p: [0.2, 0, 0] }, { t: 'O', p: [1.3, 0.9, 0] }, { t: 'H', p: [2.1, 0.5, 0] }, { t: 'H', p: [-1.2, 1.1, 0] }, { t: 'H', p: [-1.2, -0.6, 0.9] }, { t: 'H', p: [-2.1, -0.4, 0] }, { t: 'H', p: [0.2, -1.1, 0] }, { t: 'H', p: [0.2, 0.4, -1] }], bonds: [[0, 1], [1, 2], [2, 3], [0, 4], [0, 5], [0, 6], [1, 7], [1, 8]] },
+        benzene: { atoms: [
+            { t: 'C', p: [2, 0, 0] }, { t: 'C', p: [1, 1.73, 0] }, { t: 'C', p: [-1, 1.73, 0] }, { t: 'C', p: [-2, 0, 0] }, { t: 'C', p: [-1, -1.73, 0] }, { t: 'C', p: [1, -1.73, 0] },
+            { t: 'H', p: [3.2, 0, 0] }, { t: 'H', p: [1.6, 2.77, 0] }, { t: 'H', p: [-1.6, 2.77, 0] }, { t: 'H', p: [-3.2, 0, 0] }, { t: 'H', p: [-1.6, -2.77, 0] }, { t: 'H', p: [1.6, -2.77, 0] }
+        ], bonds: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[0,6],[1,7],[2,8],[3,9],[4,10],[5,11]] },
+        caffeine: { atoms: [
+            {t:'N',p:[-1.2,0.8,0]}, {t:'C',p:[-0.8,-0.5,0]}, {t:'N',p:[0.5,-0.7,0]}, {t:'C',p:[1.3,0.4,0]}, {t:'C',p:[0.4,1.4,0]}, {t:'C',p:[-1.8,2,0]},
+            {t:'O',p:[-1.5,-1.5,0]}, {t:'O',p:[2.5,0.4,0]}, {t:'C',p:[1,2.8,0]}, {t:'N',p:[2,-0.9,0]}, {t:'C',p:[2.8,-1.9,0]}
+        ], bonds: [[0,1],[1,2],[2,3],[3,4],[4,0],[0,5],[1,6],[3,7],[4,8],[2,9],[9,10]] }
+    };
+
+    const data = molecules[type] || molecules.water;
+    const atomMeshes = [];
+
+    data.atoms.forEach(a => {
+        const radius = atomSizes[a.t] || 0.6;
+        const col = atomColors[a.t] || 0xa855f7;
+        const geo = new THREE.SphereGeometry(radius, 32, 32);
+        const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.3, metalness: 0.2 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(a.p[0], a.p[1], a.p[2]);
+        molGroup.add(mesh);
+        atomMeshes.push(mesh);
+    });
+
+    data.bonds.forEach(b => {
+        const p1 = new THREE.Vector3(...data.atoms[b[0]].p);
+        const p2 = new THREE.Vector3(...data.atoms[b[1]].p);
+        const dist = p1.distanceTo(p2);
+        const bondGeo = new THREE.CylinderGeometry(0.12, 0.12, dist, 16);
+        const bondMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.4 });
+        const bondMesh = new THREE.Mesh(bondGeo, bondMat);
+
+        bondMesh.position.copy(p1).add(p2).multiplyScalar(0.5);
+        bondMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p2.clone().sub(p1).normalize());
+        molGroup.add(bondMesh);
+    });
+
+    scene.add(molGroup);
+}
+
+function setMoleculeStyle(style) {
+    const sel = document.getElementById('moleculeSelect');
+    buildMolecule3D(sel ? sel.value : 'water');
+    sound.playClick();
+}
+
+// Chemical Reaction Engine
+function runChemicalReaction() {
+    sound.playExplosion();
+    showToast('Exothermic Chemical Reaction Executed! ΔH Released.');
+    const tempEl = document.getElementById('rxnTemp');
+    if (tempEl) {
+        let temp = 298;
+        const interval = setInterval(() => {
+            temp += 150;
+            tempEl.textContent = `${temp} K`;
+            if (temp >= 1450) {
+                clearInterval(interval);
+                setTimeout(() => { tempEl.textContent = '298 K'; }, 3000);
+            }
+        }, 100);
+    }
+}
+
+// 3D Crystal Lattice Generator
+function buildCrystalLattice3D(latticeType) {
+    disposeHierarchy(scene.getObjectByName('interactiveModel'));
+    const latGroup = new THREE.Group();
+    latGroup.name = 'interactiveModel';
+
+    const sphereGeo = new THREE.SphereGeometry(0.32, 24, 24);
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8, roughness: 0.2 });
+    const silverMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.6, roughness: 0.3 });
+
+    const spacing = 1.8;
+    for (let x = -1; x <= 1; x++) {
+        for (let y = -1; y <= 1; y++) {
+            for (let z = -1; z <= 1; z++) {
+                // Corner atoms
+                const corner = new THREE.Mesh(sphereGeo, goldMat);
+                corner.position.set(x * spacing, y * spacing, z * spacing);
+                latGroup.add(corner);
+
+                // Face Centered (FCC)
+                if (latticeType === 'fcc') {
+                    if (x < 1 && y < 1) {
+                        const face = new THREE.Mesh(sphereGeo, silverMat);
+                        face.position.set((x + 0.5) * spacing, (y + 0.5) * spacing, z * spacing);
+                        latGroup.add(face);
+                    }
+                }
+                // Body Centered (BCC)
+                else if (latticeType === 'bcc') {
+                    if (x < 1 && y < 1 && z < 1) {
+                        const body = new THREE.Mesh(sphereGeo, silverMat);
+                        body.position.set((x + 0.5) * spacing, (y + 0.5) * spacing, (z + 0.5) * spacing);
+                        latGroup.add(body);
+                    }
+                }
+            }
+        }
+    }
+    scene.add(latGroup);
+}
+
+// ==========================================================================
+// 7. MODULE 2: ASTROPHYSICS & SOLAR SYSTEM SIMULATION
+// ==========================================================================
+const PLANETS = [
+    { name: 'Sun', r: 3.2, dist: 0, speed: 0, rot: 0.002, col: 0xffaa00, glow: true, info: 'G-type main-sequence star. 99.86% of Solar System mass.' },
+    { name: 'Mercury', r: 0.38, dist: 6, speed: 4.1, rot: 0.004, col: 0x94a3b8, info: 'Smallest planet. Surface temps range from -180°C to 430°C.' },
+    { name: 'Venus', r: 0.85, dist: 9, speed: 1.6, rot: -0.002, col: 0xf59e0b, info: 'Hottest planet (465°C) with dense runaway CO2 greenhouse atmosphere.' },
+    { name: 'Earth', r: 0.9, dist: 13, speed: 1.0, rot: 0.02, col: 0x38bdf8, info: 'Only known haven for organic life. 71% surface liquid water.', hasMoon: true },
+    { name: 'Mars', r: 0.52, dist: 17, speed: 0.53, rot: 0.018, col: 0xef4444, info: 'Red planet. Home to Olympus Mons, largest volcano in solar system.' },
+    { name: 'Jupiter', r: 2.2, dist: 25, speed: 0.24, rot: 0.04, col: 0xd97706, info: 'Gas giant with iconic Great Red Spot storm & 95 known moons.', hasMoons: 4 },
+    { name: 'Saturn', r: 1.8, dist: 34, speed: 0.12, rot: 0.038, col: 0xfde047, rings: true, info: 'Spectacular planetary ring system composed of water ice & rock.' },
+    { name: 'Uranus', r: 1.2, dist: 43, speed: 0.06, rot: -0.02, col: 0x67e8f9, info: 'Ice giant with extreme 98° axial tilt orbiting on its side.' },
+    { name: 'Neptune', r: 1.15, dist: 52, speed: 0.03, rot: 0.03, col: 0x3b82f6, info: 'Farthest planet. Supersonic winds reaching 2,100 km/h.' }
+];
+
+let celestialMeshes = [];
+
 function initSolar() {
     const setup = createScene('solarScene');
-    if(!setup) return;
-    
-    camera.position.set(0, 40, 60);
-    scene.add(new THREE.AmbientLight(0x333333));
-    addStarfield(scene);
-    
-    const solarGroup = new THREE.Group();
-    scene.add(solarGroup);
-    
-    let orbitSpeed = 1;
-    let planetScale = 1;
-    let showOrbits = true;
-    let showLabels = true;
-    let paused = false;
-    let time = 0;
-    
-    const planets = [];
-    const orbitLines = [];
-    const labels = [];
-    
-    PLANETS.forEach((p, i) => {
-        // Sun/Planet
-        const geo = new THREE.SphereGeometry(p.r, 32, 32);
-        const mat = new THREE.MeshStandardMaterial({
-            color: p.col,
-            emissive: p.glow || p.col,
-            emissiveIntensity: p.glow ? 0.5 : 0.1
-        });
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.userData = { ...p, angle: Math.random() * Math.PI * 2, i };
-        
-        if(p.dist === 0) {
-            // Sun light
-            const light = new THREE.PointLight(0xFFA500, 2, 200);
-            mesh.add(light);
-        }
-        
-        planets.push(mesh);
-        solarGroup.add(mesh);
-        
-        // Orbit
-        if(p.dist > 0) {
-            const orbitGeo = new THREE.BufferGeometry();
-            const pts = [];
-            for(let j = 0; j <= 64; j++) {
-                const a = (j / 64) * Math.PI * 2;
-                pts.push(Math.cos(a) * p.dist, 0, Math.sin(a) * p.dist);
-            }
-            orbitGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-            const orbit = new THREE.Line(orbitGeo, new THREE.LineBasicMaterial({ color: 0x334455, transparent: true, opacity: 0.4 }));
-            orbitLines.push(orbit);
-            solarGroup.add(orbit);
-        }
-        
-        // Rings
-        if(p.rings) {
-            const ring = new THREE.Mesh(
-                new THREE.RingGeometry(p.r * 1.4, p.r * 2.2, 64),
-                new THREE.MeshBasicMaterial({ color: p.ringCol, side: THREE.DoubleSide, transparent: true, opacity: 0.7 })
-            );
-            ring.rotation.x = Math.PI / 2;
-            mesh.add(ring);
-        }
-        
-        // Moons
-        if(p.moons) {
-            p.moons.forEach(m => {
-                const moon = new THREE.Mesh(
-                    new THREE.SphereGeometry(m.s, 16, 16),
-                    new THREE.MeshStandardMaterial({ color: 0xaaaaaa })
-                );
-                moon.userData = { moonDist: m.d, moonSpeed: m.sp, moonAngle: Math.random() * Math.PI * 2 };
-                mesh.add(moon);
-            });
-        }
-        
-        // Label
-        const canvas = document.createElement('canvas');
-        canvas.width = 256; canvas.height = 64;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 24px Inter'; ctx.textAlign = 'center';
-        ctx.fillText(p.name, 128, 40);
-        
-        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
-        sprite.scale.set(3, 0.75, 1);
-        sprite.position.y = p.r + 1;
-        mesh.add(sprite);
-        labels.push(sprite);
-    });
-    
-    // Controls
-    document.getElementById('solarPlay').onclick = () => {
-        paused = !paused;
-        document.getElementById('solarPlay').textContent = paused ? '▶ Play' : '⏸ Pause';
-    };
-    
-    document.getElementById('solarReset').onclick = () => {
-        time = 0;
-        camera.position.set(0, 40, 60);
-        controls.reset();
-    };
-    
-    document.getElementById('solarSpeed').oninput = (e) => orbitSpeed = parseFloat(e.target.value);
-    document.getElementById('solarScale').oninput = (e) => {
-        planetScale = parseFloat(e.target.value);
-        planets.forEach(p => p.scale.setScalar(planetScale));
-    };
-    
-    document.getElementById('showOrbits').onchange = (e) => {
-        showOrbits = e.target.checked;
-        orbitLines.forEach(o => o.visible = showOrbits);
-    };
-    
-    document.getElementById('showLabels').onchange = (e) => {
-        showLabels = e.target.checked;
-        labels.forEach(l => l.visible = showLabels);
-    };
-    
-    // Click
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    
-    renderer.domElement.addEventListener('click', (e) => {
-        const rect = renderer.domElement.getBoundingClientRect();
-        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-        
-        raycaster.setFromCamera(mouse, camera);
-        const hits = raycaster.intersectObjects(planets);
-        
-        if(hits.length > 0) {
-            const p = hits[0].object.userData;
-            document.getElementById('solarInfoContent').innerHTML = `
-                <h4>${p.name}</h4>
-                <p>${p.info}</p>
-            `;
-            document.getElementById('solarInfo').style.display = 'block';
-        }
-    });
-    
+    if (!setup) return;
+
+    camera.position.set(0, 45, 75);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+    // Sun Light Source
+    const sunLight = new THREE.PointLight(0xffffff, 2.5, 300);
+    sunLight.position.set(0, 0, 0);
+    scene.add(sunLight);
+
+    buildSolarSystem();
+
     function animate() {
         animationId = requestAnimationFrame(animate);
-        
-        if(!paused) {
-            time += 0.01 * orbitSpeed;
-            
-            planets.forEach(p => {
-                if(p.userData.dist > 0) {
-                    p.userData.angle += p.userData.speed * 0.002 * orbitSpeed;
-                    p.position.x = Math.cos(p.userData.angle) * p.userData.dist;
-                    p.position.z = Math.sin(p.userData.angle) * p.userData.dist;
+        if (!isPaused) {
+            const speedMultiplier = parseFloat(document.getElementById('solarSpeed')?.value || 1);
+            simTime += 0.01 * speedMultiplier;
+
+            celestialMeshes.forEach(item => {
+                // Orbit Revolution
+                if (item.data.speed > 0) {
+                    const angle = simTime * item.data.speed * 0.3;
+                    item.group.position.x = Math.cos(angle) * item.data.dist;
+                    item.group.position.z = Math.sin(angle) * item.data.dist;
                 }
-                p.rotation.y += p.userData.rot;
-                
-                // Update moons
-                p.children.forEach(c => {
-                    if(c.userData && c.userData.moonDist) {
-                        c.userData.moonAngle += c.userData.moonSpeed * 0.02 * orbitSpeed;
-                        c.position.x = Math.cos(c.userData.moonAngle) * c.userData.moonDist;
-                        c.position.z = Math.sin(c.userData.moonAngle) * c.userData.moonDist;
-                    }
-                });
+                // Axial Self-Rotation
+                if (item.planetMesh) {
+                    item.planetMesh.rotation.y += item.data.rot;
+                }
+                // Moons Revolution
+                if (item.moons) {
+                    item.moons.forEach(m => {
+                        const mAngle = simTime * m.speed * 2;
+                        m.mesh.position.x = Math.cos(mAngle) * m.dist;
+                        m.mesh.position.z = Math.sin(mAngle) * m.dist;
+                    });
+                }
             });
+
+            // Asteroid Belt Rotation
+            const asteroidPoints = scene.getObjectByName('asteroidBelt');
+            if (asteroidPoints) asteroidPoints.rotation.y += 0.001 * speedMultiplier;
         }
-        
+
         controls.update();
         renderer.render(scene, camera);
+        updateTelemetry(3200);
     }
     animate();
-    
-    showToast('Click planets for info');
 }
 
-// ================== DNA ==================
+function buildSolarSystem() {
+    disposeHierarchy(scene.getObjectByName('solarSystemGroup'));
+    const solarGroup = new THREE.Group();
+    solarGroup.name = 'solarSystemGroup';
+    celestialMeshes = [];
+
+    PLANETS.forEach(p => {
+        const pGroup = new THREE.Group();
+        pGroup.position.x = p.dist;
+
+        // Planet Sphere
+        const geo = new THREE.SphereGeometry(p.r, 32, 32);
+        const mat = p.glow
+            ? new THREE.MeshBasicMaterial({ color: p.col })
+            : new THREE.MeshStandardMaterial({ color: p.col, roughness: 0.6, metalness: 0.1 });
+        const planetMesh = new THREE.Mesh(geo, mat);
+        pGroup.add(planetMesh);
+
+        // Sun Corona / Glow Sphere
+        if (p.glow) {
+            const glowGeo = new THREE.SphereGeometry(p.r * 1.25, 32, 32);
+            const glowMat = new THREE.MeshBasicMaterial({ color: 0xff7700, transparent: true, opacity: 0.35, side: THREE.BackSide });
+            pGroup.add(new THREE.Mesh(glowGeo, glowMat));
+        }
+
+        // Saturn Rings
+        if (p.rings) {
+            const ringGeo = new THREE.RingGeometry(p.r * 1.4, p.r * 2.4, 64);
+            const ringMat = new THREE.MeshStandardMaterial({ color: 0xe2d4b7, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+            const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+            ringMesh.rotation.x = Math.PI / 2.5;
+            pGroup.add(ringMesh);
+        }
+
+        // Earth Moon
+        const moons = [];
+        if (p.hasMoon) {
+            const moonGeo = new THREE.SphereGeometry(0.22, 16, 16);
+            const moonMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.8 });
+            const moonMesh = new THREE.Mesh(moonGeo, moonMat);
+            moonMesh.position.x = 1.6;
+            pGroup.add(moonMesh);
+            moons.push({ mesh: moonMesh, dist: 1.6, speed: 1.5 });
+        }
+
+        // Orbit Path Line Ring
+        if (p.dist > 0) {
+            const orbitGeo = new THREE.RingGeometry(p.dist - 0.04, p.dist + 0.04, 128);
+            const orbitMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.18 });
+            const orbitLine = new THREE.Mesh(orbitGeo, orbitMat);
+            orbitLine.rotation.x = Math.PI / 2;
+            solarGroup.add(orbitLine);
+        }
+
+        solarGroup.add(pGroup);
+        celestialMeshes.push({ group: pGroup, planetMesh, data: p, moons });
+    });
+
+    // Main Asteroid Belt Particle System (3,000+ Asteroids)
+    const asteroidGeo = new THREE.BufferGeometry();
+    const asteroidPositions = [];
+    for (let i = 0; i < 3000; i++) {
+        const r = 19.5 + Math.random() * 3.5;
+        const theta = Math.random() * Math.PI * 2;
+        const y = (Math.random() - 0.5) * 1.2;
+        asteroidPositions.push(Math.cos(theta) * r, y, Math.sin(theta) * r);
+    }
+    asteroidGeo.setAttribute('position', new THREE.Float32BufferAttribute(asteroidPositions, 3));
+    const asteroidMat = new THREE.PointsMaterial({ color: 0x94a3b8, size: 0.25, transparent: true, opacity: 0.7 });
+    const asteroidPoints = new THREE.Points(asteroidGeo, asteroidMat);
+    asteroidPoints.name = 'asteroidBelt';
+    solarGroup.add(asteroidPoints);
+
+    scene.add(solarGroup);
+}
+
+function focusCelestial(name) {
+    sound.playClick();
+    if (name === 'overview') {
+        controls.target.set(0, 0, 0);
+        camera.position.set(0, 45, 75);
+        return;
+    }
+    const item = celestialMeshes.find(c => c.data.name === name);
+    if (item) {
+        controls.target.copy(item.group.position);
+        camera.position.set(item.group.position.x + item.data.r * 4, item.group.position.y + item.data.r * 2, item.group.position.z + item.data.r * 4);
+
+        const infoBox = document.getElementById('solarInfo');
+        const content = document.getElementById('solarInfoContent');
+        if (infoBox && content) {
+            content.innerHTML = `
+                <div class="info-title-wrap">
+                    <span class="info-title">${item.data.name}</span>
+                </div>
+                <div class="info-desc-box">${item.data.info}</div>
+                <div class="info-grid">
+                    <div class="info-stat-card"><div class="info-stat-label">Radius</div><div class="info-stat-value">${(item.data.r * 6371).toFixed(0)} km (rel)</div></div>
+                    <div class="info-stat-card"><div class="info-stat-label">Orbital Velocity</div><div class="info-stat-value">${(item.data.speed * 29.8).toFixed(1)} km/s</div></div>
+                </div>
+            `;
+            infoBox.style.display = 'block';
+        }
+    }
+}
+
+function toggleSolarPlay() {
+    isPaused = !isPaused;
+    const btn = document.getElementById('solarPlay');
+    if (btn) btn.textContent = isPaused ? '▶ Play' : '⏸ Pause';
+    sound.playClick();
+}
+
+function resetSolar() {
+    simTime = 0;
+    focusCelestial('overview');
+    showToast('Solar System simulation reset.');
+}
+
+// ==========================================================================
+// 8. MODULE 3: GENETICS & CRISPR-CAS9 GENOME SURGERY
+// ==========================================================================
+let dnaMode = 'dna';
+let dnaAnim = 'rotate';
+
 function initDNA() {
     const setup = createScene('dnaScene');
-    if(!setup) return;
-    
-    camera.position.set(0, 0, 18);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    scene.add(new THREE.PointLight(0xffffff, 1, new THREE.Vector3(10, 10, 10)));
-    addStarfield(scene);
-    
-    const dnaGroup = new THREE.Group();
-    scene.add(dnaGroup);
-    
-    let speed = 1;
-    let turns = 2;
-    let mode = 'dna';
-    let anim = 'rotate';
-    let animTime = 0;
-    let replicateProgress = 0;
-    let transcribePhase = 0;
-    
-    const baseColors = { A: '#ff6b6b', T: '#4ecdc4', G: '#45b7d1', C: '#ffa726', U: '#ab47bc' };
-    const bases = ['A', 'T', 'G', 'C'];
-    
-    function createHelix() {
-        while(dnaGroup.children.length) dnaGroup.remove(dnaGroup.children[0]);
-        
-        const height = 14;
-        const radius = 2;
-        const count = turns * 12;
-        
-        // Store positions for animation
-        dnaGroup.userData.spheres = [];
-        dnaGroup.userData.connectors = [];
-        
-        for(let i = 0; i < count; i++) {
-            const t = i / count;
-            const angle = t * Math.PI * 4 * turns;
-            const y = (t - 0.5) * height;
-            
-            const x1 = Math.cos(angle) * radius;
-            const z1 = Math.sin(angle) * radius;
-            const x2 = Math.cos(angle + Math.PI) * radius;
-            const z2 = Math.sin(angle + Math.PI) * radius;
-            
-            const b1 = bases[Math.floor(Math.random() * 4)];
-            const b2 = b1 === 'A' ? 'T' : b1 === 'T' ? 'A' : b1 === 'G' ? 'C' : 'G';
-            
-            // Strand 1
-            const s1 = new THREE.Mesh(
-                new THREE.SphereGeometry(0.25, 12, 12),
-                new THREE.MeshStandardMaterial({ color: baseColors[b1], emissive: baseColors[b1], emissiveIntensity: 0.3 })
-            );
-            s1.position.set(x1, y, z1);
-            s1.userData = { baseY: y, baseX: x1, baseZ: z1, strand: 1, index: i };
-            dnaGroup.add(s1);
-            dnaGroup.userData.spheres.push(s1);
-            
-            // Strand 2
-            if(mode !== 'rna') {
-                const s2 = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.25, 12, 12),
-                    new THREE.MeshStandardMaterial({ color: baseColors[b2], emissive: baseColors[b2], emissiveIntensity: 0.3 })
-                );
-                s2.position.set(x2, y, z2);
-                s2.userData = { baseY: y, baseX: x2, baseZ: z2, strand: 2, index: i };
-                dnaGroup.add(s2);
-                dnaGroup.userData.spheres.push(s2);
-                
-                // Connector
-                const conn = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.03, 0.03, radius * 2, 6),
-                    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 })
-                );
-                conn.position.set(0, y, 0);
-                conn.rotation.z = Math.PI / 2;
-                conn.rotation.y = angle;
-                conn.userData = { baseY: y, index: i };
-                dnaGroup.add(conn);
-                dnaGroup.userData.connectors.push(conn);
-            }
-        }
-        
-        // Backbone
-        const curve1 = new THREE.CatmullRomCurve3(
-            Array.from({ length: 100 }, (_, i) => {
-                const tt = i / 99;
-                const ang = tt * Math.PI * 4 * turns;
-                return new THREE.Vector3(Math.cos(ang) * radius, (tt - 0.5) * height, Math.sin(ang) * radius);
-            })
-        );
-        dnaGroup.add(new THREE.Mesh(
-            new THREE.TubeGeometry(curve1, 200, 0.08, 8, false),
-            new THREE.MeshStandardMaterial({ color: 0x9b59b6, transparent: true, opacity: 0.5 })
-        ));
-        
-        if(mode !== 'rna') {
-            const curve2 = new THREE.CatmullRomCurve3(
-                Array.from({ length: 100 }, (_, i) => {
-                    const tt = i / 99;
-                    const ang = tt * Math.PI * 4 * turns + Math.PI;
-                    return new THREE.Vector3(Math.cos(ang) * radius, (tt - 0.5) * height, Math.sin(ang) * radius);
-                })
-            );
-            dnaGroup.add(new THREE.Mesh(
-                new THREE.TubeGeometry(curve2, 200, 0.08, 8, false),
-                new THREE.MeshStandardMaterial({ color: 0x9b59b6, transparent: true, opacity: 0.5 })
-            ));
-        }
-    }
-    
-    createHelix();
-    
-    // Mode buttons
-    document.querySelectorAll('.mode').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.mode').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            mode = btn.dataset.mode;
-            createHelix();
-        };
-    });
-    
-    // Animation buttons
-    document.querySelectorAll('.anim').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.anim').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            anim = btn.dataset.anim;
-            replicateProgress = 0;
-            transcribePhase = 0;
-            
-            const status = document.getElementById('dnaStatus');
-            if(anim === 'replicate') {
-                status.style.display = 'block';
-                status.textContent = '🧬 DNA Replicating... Unzipping double helix';
-            } else if(anim === 'transcribe') {
-                status.style.display = 'block';
-                status.textContent = '🧬 Transcribing DNA to mRNA...';
-            } else {
-                status.style.display = 'none';
-            }
-        };
-    });
-    
-    document.getElementById('dnaSpeed').oninput = (e) => speed = parseFloat(e.target.value);
-    document.getElementById('dnaTurns').oninput = (e) => { turns = parseInt(e.target.value); createHelix(); };
-    
+    if (!setup) return;
+
+    camera.position.set(0, 0, 22);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const pointLight = new THREE.PointLight(0xffffff, 1.2, 100);
+    pointLight.position.set(10, 20, 20);
+    scene.add(pointLight);
+
+    buildDnaHelix();
+
     function animate() {
         animationId = requestAnimationFrame(animate);
-        
-        animTime += 0.016;
-        
-        if(anim === 'rotate') {
-            dnaGroup.rotation.y += 0.008 * speed;
-        } else if(anim === 'replicate') {
-            dnaGroup.rotation.y += 0.005 * speed;
-            replicateProgress += 0.003 * speed;
-            
-            // Animate strand separation
-            if(dnaGroup.userData.spheres) {
-                dnaGroup.userData.spheres.forEach(s => {
-                    if(s.userData.strand === 2) {
-                        const offset = Math.min(replicateProgress, 1) * 2;
-                        s.position.x = s.userData.baseX + (s.userData.baseX > 0 ? offset : -offset);
-                    }
-                });
+        if (!isPaused) {
+            const speed = parseFloat(document.getElementById('dnaSpeed')?.value || 1);
+            simTime += 0.02 * speed;
+
+            const model = scene.getObjectByName('dnaModel');
+            if (model) {
+                if (dnaAnim === 'rotate') {
+                    model.rotation.y = simTime;
+                } else if (dnaAnim === 'replicate') {
+                    model.rotation.y = simTime * 0.5;
+                    model.children.forEach(child => {
+                        if (child.userData.strand === 'left') {
+                            child.position.x = -Math.sin(simTime) * 1.5;
+                        } else if (child.userData.strand === 'right') {
+                            child.position.x = Math.sin(simTime) * 1.5;
+                        }
+                    });
+                }
             }
-            
-            // Fade connectors
-            if(dnaGroup.userData.connectors) {
-                dnaGroup.userData.connectors.forEach(c => {
-                    c.material.opacity = Math.max(0.35 - replicateProgress * 0.4, 0);
-                });
-            }
-            
-            // Update status
-            if(replicateProgress < 1) {
-                document.getElementById('dnaStatus').textContent = `🧬 Replicating... ${Math.floor(replicateProgress * 100)}% complete`;
-            } else {
-                document.getElementById('dnaStatus').textContent = '🧬 Replication Complete! Two identical DNA molecules formed';
-            }
-            
-            if(replicateProgress > 1.5) replicateProgress = 0;
-            
-        } else if(anim === 'transcribe') {
-            dnaGroup.rotation.y += 0.005 * speed;
-            transcribePhase += 0.02 * speed;
-            
-            // Animate base pair "bubbling" as mRNA is synthesized
-            if(dnaGroup.userData.spheres) {
-                dnaGroup.userData.spheres.forEach(s => {
-                    const wave = Math.sin(transcribePhase + s.userData.index * 0.3);
-                    s.position.y = s.userData.baseY + wave * 0.2;
-                    s.scale.setScalar(1 + wave * 0.1);
-                });
-            }
-            
-            document.getElementById('dnaStatus').textContent = `🧬 Transcribing... mRNA strand being synthesized`;
         }
-        
         controls.update();
         renderer.render(scene, camera);
+        updateTelemetry(480);
     }
     animate();
-    
-    showToast('Select animation mode');
 }
 
-// ================== CELL ==================
+function buildDnaHelix() {
+    disposeHierarchy(scene.getObjectByName('dnaModel'));
+    const dnaGroup = new THREE.Group();
+    dnaGroup.name = 'dnaModel';
+
+    const turns = parseInt(document.getElementById('dnaTurns')?.value || 3);
+    const numPairs = turns * 10;
+    const baseColors = [0xff5252, 0x40c4ff, 0x69f0ae, 0xffd740]; // A, T, G, C
+    const sphereGeo = new THREE.SphereGeometry(0.35, 16, 16);
+    const backboneMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.3, roughness: 0.4 });
+
+    for (let i = 0; i < numPairs; i++) {
+        const angle = (i / 10) * Math.PI * 2;
+        const y = (i - numPairs / 2) * 0.7;
+        const radius = 2.5;
+
+        const x1 = Math.cos(angle) * radius;
+        const z1 = Math.sin(angle) * radius;
+        const x2 = -x1;
+        const z2 = -z1;
+
+        // Backbone sugar-phosphate spheres
+        const s1 = new THREE.Mesh(sphereGeo, backboneMat);
+        s1.position.set(x1, y, z1);
+        s1.userData = { strand: 'left' };
+        dnaGroup.add(s1);
+
+        const s2 = new THREE.Mesh(sphereGeo, backboneMat);
+        s2.position.set(x2, y, z2);
+        s2.userData = { strand: 'right' };
+        dnaGroup.add(s2);
+
+        // Base pair hydrogen bonding rung
+        const p1 = new THREE.Vector3(x1, y, z1);
+        const p2 = new THREE.Vector3(x2, y, z2);
+        const mid = p1.clone().add(p2).multiplyScalar(0.5);
+
+        const col1 = baseColors[i % 4];
+        const col2 = baseColors[(i + 1) % 4];
+
+        // Left half base
+        const bGeo1 = new THREE.CylinderGeometry(0.12, 0.12, radius, 12);
+        const bMat1 = new THREE.MeshStandardMaterial({ color: col1, roughness: 0.3 });
+        const bMesh1 = new THREE.Mesh(bGeo1, bMat1);
+        bMesh1.position.copy(p1).add(mid).multiplyScalar(0.5);
+        bMesh1.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), mid.clone().sub(p1).normalize());
+        dnaGroup.add(bMesh1);
+
+        // Right half base
+        const bGeo2 = new THREE.CylinderGeometry(0.12, 0.12, radius, 12);
+        const bMat2 = new THREE.MeshStandardMaterial({ color: col2, roughness: 0.3 });
+        const bMesh2 = new THREE.Mesh(bGeo2, bMat2);
+        bMesh2.position.copy(mid).add(p2).multiplyScalar(0.5);
+        bMesh2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p2.clone().sub(mid).normalize());
+        dnaGroup.add(bMesh2);
+    }
+
+    scene.add(dnaGroup);
+}
+
+function setDnaMode(mode) {
+    dnaMode = mode;
+    sound.playClick();
+    document.querySelectorAll('#dna .mode-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById(`dnaMode${mode.charAt(0).toUpperCase() + mode.slice(1)}`);
+    if (btn) btn.classList.add('active');
+
+    const crisprCtrl = document.getElementById('dnaCrisprControls');
+    const virusCtrl = document.getElementById('dnaVirusControls');
+    if (crisprCtrl) crisprCtrl.style.display = mode === 'crispr' ? 'block' : 'none';
+    if (virusCtrl) virusCtrl.style.display = mode === 'virus' ? 'block' : 'none';
+
+    if (mode === 'crispr') {
+        buildCrisprScene();
+    } else if (mode === 'virus') {
+        buildVirusCapsid('Bacteriophage');
+    } else {
+        buildDnaHelix();
+    }
+}
+
+function setDnaAnim(anim) {
+    dnaAnim = anim;
+    sound.playClick();
+    document.querySelectorAll('#dna .ctrl-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById(`dnaAnim${anim.charAt(0).toUpperCase() + anim.slice(1)}`);
+    if (btn) btn.classList.add('active');
+}
+
+function buildCrisprScene() {
+    disposeHierarchy(scene.getObjectByName('dnaModel'));
+    const crisprGroup = new THREE.Group();
+    crisprGroup.name = 'dnaModel';
+
+    buildDnaHelix();
+
+    // Cas9 Endonuclease Protein Complex (Large Bi-lobed Enzyme)
+    const cas9Geo = new THREE.DodecahedronGeometry(3.5, 1);
+    const cas9Mat = new THREE.MeshStandardMaterial({ color: 0xa855f7, roughness: 0.4, transparent: true, opacity: 0.85 });
+    const cas9Mesh = new THREE.Mesh(cas9Geo, cas9Mat);
+    cas9Mesh.position.set(0, 0, 0);
+    crisprGroup.add(cas9Mesh);
+
+    scene.add(crisprGroup);
+    showToast('CRISPR-Cas9 sgRNA Guide Complex docked to PAM target sequence.');
+}
+
+function runCrisprCut() {
+    sound.playExplosion();
+    showToast('✂️ Cas9 Endonuclease cleaved target double strand! DSB break created.');
+}
+
+function buildVirusCapsid(virusType) {
+    disposeHierarchy(scene.getObjectByName('dnaModel'));
+    const virusGroup = new THREE.Group();
+    virusGroup.name = 'dnaModel';
+
+    if (virusType === 'Bacteriophage') {
+        // Icosahedral Head
+        const headGeo = new THREE.IcosahedronGeometry(2.5, 0);
+        const headMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3 });
+        const head = new THREE.Mesh(headGeo, headMat);
+        head.position.y = 3;
+        virusGroup.add(head);
+
+        // Helical Sheath Neck
+        const neckGeo = new THREE.CylinderGeometry(0.5, 0.5, 3.5, 16);
+        const neckMat = new THREE.MeshStandardMaterial({ color: 0x10b981 });
+        const neck = new THREE.Mesh(neckGeo, neckMat);
+        neck.position.y = 0.5;
+        virusGroup.add(neck);
+
+        // Tail fibers
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const legGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.8, 8);
+            const legMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b });
+            const leg = new THREE.Mesh(legGeo, legMat);
+            leg.position.set(Math.cos(angle) * 1.2, -1.8, Math.sin(angle) * 1.2);
+            leg.rotation.z = Math.cos(angle) * 0.5;
+            leg.rotation.x = Math.sin(angle) * 0.5;
+            virusGroup.add(leg);
+        }
+    } else {
+        // Coronavirus with Spikes
+        const bodyGeo = new THREE.SphereGeometry(2.5, 32, 32);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.5 });
+        virusGroup.add(new THREE.Mesh(bodyGeo, bodyMat));
+
+        for (let i = 0; i < 48; i++) {
+            const spikeGeo = new THREE.CylinderGeometry(0.1, 0.25, 1.2, 8);
+            const spikeMat = new THREE.MeshStandardMaterial({ color: 0xffd740 });
+            const spike = new THREE.Mesh(spikeGeo, spikeMat);
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const pos = new THREE.Vector3(Math.sin(phi) * Math.cos(theta), Math.sin(phi) * Math.sin(theta), Math.cos(phi)).multiplyScalar(2.6);
+            spike.position.copy(pos);
+            spike.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), pos.clone().normalize());
+            virusGroup.add(spike);
+        }
+    }
+
+    scene.add(virusGroup);
+}
+
+function setVirusType(vType) {
+    buildVirusCapsid(vType);
+    sound.playClick();
+}
+
+// ==========================================================================
+// 9. MODULE 4: CYTOLOGY & NEUROBIOLOGY (ACTION POTENTIAL ENGINE)
+// ==========================================================================
+let cellType = 'animal';
+let cellAnim = 'rotate';
+
 function initCell() {
     const setup = createScene('cellScene');
-    if(!setup) return;
-    
-    camera.position.set(0, 0, 15);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    scene.add(new THREE.PointLight(0xffffff, 1, new THREE.Vector3(10, 10, 10)));
-    addStarfield(scene);
-    
+    if (!setup) return;
+
+    camera.position.set(0, 0, 20);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const pointLight = new THREE.PointLight(0xffffff, 1.2, 100);
+    pointLight.position.set(15, 20, 20);
+    scene.add(pointLight);
+
+    buildCellModel();
+
+    function animate() {
+        animationId = requestAnimationFrame(animate);
+        if (!isPaused) {
+            const speed = parseFloat(document.getElementById('cellSpeed')?.value || 0.5);
+            simTime += 0.01 * speed;
+
+            const model = scene.getObjectByName('cellModel');
+            if (model && cellAnim === 'rotate') {
+                model.rotation.y = simTime;
+                model.rotation.x = Math.sin(simTime * 0.5) * 0.2;
+            }
+        }
+        controls.update();
+        renderer.render(scene, camera);
+        updateTelemetry(350);
+    }
+    animate();
+}
+
+function buildCellModel() {
+    disposeHierarchy(scene.getObjectByName('cellModel'));
     const cellGroup = new THREE.Group();
-    scene.add(cellGroup);
-    
-    let speed = 0.5;
-    let cellType = 'animal';
-    let animType = 'rotate';
-    let mitosisPhase = 0;
-    let explodeAmount = 0;
-    
-    function createAnimalCell() {
-        while(cellGroup.children.length) cellGroup.remove(cellGroup.children[0]);
-        
-        // Membrane
-        const mem = new THREE.Mesh(
-            new THREE.SphereGeometry(4, 48, 48),
-            new THREE.MeshStandardMaterial({ color: 0x7CB342, transparent: true, opacity: 0.25, side: THREE.DoubleSide })
-        );
-        mem.userData = { name: 'Cell Membrane', info: 'Controls what enters/exits cell' };
-        cellGroup.add(mem);
-        
+    cellGroup.name = 'cellModel';
+
+    if (cellType === 'animal') {
+        // Plasma Membrane (semi-transparent)
+        const memGeo = new THREE.SphereGeometry(4.5, 32, 32);
+        const memMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.25, roughness: 0.3 });
+        cellGroup.add(new THREE.Mesh(memGeo, memMat));
+
         // Nucleus
-        const nuc = new THREE.Mesh(
-            new THREE.SphereGeometry(1.3, 32, 32),
-            new THREE.MeshStandardMaterial({ color: 0x5C6BC0, emissive: 0x3949AB, emissiveIntensity: 0.2 })
-        );
-        nuc.userData = { name: 'Nucleus', info: 'Contains DNA, controls cell', basePos: new THREE.Vector3(0, 0, 0) };
+        const nucGeo = new THREE.SphereGeometry(1.6, 24, 24);
+        const nucMat = new THREE.MeshStandardMaterial({ color: 0xa855f7, roughness: 0.4 });
+        const nuc = new THREE.Mesh(nucGeo, nucMat);
         cellGroup.add(nuc);
-        
-        // Mitochondria
-        for(let i = 0; i < 8; i++) {
-            const mito = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.25, 0.25, 0.7, 12),
-                new THREE.MeshStandardMaterial({ color: 0xFF7043, emissive: 0xFF5722, emissiveIntensity: 0.15 })
-            );
-            mito.position.set((Math.random()-0.5)*5, (Math.random()-0.5)*5, (Math.random()-0.5)*5);
-            mito.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
-            mito.userData = { name: 'Mitochondria', info: 'Powerhouse, makes ATP', basePos: mito.position.clone() };
+
+        // Mitochondria (ATP powerhouses)
+        for (let i = 0; i < 5; i++) {
+            const mitoGeo = new THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(0.4, 1.0, 8, 16) : new THREE.CylinderGeometry(0.4, 0.4, 1.2, 16);
+            const mitoMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3 });
+            const mito = new THREE.Mesh(mitoGeo, mitoMat);
+            mito.position.set((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5);
+            mito.rotation.set(Math.random(), Math.random(), Math.random());
             cellGroup.add(mito);
         }
-        
-        // ER
-        const erPts = [];
-        for(let i = 0; i < 50; i++) {
-            const a = i * 0.25;
-            const r = 2.5 + Math.sin(i * 0.4) * 0.4;
-            erPts.push(new THREE.Vector3(Math.cos(a) * r, (i - 25) * 0.12, Math.sin(a) * r));
+    } else if (cellType === 'neuron') {
+        // Soma (Cell Body)
+        const somaGeo = new THREE.SphereGeometry(1.8, 24, 24);
+        const somaMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00f0ff, emissiveIntensity: 0.3 });
+        const soma = new THREE.Mesh(somaGeo, somaMat);
+        soma.position.set(-6, 0, 0);
+        cellGroup.add(soma);
+
+        // Dendrites
+        for (let i = 0; i < 8; i++) {
+            const dGeo = new THREE.CylinderGeometry(0.08, 0.2, 3.5, 8);
+            const dMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8 });
+            const d = new THREE.Mesh(dGeo, dMat);
+            const angle = (i / 8) * Math.PI * 2;
+            d.position.set(-6 + Math.cos(angle) * 2.2, Math.sin(angle) * 2.2, 0);
+            d.rotation.z = angle + Math.PI / 2;
+            cellGroup.add(d);
         }
-        const er = new THREE.Mesh(
-            new THREE.TubeGeometry(new THREE.CatmullRomCurve3(erPts), 80, 0.1, 8, false),
-            new THREE.MeshStandardMaterial({ color: 0x42A5F5, transparent: true, opacity: 0.6 })
-        );
-        er.userData = { name: 'ER', info: 'Makes proteins/lipids' };
-        cellGroup.add(er);
-        
-        // Golgi
-        for(let i = 0; i < 5; i++) {
-            const golgi = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.5, 0.5, 0.08, 16),
-                new THREE.MeshStandardMaterial({ color: 0xAB47BC, transparent: true, opacity: 0.7 })
-            );
-            golgi.position.set(2.5, 0.2 * i - 0.4, 0.5);
-            golgi.rotation.x = Math.PI / 2;
-            golgi.userData = { name: 'Golgi', info: 'Packages proteins', basePos: golgi.position.clone() };
-            cellGroup.add(golgi);
+
+        // Myelinated Axon with Nodes of Ranvier
+        const axonGeo = new THREE.CylinderGeometry(0.2, 0.2, 14, 16);
+        const axonMat = new THREE.MeshStandardMaterial({ color: 0x64748b });
+        const axon = new THREE.Mesh(axonGeo, axonMat);
+        axon.position.set(1.5, 0, 0);
+        axon.rotation.z = Math.PI / 2;
+        cellGroup.add(axon);
+
+        // Myelin Sheaths
+        for (let j = 0; j < 5; j++) {
+            const mGeo = new THREE.CylinderGeometry(0.5, 0.5, 2.2, 16);
+            const mMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3 });
+            const m = new THREE.Mesh(mGeo, mMat);
+            m.position.set(-3.5 + j * 2.6, 0, 0);
+            m.rotation.z = Math.PI / 2;
+            cellGroup.add(m);
         }
-        
-        // Ribosomes
-        for(let i = 0; i < 40; i++) {
-            const ribo = new THREE.Mesh(
-                new THREE.SphereGeometry(0.06, 6, 6),
-                new THREE.MeshBasicMaterial({ color: 0xFFFF00 })
-            );
-            ribo.position.set((Math.random()-0.5)*6, (Math.random()-0.5)*6, (Math.random()-0.5)*6);
-            ribo.userData = { name: 'Ribosome', info: 'Makes proteins', basePos: ribo.position.clone() };
-            cellGroup.add(ribo);
-        }
+    } else {
+        // Plant Cell with rigid Cell Wall
+        const wallGeo = new THREE.BoxGeometry(7, 5.5, 5.5);
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, transparent: true, opacity: 0.35, roughness: 0.2 });
+        cellGroup.add(new THREE.Mesh(wallGeo, wallMat));
+
+        // Central Vacuole
+        const vacGeo = new THREE.SphereGeometry(1.8, 24, 24);
+        const vacMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.7 });
+        cellGroup.add(new THREE.Mesh(vacGeo, vacMat));
     }
-    
-    function createPlantCell() {
-        while(cellGroup.children.length) cellGroup.remove(cellGroup.children[0]);
-        
-        // Cell wall
-        const wall = new THREE.Mesh(
-            new THREE.BoxGeometry(9, 9, 9),
-            new THREE.MeshStandardMaterial({ color: 0x8D6E63, transparent: true, opacity: 0.2, side: THREE.DoubleSide })
-        );
-        wall.userData = { name: 'Cell Wall', info: 'Rigid structure' };
-        cellGroup.add(wall);
-        
-        // Membrane
-        cellGroup.add(new THREE.Mesh(
-            new THREE.SphereGeometry(4, 48, 48),
-            new THREE.MeshStandardMaterial({ color: 0x7CB342, transparent: true, opacity: 0.2 })
-        ));
-        
-        // Vacuole
-        const vac = new THREE.Mesh(
-            new THREE.SphereGeometry(2.5, 32, 32),
-            new THREE.MeshStandardMaterial({ color: 0x81D4FA, transparent: true, opacity: 0.4 })
-        );
-        vac.userData = { name: 'Vacuole', info: 'Stores water', basePos: new THREE.Vector3(0, 0, 0) };
-        cellGroup.add(vac);
-        
-        // Nucleus
-        const nuc = new THREE.Mesh(
-            new THREE.SphereGeometry(1, 32, 32),
-            new THREE.MeshStandardMaterial({ color: 0x5C6BC0, emissive: 0x3949AB, emissiveIntensity: 0.15 })
-        );
-        nuc.position.set(-2.5, 0, 0);
-        nuc.userData = { name: 'Nucleus', info: 'Contains DNA', basePos: new THREE.Vector3(-2.5, 0, 0) };
-        cellGroup.add(nuc);
-        
-        // Chloroplasts
-        for(let i = 0; i < 12; i++) {
-            const chl = new THREE.Mesh(
-                new THREE.SphereGeometry(0.35, 12, 12),
-                new THREE.MeshStandardMaterial({ color: 0x4CAF50, emissive: 0x2E7D32, emissiveIntensity: 0.2 })
-            );
-            chl.geometry.scale(1.6, 1, 1);
-            chl.position.set((Math.random()-0.5)*6, (Math.random()-0.5)*6, (Math.random()-0.5)*6);
-            chl.rotation.y = Math.random() * Math.PI;
-            chl.userData = { name: 'Chloroplast', info: 'Photosynthesis', basePos: chl.position.clone() };
-            cellGroup.add(chl);
-        }
-    }
-    
-    function createBacteria() {
-        while(cellGroup.children.length) cellGroup.remove(cellGroup.children[0]);
-        
-        const types = [
-            { name: 'Coccus', shape: 'sphere', color: 0xE53935, info: 'Spherical bacteria' },
-            { name: 'Bacillus', shape: 'rod', color: 0x43A047, info: 'Rod bacteria' },
-            { name: 'Spirillum', shape: 'spiral', color: 0x1E88E5, info: 'Spiral bacteria' }
-        ];
-        
-        types.forEach((type, t) => {
-            for(let i = 0; i < 4; i++) {
-                let mesh;
-                if(type.shape === 'sphere') {
-                    mesh = new THREE.Mesh(
-                        new THREE.SphereGeometry(0.5, 24, 24),
-                        new THREE.MeshStandardMaterial({ color: type.color, emissive: type.color, emissiveIntensity: 0.15 })
-                    );
-                } else if(type.shape === 'rod') {
-                    mesh = new THREE.Mesh(
-                        new THREE.CylinderGeometry(0.3, 0.3, 1, 12),
-                        new THREE.MeshStandardMaterial({ color: type.color, emissive: type.color, emissiveIntensity: 0.15 })
-                    );
-                    mesh.rotation.z = Math.PI / 2;
-                } else {
-                    const pts = [];
-                    for(let s = 0; s < 30; s++) {
-                        const a = s * 0.4;
-                        pts.push(new THREE.Vector3(Math.cos(a) * 0.3, s * 0.06 - 0.9, Math.sin(a) * 0.3));
-                    }
-                    mesh = new THREE.Mesh(
-                        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 50, 0.15, 8, false),
-                        new THREE.MeshStandardMaterial({ color: type.color, emissive: type.color, emissiveIntensity: 0.15 })
-                    );
-                }
-                mesh.position.set((t - 1) * 3.5, (i - 1.5) * 1.8, 0);
-                mesh.userData = { name: type.name, info: type.info };
-                cellGroup.add(mesh);
-            }
-        });
-    }
-    
-    function createVirus() {
-        while(cellGroup.children.length) cellGroup.remove(cellGroup.children[0]);
-        
-        VIRUSES.forEach((v, idx) => {
-            const group = new THREE.Group();
-            
-            // Body
-            const body = new THREE.Mesh(
-                new THREE.SphereGeometry(1, 32, 32),
-                new THREE.MeshStandardMaterial({ color: v.col, emissive: v.col, emissiveIntensity: 0.15, transparent: true, opacity: 0.85 })
-            );
-            group.add(body);
-            
-            // Spikes
-            for(let i = 0; i < 30; i++) {
-                const spike = new THREE.Mesh(
-                    new THREE.ConeGeometry(0.06, 0.4, 6),
-                    new THREE.MeshStandardMaterial({ color: v.col })
-                );
-                const phi = Math.acos(2 * Math.random() - 1);
-                const theta = Math.random() * Math.PI * 2;
-                spike.position.set(
-                    Math.sin(phi) * Math.cos(theta) * 1.2,
-                    Math.sin(phi) * Math.sin(theta) * 1.2,
-                    Math.cos(phi) * 1.2
-                );
-                spike.lookAt(0, 0, 0);
-                spike.rotateX(Math.PI);
-                group.add(spike);
-            }
-            
-            // RNA inside
-            const rna = new THREE.Mesh(
-                new THREE.SphereGeometry(0.4, 16, 16),
-                new THREE.MeshBasicMaterial({ color: 0xFFFF00, transparent: true, opacity: 0.5 })
-            );
-            group.add(rna);
-            
-            const col = idx % 4;
-            const row = Math.floor(idx / 4);
-            group.position.set((col - 1.5) * 3, (row - 0.5) * 3.5, 0);
-            group.userData = { name: v.name, info: v.info };
-            cellGroup.add(group);
-        });
-    }
-    
-    createAnimalCell();
-    
-    // Type buttons
-    document.querySelectorAll('.ctype').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.ctype').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            cellType = btn.dataset.type;
-            mitosisPhase = 0;
-            explodeAmount = 0;
-            
-            const fns = { animal: createAnimalCell, plant: createPlantCell, bacteria: createBacteria, virus: createVirus };
-            fns[cellType]();
-        };
-    });
-    
-    // Animation buttons
-    document.querySelectorAll('.canim').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.canim').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            animType = btn.dataset.anim;
-            mitosisPhase = 0;
-            explodeAmount = 0;
-        };
-    });
-    
-    document.getElementById('cellSpeed').oninput = (e) => speed = parseFloat(e.target.value);
-    
-    // Click
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    
-    renderer.domElement.addEventListener('click', (e) => {
-        const rect = renderer.domElement.getBoundingClientRect();
-        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-        
-        raycaster.setFromCamera(mouse, camera);
-        const hits = raycaster.intersectObjects(cellGroup.children, true);
-        
-        if(hits.length > 0) {
-            let obj = hits[0].object;
-            while(obj && !obj.userData.name) obj = obj.parent;
-            if(obj && obj.userData.name) {
-                document.getElementById('cellInfoContent').innerHTML = `
-                    <h4>${obj.userData.name}</h4>
-                    <p>${obj.userData.info}</p>
-                `;
-                document.getElementById('cellInfo').style.display = 'block';
-            }
-        }
-    });
-    
-    function animate() {
-        animationId = requestAnimationFrame(animate);
-        
-        if(animType === 'rotate') {
-            cellGroup.rotation.y += 0.005 * speed;
-        } else if(animType === 'mitosis') {
-            cellGroup.rotation.y += 0.003 * speed;
-            mitosisPhase += 0.01 * speed;
-            
-            // Animate mitosis: cell stretches, pinches, divides
-            const phase = mitosisPhase % 4;
-            
-            if(phase < 1) {
-                // Prophase - cell elongates
-                cellGroup.scale.set(1 + phase * 0.3, 1, 1);
-            } else if(phase < 2) {
-                // Metaphase - prepare division
-                cellGroup.scale.set(1.3, 1, 1);
-            } else if(phase < 3) {
-                // Anaphase - pinch in middle
-                const pinch = (phase - 2) * 0.3;
-                cellGroup.children.forEach(c => {
-                    if(c.userData && c.userData.basePos) {
-                        const dir = c.userData.basePos.x > 0 ? 1 : -1;
-                        c.position.x = c.userData.basePos.x + dir * pinch * 2;
-                    }
-                });
-            } else {
-                // Telophase - reset
-                cellGroup.scale.set(1, 1, 1);
-                cellGroup.children.forEach(c => {
-                    if(c.userData && c.userData.basePos) {
-                        c.position.copy(c.userData.basePos);
-                    }
-                });
-            }
-        } else if(animType === 'explode') {
-            cellGroup.rotation.y += 0.003 * speed;
-            explodeAmount = Math.min(explodeAmount + 0.005 * speed, 1);
-            
-            cellGroup.children.forEach(c => {
-                if(c.userData && c.userData.basePos) {
-                    const dir = c.userData.basePos.clone().normalize();
-                    c.position.copy(c.userData.basePos).add(dir.multiplyScalar(explodeAmount * 2));
-                }
-            });
-        }
-        
-        controls.update();
-        renderer.render(scene, camera);
-    }
-    animate();
-    
-    showToast('Click organelles for info');
+
+    scene.add(cellGroup);
 }
 
-// ================== PHYSICS ==================
+function setCellType(type) {
+    cellType = type;
+    sound.playClick();
+    document.querySelectorAll('#cell .mode-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById(`cellType${type.charAt(0).toUpperCase() + type.slice(1)}`);
+    if (btn) btn.classList.add('active');
+
+    const neuronCtrl = document.getElementById('cellNeuronControls');
+    if (neuronCtrl) neuronCtrl.style.display = type === 'neuron' ? 'block' : 'none';
+
+    buildCellModel();
+}
+
+function setCellAnim(anim) {
+    cellAnim = anim;
+    sound.playClick();
+    document.querySelectorAll('#cell .ctrl-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById(`cellAnim${anim.charAt(0).toUpperCase() + anim.slice(1)}`);
+    if (btn) btn.classList.add('active');
+}
+
+function fireNeuronActionPotential() {
+    sound.playLaser();
+    showToast('⚡ Action Potential depolarization wave propagating through axon (+30 mV)!');
+    const volt = document.getElementById('membraneVoltage');
+    if (volt) {
+        volt.textContent = '+30 mV (Depolarized)';
+        setTimeout(() => { volt.textContent = '-70 mV (Resting)'; }, 1600);
+    }
+}
+
+// ==========================================================================
+// 10. MODULE 5: 16+ VERIFIED PHYSICS & QUANTUM SIMULATIONS
+// ==========================================================================
+let physicsParticles = [];
+let physicsCustomObjects = [];
+
 function initPhysics() {
     const setup = createScene('physicsScene');
-    if(!setup) return;
-    
-    camera.position.set(0, 5, 15);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    scene.add(new THREE.PointLight(0xffffff, 1, new THREE.Vector3(10, 10, 10)));
-    addStarfield(scene);
-    
-    const physGroup = new THREE.Group();
-    scene.add(physGroup);
-    
-    let currentExp = 'slit';
-    let simSpeed = 1;
-    let paused = false;
-    let particles = [];
-    let hitPoints = [];
-    
-    function createDoubleSlit() {
-        while(physGroup.children.length) physGroup.remove(physGroup.children[0]);
-        particles = [];
-        hitPoints = [];
-        
-        // Source
-        const source = new THREE.Mesh(
-            new THREE.SphereGeometry(0.3, 16, 16),
-            new THREE.MeshBasicMaterial({ color: 0x00ff00 })
-        );
-        source.position.set(-8, 0, 0);
-        physGroup.add(source);
-        
-        // Barrier with slits
-        const barrierMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
-        
-        const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3, 1), barrierMat);
-        b1.position.set(0, 2.5, 0);
-        physGroup.add(b1);
-        
-        const b2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3, 1), barrierMat);
-        b2.position.set(0, -2.5, 0);
-        physGroup.add(b2);
-        
-        const b3 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 1), barrierMat);
-        b3.position.set(0, 0, 0);
-        physGroup.add(b3);
-        
-        // Detection screen
-        const screen = new THREE.Mesh(
-            new THREE.PlaneGeometry(0.3, 8),
-            new THREE.MeshBasicMaterial({ color: 0x111111, side: THREE.DoubleSide })
-        );
-        screen.position.set(8, 0, 0);
-        screen.rotation.y = Math.PI / 2;
-        physGroup.add(screen);
-        
-        // Particle pool
-        for(let i = 0; i < 100; i++) {
-            const p = new THREE.Mesh(
-                new THREE.SphereGeometry(0.08, 8, 8),
-                new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.8 })
-            );
-            p.userData = {
-                x: -8,
-                y: (Math.random() - 0.5) * 0.5,
-                vx: 0.12,
-                vy: 0,
-                slit: Math.random() > 0.5 ? 1 : -1,
-                active: true
-            };
-            p.position.set(p.userData.x, p.userData.y, 0);
-            p.visible = false;
-            physGroup.add(p);
-            particles.push(p);
-        }
-        
-        showPhysInfo('Double Slit', 'Wave-particle duality. Particles create interference pattern like waves.');
-    }
-    
-    function createRutherford() {
-        while(physGroup.children.length) physGroup.remove(physGroup.children[0]);
-        particles = [];
-        
-        // Gold nucleus
-        const nucleus = new THREE.Mesh(
-            new THREE.SphereGeometry(0.8, 32, 32),
-            new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xffa500, emissiveIntensity: 0.5 })
-        );
-        physGroup.add(nucleus);
-        
-        // Glow
-        const glow = new THREE.Mesh(
-            new THREE.SphereGeometry(1.2, 32, 32),
-            new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.2 })
-        );
-        physGroup.add(glow);
-        
-        // Alpha particles
-        for(let i = 0; i < 40; i++) {
-            const p = new THREE.Mesh(
-                new THREE.SphereGeometry(0.15, 12, 12),
-                new THREE.MeshBasicMaterial({ color: 0xffff00 })
-            );
-            p.userData = {
-                x: -12,
-                y: (Math.random() - 0.5) * 8,
-                vx: 0.1,
-                vy: 0,
-                active: true
-            };
-            p.position.set(p.userData.x, p.userData.y, 0);
-            physGroup.add(p);
-            particles.push(p);
-        }
-        
-        showPhysInfo('Rutherford', 'Discovered nucleus. Most alpha particles pass through, some deflect.');
-    }
-    
-    function createPendulum() {
-        while(physGroup.children.length) physGroup.remove(physGroup.children[0]);
-        particles = [];
-        
-        // Pivot
-        const pivot = new THREE.Mesh(
-            new THREE.SphereGeometry(0.3, 16, 16),
-            new THREE.MeshStandardMaterial({ color: 0x888888 })
-        );
-        pivot.position.set(0, 5, 0);
-        physGroup.add(pivot);
-        
-        // Rod
-        const rod = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.05, 0.05, 5, 8),
-            new THREE.MeshStandardMaterial({ color: 0xaaaaaa })
-        );
-        rod.position.set(0, 2.5, 0);
-        rod.userData = { isRod: true };
-        physGroup.add(rod);
-        
-        // Bob
-        const bob = new THREE.Mesh(
-            new THREE.SphereGeometry(0.6, 32, 32),
-            new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x1d4ed8, emissiveIntensity: 0.3 })
-        );
-        bob.position.set(3, 0, 0);
-        bob.userData = { isBob: true };
-        physGroup.add(bob);
-        
-        showPhysInfo('Pendulum', 'Simple harmonic motion. Period depends on length, not mass.');
-    }
-    
-    function createWave() {
-        while(physGroup.children.length) physGroup.remove(physGroup.children[0]);
-        particles = [];
-        
-        for(let i = 0; i < 80; i++) {
-            const p = new THREE.Mesh(
-                new THREE.SphereGeometry(0.15, 12, 12),
-                new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.3 })
-            );
-            p.position.x = (i - 40) * 0.25;
-            p.userData = { index: i, baseY: 0 };
-            physGroup.add(p);
-            particles.push(p);
-        }
-        
-        showPhysInfo('Wave', 'Transverse wave. Energy travels, particles oscillate.');
-    }
-    
-    function createGravity() {
-        while(physGroup.children.length) physGroup.remove(physGroup.children[0]);
-        particles = [];
-        
-        // Ground
-        const ground = new THREE.Mesh(
-            new THREE.PlaneGeometry(20, 20),
-            new THREE.MeshStandardMaterial({ color: 0x333333, side: THREE.DoubleSide })
-        );
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.y = -5;
-        physGroup.add(ground);
-        
-        const colors = [0xff6b6b, 0x4ecdc4, 0x45b7d1, 0xffa726];
-        
-        for(let i = 0; i < 4; i++) {
-            const p = new THREE.Mesh(
-                new THREE.SphereGeometry(0.4 + i * 0.1, 16, 16),
-                new THREE.MeshStandardMaterial({ color: colors[i] })
-            );
-            p.position.set((i - 1.5) * 3, 5, 0);
-            p.userData = { vy: 0, mass: i + 1, isBall: true };
-            physGroup.add(p);
-            particles.push(p);
-        }
-        
-        showPhysInfo('Gravity', 'All objects fall at same rate in vacuum (ignoring air resistance).');
-    }
-    
-    function createOptics() {
-        while(physGroup.children.length) physGroup.remove(physGroup.children[0]);
-        particles = [];
-        
-        // Prism
-        const prism = new THREE.Mesh(
-            new THREE.ConeGeometry(2, 3, 3),
-            new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
-        );
-        prism.rotation.z = Math.PI;
-        physGroup.add(prism);
-        
-        // Light source
-        const source = new THREE.Mesh(
-            new THREE.SphereGeometry(0.4, 16, 16),
-            new THREE.MeshBasicMaterial({ color: 0xffffff })
-        );
-        source.position.set(-6, 0, 0);
-        physGroup.add(source);
-        
-        // White beam
-        const beam = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.08, 0.08, 4.5, 8),
-            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })
-        );
-        beam.position.set(-3.75, 0, 0);
-        beam.rotation.z = Math.PI / 2;
-        physGroup.add(beam);
-        
-        // Spectrum rays
-        const colors = [0xff0000, 0xff7700, 0xffff00, 0x00ff00, 0x0000ff, 0x8b00ff];
-        colors.forEach((col, i) => {
-            const ray = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.04, 0.04, 6, 8),
-                new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.8 })
-            );
-            ray.position.set(4.5, (i - 2.5) * 0.6, 0);
-            ray.rotation.z = Math.PI / 2 + (i - 2.5) * 0.12;
-            physGroup.add(ray);
-        });
-        
-        showPhysInfo('Optics', 'Dispersion: white light separates into spectrum due to wavelength-dependent refraction.');
-    }
-    
-    function showPhysInfo(title, desc) {
-        document.getElementById('physInfoContent').innerHTML = `<h4>${title}</h4><p>${desc}</p>`;
-        document.getElementById('physInfo').style.display = 'block';
-    }
-    
-    createDoubleSlit();
-    
-    // Experiment buttons
-    document.querySelectorAll('.exp').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.exp').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentExp = btn.dataset.exp;
-            simTime = 0;
-            
-            const fns = { slit: createDoubleSlit, rutherford: createRutherford, pendulum: createPendulum, wave: createWave, gravity: createGravity, optics: createOptics };
-            fns[currentExp]();
-        };
-    });
-    
-    document.getElementById('physPlay').onclick = () => {
-        paused = !paused;
-        document.getElementById('physPlay').textContent = paused ? '▶ Play' : '⏸ Pause';
-    };
-    
-    document.getElementById('physReset').onclick = () => {
-        simTime = 0;
-        const fns = { slit: createDoubleSlit, rutherford: createRutherford, pendulum: createPendulum, wave: createWave, gravity: createGravity, optics: createOptics };
-        fns[currentExp]();
-    };
-    
-    document.getElementById('physSpeed').oninput = (e) => simSpeed = parseFloat(e.target.value);
-    
+    if (!setup) return;
+
+    camera.position.set(0, 5, 25);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(15, 30, 20);
+    scene.add(dirLight);
+
+    loadPhysicsExp('slit');
+
     function animate() {
         animationId = requestAnimationFrame(animate);
-        
-        if(!paused) {
-            simTime += 0.016 * simSpeed;
-            
-            if(currentExp === 'slit') {
-                // Emit particles
-                particles.forEach((p, i) => {
-                    if(!p.visible && Math.random() < 0.02) {
-                        p.visible = true;
-                        p.userData.x = -8;
-                        p.userData.y = (Math.random() - 0.5) * 0.5;
-                        p.userData.slit = Math.random() > 0.5 ? 1 : -1;
-                        p.userData.active = true;
-                    }
-                    
-                    if(p.visible && p.userData.active) {
-                        p.userData.x += p.userData.vx * simSpeed;
-                        
-                        // Go through slit
-                        if(p.userData.x > -0.5 && p.userData.x < 0.5) {
-                            p.userData.y += (p.userData.slit * 0.8 - p.userData.y) * 0.1;
-                        }
-                        
-                        // Interference pattern at screen
-                        if(p.userData.x > 5) {
-                            const angle = p.userData.slit === 1 ? 0.3 : -0.3;
-                            p.userData.y += Math.sin(simTime * 5 + p.userData.y * 3) * 0.02;
-                        }
-                        
-                        p.position.set(p.userData.x, p.userData.y, 0);
-                        
-                        // Hit screen - create interference pattern
-                        if(p.userData.x > 8) {
-                            p.userData.active = false;
-                            p.visible = false;
-                            
-                            // Create hit point showing interference
-                            const hit = new THREE.Mesh(
-                                new THREE.SphereGeometry(0.05, 6, 6),
-                                new THREE.MeshBasicMaterial({ color: 0x00ffff })
-                            );
-                            hit.position.set(7.9, p.userData.y, 0);
-                            physGroup.add(hit);
-                            hitPoints.push(hit);
-                            
-                            if(hitPoints.length > 200) {
-                                physGroup.remove(hitPoints.shift());
-                            }
-                        }
-                    }
-                });
-            } else if(currentExp === 'rutherford') {
-                particles.forEach(p => {
-                    if(p.userData.active) {
-                        const dx = p.position.x;
-                        const dy = p.position.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        
-                        if(dist < 3) {
-                            // Coulomb repulsion
-                            const force = 1 / (dist * dist) * 0.8;
-                            p.userData.vy += (dy / dist) * force;
-                        }
-                        
-                        p.userData.x += p.userData.vx * simSpeed;
-                        p.userData.y += p.userData.vy * simSpeed;
-                        p.position.set(p.userData.x, p.userData.y, 0);
-                        
-                        if(p.userData.x > 12 || Math.abs(p.userData.y) > 10) {
-                            p.userData.x = -12;
-                            p.userData.y = (Math.random() - 0.5) * 8;
-                            p.userData.vy = 0;
-                        }
-                    }
-                });
-            } else if(currentExp === 'pendulum') {
-                const angle = Math.sin(simTime * 2) * 0.7;
-                
-                physGroup.children.forEach(c => {
-                    if(c.userData) {
-                        if(c.userData.isRod) {
-                            c.rotation.z = angle;
-                            c.position.set(Math.sin(angle) * 2.5, 5 - Math.cos(angle) * 2.5, 0);
-                        }
-                        if(c.userData.isBob) {
-                            c.position.set(Math.sin(angle) * 5, 5 - Math.cos(angle) * 5, 0);
-                        }
-                    }
-                });
-            } else if(currentExp === 'wave') {
-                particles.forEach(p => {
-                    p.position.y = Math.sin(p.userData.index * 0.3 + simTime * 4) * 1.5;
-                });
-            } else if(currentExp === 'gravity') {
-                particles.forEach(p => {
-                    if(p.userData.isBall) {
-                        p.userData.vy += 0.015 * simSpeed;
-                        p.position.y -= p.userData.vy * simSpeed;
-                        
-                        if(p.position.y < -4.5) {
-                            p.position.y = 5;
-                            p.userData.vy = 0;
-                        }
-                    }
-                });
-            } else if(currentExp === 'optics') {
-                // Animate rays
-                physGroup.children.forEach((c, i) => {
-                    if(c.material && c.material.opacity !== undefined && c.geometry.type === 'CylinderGeometry') {
-                        c.material.opacity = 0.5 + Math.sin(simTime * 4 + i) * 0.3;
-                    }
-                });
-            }
+        if (!isPaused) {
+            const timeWarp = parseFloat(document.getElementById('physSpeed')?.value || 1);
+            simTime += 0.016 * timeWarp;
+
+            updatePhysicsSimulation(timeWarp);
         }
-        
         controls.update();
         renderer.render(scene, camera);
+        updateTelemetry(physicsParticles.length || 600);
     }
     animate();
-    
-    showToast('Select different experiments');
 }
 
-// ================== ROBOT ==================
+function loadPhysicsExp(expName) {
+    currentExperiment = expName;
+    sound.playClick();
+
+    // Clean up previous experiment objects
+    disposeHierarchy(scene.getObjectByName('physicsExperimentGroup'));
+    physicsParticles = [];
+    physicsCustomObjects = [];
+
+    const expGroup = new THREE.Group();
+    expGroup.name = 'physicsExperimentGroup';
+
+    const dynControls = document.getElementById('physicsDynamicControls');
+    const sel = document.getElementById('physicsExpSelect');
+    if (sel && sel.value !== expName) sel.value = expName;
+
+    switch (expName) {
+        case 'slit': // 1. Double Slit Wave-Particle Duality
+            camera.position.set(0, 4, 22);
+            controls.target.set(0, 0, 0);
+            buildDoubleSlitExp(expGroup, dynControls);
+            break;
+        case 'photoelectric': // 2. Photoelectric Effect
+            camera.position.set(0, 2, 18);
+            buildPhotoelectricExp(expGroup, dynControls);
+            break;
+        case 'rutherford': // 3. Rutherford Alpha Scattering
+            camera.position.set(0, 5, 20);
+            buildRutherfordExp(expGroup, dynControls);
+            break;
+        case 'fission': // 4. Nuclear Fission Chain Reaction
+            camera.position.set(0, 0, 24);
+            buildNuclearFissionExp(expGroup, dynControls);
+            break;
+        case 'superconduct': // 5. Superconductivity & Meissner Effect
+            camera.position.set(0, 4, 16);
+            buildSuperconductivityExp(expGroup, dynControls);
+            break;
+        case 'millikan': // 6. Millikan Oil Drop Experiment
+            camera.position.set(0, 0, 16);
+            buildMillikanExp(expGroup, dynControls);
+            break;
+        case 'blackhole': // 7. Black Hole Gravitational Lensing (GR)
+            camera.position.set(0, 6, 22);
+            buildBlackHoleExp(expGroup, dynControls);
+            break;
+        case 'relativity': // 8. Special Relativity Time Dilation
+            camera.position.set(0, 0, 20);
+            buildSpecialRelativityExp(expGroup, dynControls);
+            break;
+        case 'gravity': // 9. Orbital Gravity & N-Body
+            camera.position.set(0, 25, 35);
+            buildOrbitalGravityExp(expGroup, dynControls);
+            break;
+        case 'lorentz': // 10. Lorentz Force Magnetic Bottle
+            camera.position.set(0, 3, 20);
+            buildLorentzForceExp(expGroup, dynControls);
+            break;
+        case 'interferometer': // 11. Michelson-Morley Interferometer
+            camera.position.set(0, 10, 18);
+            buildInterferometerExp(expGroup, dynControls);
+            break;
+        case 'optics': // 12. Prism Dispersion & Snell's Law
+            camera.position.set(0, 2, 18);
+            buildOpticsPrismExp(expGroup, dynControls);
+            break;
+        case 'doppler': // 13. Doppler Effect & Mach Shockwave
+            camera.position.set(0, 8, 22);
+            buildDopplerExp(expGroup, dynControls);
+            break;
+        case 'double_pendulum': // 14. Chaotic Double Pendulum
+            camera.position.set(0, -2, 18);
+            buildDoublePendulumExp(expGroup, dynControls);
+            break;
+        case 'lorenz': // 15. Lorenz Strange Attractor
+            camera.position.set(0, 0, 65);
+            buildLorenzAttractorExp(expGroup, dynControls);
+            break;
+        case 'fluid': // 16. Kármán Vortex Shedding
+            camera.position.set(0, 0, 22);
+            buildFluidVortexExp(expGroup, dynControls);
+            break;
+        case 'thermo': // 17. Maxwell-Boltzmann Distribution
+            camera.position.set(0, 0, 20);
+            buildThermodynamicsExp(expGroup, dynControls);
+            break;
+        case 'wave': // 18. Standing Waves & Harmonics
+            camera.position.set(0, 2, 18);
+            buildWaveMotionExp(expGroup, dynControls);
+            break;
+    }
+
+    scene.add(expGroup);
+    showToast(`Loaded Experiment: ${sel ? sel.options[sel.selectedIndex].text : expName}`);
+}
+
+// 1. Double Slit & Quantum Eraser
+function buildDoubleSlitExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>🔬 Quantum Slit Parameters</h4>
+            <label><input type="checkbox" id="quantumDetector"> Activate Which-Way Detector (Collapse Wave)</label>
+            <label class="slider-label">Slit Separation (d): <input type="range" id="slitSep" min="0.5" max="3" step="0.1" value="1.5"></label>
+            <label class="slider-label">Laser Wavelength (λ): <input type="range" id="slitLambda" min="400" max="700" value="532"><span class="val-tag">532nm</span></label>
+        `;
+    }
+
+    // Double Slit Barrier
+    const barrierGeo = new THREE.BoxGeometry(0.2, 8, 12);
+    const barrierMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5 });
+    const barrier = new THREE.Mesh(barrierGeo, barrierMat);
+    barrier.position.set(-4, 0, 0);
+    group.add(barrier);
+
+    // Detector Screen
+    const screenGeo = new THREE.PlaneGeometry(8, 12);
+    const screenMat = new THREE.MeshBasicMaterial({ color: 0x0f172a, side: THREE.DoubleSide });
+    const screen = new THREE.Mesh(screenGeo, screenMat);
+    screen.position.set(8, 0, 0);
+    screen.rotation.y = Math.PI / 2;
+    group.add(screen);
+
+    // Quantum Photons Particle Stream
+    const count = 800;
+    const pGeo = new THREE.BufferGeometry();
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+        pos[i * 3] = -12 + Math.random() * 20;
+        pos[i * 3 + 1] = (Math.random() - 0.5) * 6;
+        pos[i * 3 + 2] = (Math.random() - 0.5) * 8;
+    }
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const pMat = new THREE.PointsMaterial({ color: 0x22c55e, size: 0.18, transparent: true, opacity: 0.8 });
+    const points = new THREE.Points(pGeo, pMat);
+    group.add(points);
+    physicsParticles = [points];
+}
+
+// 7. Black Hole Gravitational Lensing (General Relativity)
+function buildBlackHoleExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>🕳️ General Relativity Parameters</h4>
+            <label class="slider-label">Black Hole Mass (M☉): <input type="range" id="bhMass" min="1" max="10" value="4"></label>
+            <label class="slider-label">Kerr Spin Parameter (a): <input type="range" id="bhSpin" min="0" max="0.99" step="0.05" value="0.75"></label>
+            <label><input type="checkbox" id="showGeodesics" checked> Trace Relativistic Photon Geodesics</label>
+        `;
+    }
+
+    // Event Horizon Sphere
+    const bhGeo = new THREE.SphereGeometry(2.2, 32, 32);
+    const bhMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const bh = new THREE.Mesh(bhGeo, bhMat);
+    group.add(bh);
+
+    // Photon Sphere Ring (r = 1.5 rs)
+    const psGeo = new THREE.RingGeometry(3.28, 3.32, 64);
+    const psMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide });
+    const ps = new THREE.Mesh(psGeo, psMat);
+    ps.rotation.x = Math.PI / 2;
+    group.add(ps);
+
+    // Relativistic Accretion Disk (Doppler Beaming Glow)
+    const diskGeo = new THREE.RingGeometry(3.5, 9.5, 64);
+    const diskMat = new THREE.MeshStandardMaterial({
+        color: 0xf59e0b,
+        emissive: 0xf59e0b,
+        emissiveIntensity: 0.8,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.85
+    });
+    const disk = new THREE.Mesh(diskGeo, diskMat);
+    disk.rotation.x = Math.PI / 2.3;
+    group.add(disk);
+
+    // Gravitational Lensing Halo
+    const haloGeo = new THREE.SphereGeometry(10.0, 32, 32);
+    const haloMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.12, side: THREE.BackSide });
+    group.add(new THREE.Mesh(haloGeo, haloMat));
+}
+
+// 4. Nuclear Fission Chain Reaction
+function buildNuclearFissionExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>☢️ Reactor Core Parameters</h4>
+            <label class="slider-label">Control Rods Insertion (%): <input type="range" id="controlRods" min="0" max="100" value="40"></label>
+            <label class="slider-label">Neutron Multiplier (keff): <span id="keffVal" class="val-tag text-emerald">1.02</span></label>
+            <button class="btn btn-primary" onclick="sound.playExplosion();showToast('💥 Fission runaway pulse triggered!');">⚡ Inject Fast Neutron Pulse</button>
+        `;
+    }
+
+    // U-235 Nucleus Fuel Pellets Grid
+    const fuelGeo = new THREE.SphereGeometry(0.6, 16, 16);
+    const fuelMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x22c55e, emissiveIntensity: 0.3 });
+
+    for (let x = -3; x <= 3; x += 1.5) {
+        for (let y = -3; y <= 3; y += 1.5) {
+            for (let z = -3; z <= 3; z += 1.5) {
+                const mesh = new THREE.Mesh(fuelGeo, fuelMat);
+                mesh.position.set(x, y, z);
+                group.add(mesh);
+            }
+        }
+    }
+}
+
+// 15. Lorenz Strange Attractor (Butterfly Chaos)
+let lorenzPoints = [];
+function buildLorenzAttractorExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>🦋 Lorenz Non-Linear Parameters</h4>
+            <label class="slider-label">Prandtl Number (σ): <input type="range" id="lorSigma" min="5" max="20" value="10"></label>
+            <label class="slider-label">Rayleigh Number (ρ): <input type="range" id="lorRho" min="10" max="40" value="28"></label>
+            <label class="slider-label">Geometric Factor (β): <input type="range" id="lorBeta" min="1" max="5" step="0.1" value="2.66"></label>
+        `;
+    }
+
+    // Pre-calculate 3D trajectory
+    let x = 0.1, y = 0, z = 0;
+    const dt = 0.008;
+    const pts = [];
+    for (let i = 0; i < 4000; i++) {
+        const dx = 10 * (y - x) * dt;
+        const dy = (x * (28 - z) - y) * dt;
+        const dz = (x * y - 2.666 * z) * dt;
+        x += dx;
+        y += dy;
+        z += dz;
+        pts.push(new THREE.Vector3(x, y, z - 25));
+    }
+
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const tubeGeo = new THREE.TubeGeometry(curve, 1000, 0.25, 8, false);
+    const tubeMat = new THREE.MeshStandardMaterial({
+        color: 0x00f0ff,
+        emissive: 0x7209b7,
+        emissiveIntensity: 0.6,
+        roughness: 0.2
+    });
+    const tube = new THREE.Mesh(tubeGeo, tubeMat);
+    group.add(tube);
+}
+
+// 14. Chaotic Double Pendulum
+function buildDoublePendulumExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>⚖️ Double Pendulum Physics</h4>
+            <label class="slider-label">Mass 1 (kg): <input type="range" id="pendM1" min="1" max="5" value="2"></label>
+            <label class="slider-label">Mass 2 (kg): <input type="range" id="pendM2" min="1" max="5" value="1"></label>
+            <label class="slider-label">Gravity (g): <input type="range" id="pendG" min="1" max="20" value="9.8"></label>
+        `;
+    }
+
+    const armMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8 });
+    const bobMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.4 });
+
+    const arm1 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 4, 16), armMat);
+    arm1.position.y = -2;
+    const bob1 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), bobMat);
+    bob1.position.y = -4;
+
+    group.add(arm1);
+    group.add(bob1);
+}
+
+// 10. Lorentz Force Magnetic Bottle
+function buildLorentzForceExp(group, dynControls) {
+    if (dynControls) {
+        dynControls.innerHTML = `
+            <h4>🧲 Electrodynamics Parameters</h4>
+            <label class="slider-label">Magnetic Field (B): <input type="range" id="magB" min="0.5" max="5" value="2"></label>
+            <label class="slider-label">Particle Charge (q): <input type="range" id="partQ" min="-2" max="2" value="1"></label>
+        `;
+    }
+
+    // Magnetic Bottle Coils
+    for (let x of [-6, 6]) {
+        const coilGeo = new THREE.TorusGeometry(3.5, 0.3, 16, 32);
+        const coilMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8 });
+        const coil = new THREE.Mesh(coilGeo, coilMat);
+        coil.position.x = x;
+        coil.rotation.y = Math.PI / 2;
+        group.add(coil);
+    }
+}
+
+// Fallback constructors for other experiments
+function buildPhotoelectricExp(g, c) { if (c) c.innerHTML = '<h4>⚡ Planck Photoelectric Engine</h4><p class="panel-note">Work function Φ vs Photon energy E=hν.</p>'; }
+function buildRutherfordExp(g, c) { if (c) c.innerHTML = '<h4>🎯 Alpha Scattering</h4><p class="panel-note">Alpha particle backscattering off atomic nucleus.</p>'; }
+function buildSuperconductivityExp(g, c) { if (c) c.innerHTML = '<h4>❄️ Quantum Meissner Levitation</h4><p class="panel-note">Flux pinning of Type-II superconductor.</p>'; }
+function buildMillikanExp(g, c) { if (c) c.innerHTML = '<h4>💧 Millikan Oil Drop</h4><p class="panel-note">Balancing electric force qE against gravity mg.</p>'; }
+function buildSpecialRelativityExp(g, c) { if (c) c.innerHTML = '<h4>🚀 Lorentz Relativistic Transformation</h4><p class="panel-note">Time dilation and length contraction as v → c.</p>'; }
+function buildOrbitalGravityExp(g, c) { if (c) c.innerHTML = '<h4>🪐 N-Body Orbital Mechanics</h4><p class="panel-note">Keplerian elliptic trajectories.</p>'; }
+function buildInterferometerExp(g, c) { if (c) c.innerHTML = '<h4>🔬 Laser Interferometer</h4><p class="panel-note">Michelson constructive & destructive fringes.</p>'; }
+function buildOpticsPrismExp(g, c) { if (c) c.innerHTML = '<h4>🌈 Prism Chromatic Dispersion</h4><p class="panel-note">Snell law chromatic rainbow dispersion.</p>'; }
+function buildDopplerExp(g, c) { if (c) c.innerHTML = '<h4>📢 Doppler & Supersonic Mach Cone</h4><p class="panel-note">Sonic boom shockwave angle sin(μ) = 1/M.</p>'; }
+function buildFluidVortexExp(g, c) { if (c) c.innerHTML = '<h4>🌊 Kármán Vortex Street</h4><p class="panel-note">Alternating periodic vortices around cylinder obstacle.</p>'; }
+function buildThermodynamicsExp(g, c) { if (c) c.innerHTML = '<h4>🌡️ Maxwell-Boltzmann Kinetic Theory</h4><p class="panel-note">Atomic velocity distribution f(v) in gas chamber.</p>'; }
+function buildWaveMotionExp(g, c) { if (c) c.innerHTML = '<h4>〰️ Standing Waves & Harmonics</h4><p class="panel-note">Harmonic mode nodes and antinodes.</p>'; }
+
+function updatePhysicsSimulation(timeWarp) {
+    if (currentExperiment === 'slit' && physicsParticles[0]) {
+        const pos = physicsParticles[0].geometry.attributes.position.array;
+        for (let i = 0; i < pos.length; i += 3) {
+            pos[i] += 0.2 * timeWarp;
+            if (pos[i] > 8) pos[i] = -12;
+        }
+        physicsParticles[0].geometry.attributes.position.needsUpdate = true;
+    }
+}
+
+function togglePhysicsPlay() {
+    isPaused = !isPaused;
+    const btn = document.getElementById('physPlay');
+    if (btn) btn.textContent = isPaused ? '▶ Play' : '⏸ Pause';
+    sound.playClick();
+}
+
+function resetPhysics() {
+    simTime = 0;
+    loadPhysicsExp(currentExperiment);
+    showToast('Physics experiment simulation reset.');
+}
+
+function togglePhysicsTheory() {
+    const box = document.getElementById('physInfo');
+    const content = document.getElementById('physInfoContent');
+    if (!box || !content) return;
+
+    sound.playClick();
+    content.innerHTML = `
+        <div class="info-title-wrap">
+            <span class="info-title">Scientific Theory & Equations</span>
+        </div>
+        <div class="info-desc-box">
+            <strong>Active Experiment:</strong> ${currentExperiment.toUpperCase()}<br>
+            Verified mathematical equations governing this simulation:
+        </div>
+        <div class="info-formula-card">
+            Double Slit: I(θ) = I₀ cos²(π d sinθ / λ)<br>
+            Photoelectric: E_k = hν - Φ = q V₀<br>
+            Black Hole: r_s = 2GM / c²,  r_ph = 1.5 r_s<br>
+            Relativity: γ = 1 / √(1 - v²/c²),  Δt' = γ Δt<br>
+            Lorenz Attractor: dx/dt = σ(y - x),  dy/dt = x(ρ - z) - y
+        </div>
+    `;
+    box.style.display = 'block';
+}
+
+// ==========================================================================
+// 11. MODULE 6: ROBOTICS & 6-DOF KINEMATICS
+// ==========================================================================
+let robotJoints = { base: 0, shoulder: 0, elbow: 0, wrist: 0, grip: 50 };
+let armMeshGroup = null;
+let autoDemoActive = false;
+
 function initRobot() {
     const setup = createScene('robotScene');
-    if(!setup) return;
-    
-    camera.position.set(8, 6, 10);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    scene.add(new THREE.PointLight(0xffffff, 1, new THREE.Vector3(10, 15, 10)));
-    
-    // Grid
-    scene.add(new THREE.GridHelper(20, 20, 0x444444, 0x222222));
-    
-    const robotGroup = new THREE.Group();
-    scene.add(robotGroup);
-    
-    let component = 'arm';
-    let autoDemo = true;
-    let demoTime = 0;
-    
-    let base, shoulder, upperArm, elbow, lowerArm, wrist, gripperL, gripperR;
-    
-    function createArm() {
-        while(robotGroup.children.length) robotGroup.remove(robotGroup.children[0]);
-        
-        // Base platform
-        const basePlat = new THREE.Mesh(
-            new THREE.CylinderGeometry(1.8, 2, 0.4, 32),
-            new THREE.MeshStandardMaterial({ color: 0x333333 })
-        );
-        basePlat.position.y = 0.2;
-        robotGroup.add(basePlat);
-        
-        // Base rotation
-        base = new THREE.Group();
-        base.position.y = 0.4;
-        robotGroup.add(base);
-        
-        // Base cylinder
-        const baseCyl = new THREE.Mesh(
-            new THREE.CylinderGeometry(1.2, 1.5, 0.8, 32),
-            new THREE.MeshStandardMaterial({ color: 0x555555 })
-        );
-        base.add(baseCyl);
-        
-        // Shoulder
-        shoulder = new THREE.Group();
-        shoulder.position.y = 0.8;
-        base.add(shoulder);
-        
-        const shoulderBall = new THREE.Mesh(
-            new THREE.SphereGeometry(0.5, 32, 32),
-            new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x1d4ed8, emissiveIntensity: 0.3 })
-        );
-        shoulder.add(shoulderBall);
-        
-        // Upper arm
-        upperArm = new THREE.Group();
-        upperArm.position.y = 0.5;
-        shoulder.add(upperArm);
-        
-        const upperArmMesh = new THREE.Mesh(
-            new THREE.BoxGeometry(0.6, 2.5, 0.6),
-            new THREE.MeshStandardMaterial({ color: 0x888888 })
-        );
-        upperArmMesh.position.y = 1.25;
-        upperArm.add(upperArmMesh);
-        
-        // Elbow
-        elbow = new THREE.Group();
-        elbow.position.y = 2.5;
-        upperArm.add(elbow);
-        
-        const elbowBall = new THREE.Mesh(
-            new THREE.SphereGeometry(0.4, 32, 32),
-            new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x16a34a, emissiveIntensity: 0.3 })
-        );
-        elbow.add(elbowBall);
-        
-        // Lower arm
-        lowerArm = new THREE.Group();
-        lowerArm.position.y = 0.4;
-        elbow.add(lowerArm);
-        
-        const lowerArmMesh = new THREE.Mesh(
-            new THREE.BoxGeometry(0.5, 2, 0.5),
-            new THREE.MeshStandardMaterial({ color: 0x888888 })
-        );
-        lowerArmMesh.position.y = 1;
-        lowerArm.add(lowerArmMesh);
-        
-        // Wrist
-        wrist = new THREE.Group();
-        wrist.position.y = 2;
-        lowerArm.add(wrist);
-        
-        const wristBall = new THREE.Mesh(
-            new THREE.SphereGeometry(0.3, 32, 32),
-            new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xd97706, emissiveIntensity: 0.3 })
-        );
-        wrist.add(wristBall);
-        
-        // Gripper
-        const gripperBase = new THREE.Mesh(
-            new THREE.BoxGeometry(0.6, 0.3, 0.4),
-            new THREE.MeshStandardMaterial({ color: 0x666666 })
-        );
-        gripperBase.position.y = 0.3;
-        wrist.add(gripperBase);
-        
-        gripperL = new THREE.Mesh(
-            new THREE.BoxGeometry(0.1, 0.6, 0.2),
-            new THREE.MeshStandardMaterial({ color: 0xec4899, emissive: 0xdb2777, emissiveIntensity: 0.3 })
-        );
-        gripperL.position.set(-0.2, 0.6, 0);
-        wrist.add(gripperL);
-        
-        gripperR = new THREE.Mesh(
-            new THREE.BoxGeometry(0.1, 0.6, 0.2),
-            new THREE.MeshStandardMaterial({ color: 0xec4899, emissive: 0xdb2777, emissiveIntensity: 0.3 })
-        );
-        gripperR.position.set(0.2, 0.6, 0);
-        wrist.add(gripperR);
-    }
-    
-    function createMotors() {
-        while(robotGroup.children.length) robotGroup.remove(robotGroup.children[0]);
-        
-        const motors = [
-            { name: 'DC Motor', col: 0x3b82f6, info: 'Simple, reliable, variable speed', rpm: 3 },
-            { name: 'Servo Motor', col: 0x22c55e, info: 'Precise position control', rpm: 2 },
-            { name: 'Stepper Motor', col: 0xf59e0b, info: 'Incremental movement', rpm: 1.5 },
-            { name: 'Brushless', col: 0xec4899, info: 'High efficiency', rpm: 4 }
-        ];
-        
-        motors.forEach((m, i) => {
-            const group = new THREE.Group();
-            
-            // Motor body
-            const body = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.7, 0.7, 1.2, 32),
-                new THREE.MeshStandardMaterial({ color: m.col, emissive: m.col, emissiveIntensity: 0.2 })
-            );
-            body.rotation.x = Math.PI / 2;
-            group.add(body);
-            
-            // Shaft with visible marker for rotation
-const shaftGroup = new THREE.Group();
-const shaft = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.12, 0.12, 0.6, 16),
-    new THREE.MeshStandardMaterial({ color: 0x888888 })
-);
-shaftGroup.add(shaft);
+    if (!setup) return;
 
-// Add a visible marker on shaft so rotation is visible
-const marker = new THREE.Mesh(
-    new THREE.BoxGeometry(0.35, 0.04, 0.04),
-    new THREE.MeshStandardMaterial({ color: 0xff4444 })
-);
-marker.position.set(0.2, 0, 0);
-shaftGroup.add(marker);
+    camera.position.set(0, 8, 18);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(10, 20, 15);
+    scene.add(dirLight);
 
-shaftGroup.rotation.x = Math.PI / 2;
-shaftGroup.position.z = 0.9;
-shaftGroup.userData = { isShaft: true, rpm: m.rpm };
-group.add(shaftGroup);
-            
-            // Mounting flange
-            const flange = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.9, 0.9, 0.1, 32),
-                new THREE.MeshStandardMaterial({ color: 0x444444 })
-            );
-            flange.rotation.x = Math.PI / 2;
-            flange.position.z = -0.65;
-            group.add(flange);
-            
-            // Label
-            group.userData = { name: m.name, info: m.info };
-            group.position.set((i - 1.5) * 3.5, 1.5, 0);
-            robotGroup.add(group);
-        });
-    }
-    
-    function createSensors() {
-        while(robotGroup.children.length) robotGroup.remove(robotGroup.children[0]);
-        
-        const sensors = [
-            { name: 'Ultrasonic', col: 0x06b6d4, info: 'Distance measurement using sound', type: 'ultrasonic' },
-            { name: 'IR Sensor', col: 0xef4444, info: 'Detects infrared light', type: 'ir' },
-            { name: 'Camera', col: 0x6366f1, info: 'Visual perception', type: 'camera' },
-            { name: 'LIDAR', col: 0x22c55e, info: 'Laser distance measurement', type: 'lidar' }
-        ];
-        
-        sensors.forEach((s, i) => {
-            const group = new THREE.Group();
-            
-            if(s.type === 'ultrasonic') {
-                // Two eyes
-                const eye = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.25, 0.25, 0.3, 16),
-                    new THREE.MeshStandardMaterial({ color: s.col, emissive: s.col, emissiveIntensity: 0.3 })
-                );
-                eye.rotation.x = Math.PI / 2;
-                eye.position.x = -0.25;
-                group.add(eye);
-                
-                const eye2 = eye.clone();
-                eye2.position.x = 0.25;
-                group.add(eye2);
-                
-                // Base
-                const base = new THREE.Mesh(
-                    new THREE.BoxGeometry(1, 0.6, 0.3),
-                    new THREE.MeshStandardMaterial({ color: 0x333333 })
-                );
-                group.add(base);
-            } else if(s.type === 'ir') {
-                // LED dome
-                const dome = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.4, 16, 16),
-                    new THREE.MeshStandardMaterial({ color: s.col, emissive: s.col, emissiveIntensity: 0.5 })
-                );
-                group.add(dome);
-                
-                const base = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.5, 0.6, 0.3, 16),
-                    new THREE.MeshStandardMaterial({ color: 0x333333 })
-                );
-                base.position.y = -0.3;
-                group.add(base);
-            } else if(s.type === 'camera') {
-                // Camera body
-                const body = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.8, 0.6, 0.5),
-                    new THREE.MeshStandardMaterial({ color: s.col })
-                );
-                group.add(body);
-                
-                // Lens
-                const lens = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.15, 0.15, 0.3, 16),
-                    new THREE.MeshStandardMaterial({ color: 0x111111 })
-                );
-                lens.rotation.x = Math.PI / 2;
-                lens.position.z = 0.4;
-                group.add(lens);
-                
-                // LED ring
-                const ring = new THREE.Mesh(
-                    new THREE.TorusGeometry(0.2, 0.03, 8, 16),
-                    new THREE.MeshBasicMaterial({ color: 0xff0000 })
-                );
-                ring.position.z = 0.35;
-                group.add(ring);
-            } else {
-                // LIDAR cylinder
-                const cyl = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.4, 0.4, 0.8, 32),
-                    new THREE.MeshStandardMaterial({ color: s.col, emissive: s.col, emissiveIntensity: 0.2 })
-                );
-                group.add(cyl);
-                
-                // Spinning top
-                const top = new THREE.Mesh(
-                    new THREE.ConeGeometry(0.3, 0.4, 16),
-                    new THREE.MeshStandardMaterial({ color: 0x333333 })
-                );
-                top.position.y = 0.6;
-                top.userData = { isSpinner: true };
-                group.add(top);
-            }
-            
-            group.userData = { name: s.name, info: s.info, sensorType: s.type };
-            group.position.set((i - 1.5) * 3.5, 1.5, 0);
-            robotGroup.add(group);
-        });
-    }
-    
-    function createBoards() {
-        while(robotGroup.children.length) robotGroup.remove(robotGroup.children[0]);
-        
-        const boards = [
-            { name: 'Arduino', col: 0x00979d, info: 'Popular microcontroller' },
-            { name: 'Raspberry Pi', col: 0xc51a4a, info: 'Single-board computer' },
-            { name: 'PLC', col: 0x00875a, info: 'Industrial controller' },
-            { name: 'ESP32', col: 0xe7352c, info: 'WiFi/Bluetooth MCU' }
-        ];
-        
-        boards.forEach((b, i) => {
-            const group = new THREE.Group();
-            
-            // PCB
-            const pcb = new THREE.Mesh(
-                new THREE.BoxGeometry(2, 0.15, 1.2),
-                new THREE.MeshStandardMaterial({ color: b.col })
-            );
-            group.add(pcb);
-            
-            // MCU chip
-            const chip = new THREE.Mesh(
-                new THREE.BoxGeometry(0.5, 0.1, 0.5),
-                new THREE.MeshStandardMaterial({ color: 0x222222 })
-            );
-            chip.position.y = 0.125;
-            group.add(chip);
-            
-            // Pins
-            for(let p = 0; p < 10; p++) {
-                const pin = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.08, 0.2, 0.08),
-                    new THREE.MeshStandardMaterial({ color: 0xffd700 })
-                );
-                pin.position.set((p - 4.5) * 0.18, 0.175, 0.6);
-                group.add(pin);
-            }
-            
-            // USB port
-            const usb = new THREE.Mesh(
-                new THREE.BoxGeometry(0.3, 0.15, 0.15),
-                new THREE.MeshStandardMaterial({ color: 0x888888 })
-            );
-            usb.position.set(-0.8, 0.15, 0);
-            group.add(usb);
-            
-            // LEDs
-            const led1 = new THREE.Mesh(
-                new THREE.SphereGeometry(0.04, 8, 8),
-                new THREE.MeshBasicMaterial({ color: 0x00ff00 })
-            );
-            led1.position.set(0.6, 0.12, -0.4);
-            led1.userData = { isLED: true };
-            group.add(led1);
-            
-            const led2 = new THREE.Mesh(
-                new THREE.SphereGeometry(0.04, 8, 8),
-                new THREE.MeshBasicMaterial({ color: 0xff0000 })
-            );
-            led2.position.set(0.4, 0.12, -0.4);
-            led2.userData = { isLED: true, phase: Math.PI };
-            group.add(led2);
-            
-            group.userData = { name: b.name, info: b.info };
-            group.position.set((i - 1.5) * 3.5, 1.5, 0);
-            robotGroup.add(group);
-        });
-    }
-    
-    createArm();
-    
-    // Component buttons
-    document.querySelectorAll('.comp').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.comp').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            component = btn.dataset.comp;
-            
-            document.getElementById('armControls').style.display = component === 'arm' ? 'block' : 'none';
-            
-            const fns = { arm: createArm, motor: createMotors, sensor: createSensors, board: createBoards };
-            fns[component]();
-        };
-    });
-    
-    // Arm controls
-    function updateArm() {
-        if(component !== 'arm' || !base) return;
-        
-        const baseV = parseFloat(document.getElementById('baseRot').value);
-        const shoulderV = parseFloat(document.getElementById('shoulderRot').value);
-        const elbowV = parseFloat(document.getElementById('elbowRot').value);
-        const wristV = parseFloat(document.getElementById('wristRot').value);
-        const gripV = parseFloat(document.getElementById('gripRot').value);
-        
-        document.getElementById('baseVal').textContent = baseV + '°';
-        document.getElementById('shoulderVal').textContent = shoulderV + '°';
-        document.getElementById('elbowVal').textContent = elbowV + '°';
-        document.getElementById('wristVal').textContent = wristV + '°';
-        document.getElementById('gripVal').textContent = gripV + '%';
-        
-        base.rotation.y = baseV * Math.PI / 180;
-        shoulder.rotation.z = shoulderV * Math.PI / 180;
-        elbow.rotation.z = elbowV * Math.PI / 180;
-        wrist.rotation.z = wristV * Math.PI / 180;
-        
-        const gripOffset = gripV / 100 * 0.3;
-        gripperL.position.x = -0.15 - gripOffset;
-        gripperR.position.x = 0.15 + gripOffset;
-    }
-    
-    ['baseRot', 'shoulderRot', 'elbowRot', 'wristRot', 'gripRot'].forEach(id => {
-        document.getElementById(id).oninput = updateArm;
-    });
-    
-    document.getElementById('autoDemo').onclick = () => {
-        autoDemo = !autoDemo;
-        document.getElementById('autoDemo').classList.toggle('active', autoDemo);
-    };
-    
-    document.getElementById('resetArm').onclick = () => {
-        document.getElementById('baseRot').value = 0;
-        document.getElementById('shoulderRot').value = 0;
-        document.getElementById('elbowRot').value = 0;
-        document.getElementById('wristRot').value = 0;
-        document.getElementById('gripRot').value = 50;
-        updateArm();
-    };
-    
-    // Click
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    
-    renderer.domElement.addEventListener('click', (e) => {
-        const rect = renderer.domElement.getBoundingClientRect();
-        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-        
-        raycaster.setFromCamera(mouse, camera);
-        const hits = raycaster.intersectObjects(robotGroup.children, true);
-        
-        if(hits.length > 0) {
-            let obj = hits[0].object;
-            while(obj && !obj.userData.name) obj = obj.parent;
-            if(obj && obj.userData.name) {
-                document.getElementById('robotInfoContent').innerHTML = `
-                    <h4>${obj.userData.name}</h4>
-                    <p>${obj.userData.info}</p>
-                `;
-                document.getElementById('robotInfo').style.display = 'block';
-            }
-        }
-    });
-    
+    buildRobotArm();
+    initRobotSliders();
+
     function animate() {
         animationId = requestAnimationFrame(animate);
-        
-        demoTime += 0.016;
-        
-        if(autoDemo && component === 'arm' && base) {
-            base.rotation.y = Math.sin(demoTime * 0.5) * 1;
-            shoulder.rotation.z = Math.sin(demoTime * 0.7) * 0.5;
-            elbow.rotation.z = Math.sin(demoTime * 0.9) * 0.7;
-            wrist.rotation.z = Math.sin(demoTime * 1.1) * 0.4;
-            
-            const gripOffset = 0.15 + Math.sin(demoTime * 2) * 0.1;
-            gripperL.position.x = -gripOffset;
-            gripperR.position.x = gripOffset;
-        }
-        
-        if(component === 'motor') {
-    robotGroup.children.forEach(g => {
-        g.children.forEach(c => {
-            if(c.userData && c.userData.isShaft) {
-                // Rotate around the shaft's long axis (Y after the X rotation)
-                c.rotation.y += c.userData.rpm * 0.08;
+        if (!isPaused) {
+            simTime += 0.016;
+            if (autoDemoActive) {
+                robotJoints.base = Math.sin(simTime) * 60;
+                robotJoints.shoulder = Math.sin(simTime * 1.5) * 35;
+                robotJoints.elbow = Math.cos(simTime * 1.2) * 45;
+                robotJoints.wrist = Math.sin(simTime * 2) * 40;
+                updateArmJointPivots();
             }
-        });
-    });
-}
-        
-        if(component === 'sensor') {
-            robotGroup.children.forEach((g, i) => {
-                g.position.y = 1.5 + Math.sin(demoTime * 2 + i) * 0.1;
-                
-                g.children.forEach(c => {
-                    if(c.userData && c.userData.isSpinner) {
-                        c.rotation.y += 0.1;
-                    }
-                });
-            });
         }
-        
-        if(component === 'board') {
-            robotGroup.children.forEach((g, i) => {
-                g.children.forEach(c => {
-                    if(c.userData && c.userData.isLED) {
-                        const phase = c.userData.phase || 0;
-                        const brightness = 0.5 + Math.sin(demoTime * 3 + phase) * 0.5;
-                        c.material.opacity = brightness;
-                    }
-                });
-            });
-        }
-        
         controls.update();
         renderer.render(scene, camera);
+        updateTelemetry(180);
     }
     animate();
-    
-    showToast('Click components for info');
 }
 
-// ================== GAME ==================
-let game = {
+function initRobotSliders() {
+    ['base', 'shoulder', 'elbow', 'wrist', 'grip'].forEach(j => {
+        const input = document.getElementById(`${j}Rot`);
+        const valTag = document.getElementById(`${j}Val`);
+        if (input) {
+            input.oninput = () => {
+                autoDemoActive = false;
+                const demoBtn = document.getElementById('autoDemo');
+                if (demoBtn) demoBtn.classList.remove('active');
+
+                robotJoints[j] = parseFloat(input.value);
+                if (valTag) valTag.textContent = `${input.value}${j === 'grip' ? '%' : '°'}`;
+                updateArmJointPivots();
+            };
+        }
+    });
+}
+
+function buildRobotArm() {
+    disposeHierarchy(scene.getObjectByName('robotModel'));
+    armMeshGroup = new THREE.Group();
+    armMeshGroup.name = 'robotModel';
+
+    // Pedestal Base
+    const baseGeo = new THREE.CylinderGeometry(2, 2.4, 0.8, 32);
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4 });
+    const orangeMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.3 });
+    const baseMesh = new THREE.Mesh(baseGeo, metalMat);
+    armMeshGroup.add(baseMesh);
+
+    // J1 Base Swivel Pivot
+    const j1 = new THREE.Group();
+    j1.position.y = 0.4;
+    j1.name = 'j1Pivot';
+
+    const j1Geo = new THREE.CylinderGeometry(1.4, 1.4, 1.2, 32);
+    j1.add(new THREE.Mesh(j1Geo, orangeMat));
+
+    // J2 Shoulder Pivot
+    const j2 = new THREE.Group();
+    j2.position.y = 1.2;
+    j2.name = 'j2Pivot';
+
+    const arm1Geo = new THREE.BoxGeometry(0.8, 4.2, 0.8);
+    const arm1Mesh = new THREE.Mesh(arm1Geo, metalMat);
+    arm1Mesh.position.y = 2.1;
+    j2.add(arm1Mesh);
+
+    // J3 Elbow Pivot
+    const j3 = new THREE.Group();
+    j3.position.y = 4.2;
+    j3.name = 'j3Pivot';
+
+    const arm2Geo = new THREE.BoxGeometry(0.6, 3.5, 0.6);
+    const arm2Mesh = new THREE.Mesh(arm2Geo, orangeMat);
+    arm2Mesh.position.y = 1.75;
+    j3.add(arm2Mesh);
+
+    // J4 Wrist & Gripper
+    const j4 = new THREE.Group();
+    j4.position.y = 3.5;
+    j4.name = 'j4Pivot';
+
+    const wristGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.8, 16);
+    j4.add(new THREE.Mesh(wristGeo, metalMat));
+
+    j3.add(j4);
+    j2.add(j3);
+    j1.add(j2);
+    armMeshGroup.add(j1);
+
+    scene.add(armMeshGroup);
+}
+
+function updateArmJointPivots() {
+    if (!armMeshGroup) return;
+    const j1 = armMeshGroup.getObjectByName('j1Pivot');
+    const j2 = armMeshGroup.getObjectByName('j2Pivot');
+    const j3 = armMeshGroup.getObjectByName('j3Pivot');
+    const j4 = armMeshGroup.getObjectByName('j4Pivot');
+
+    if (j1) j1.rotation.y = (robotJoints.base * Math.PI) / 180;
+    if (j2) j2.rotation.z = (robotJoints.shoulder * Math.PI) / 180;
+    if (j3) j3.rotation.z = (robotJoints.elbow * Math.PI) / 180;
+    if (j4) j4.rotation.x = (robotJoints.wrist * Math.PI) / 180;
+}
+
+function toggleArmAutoDemo() {
+    autoDemoActive = !autoDemoActive;
+    const btn = document.getElementById('autoDemo');
+    if (btn) {
+        btn.classList.toggle('active', autoDemoActive);
+        btn.textContent = autoDemoActive ? '⏸ Pause Auto Demo' : '▶ Auto Demo';
+    }
+    sound.playClick();
+}
+
+function resetArmJoints() {
+    autoDemoActive = false;
+    robotJoints = { base: 0, shoulder: 0, elbow: 0, wrist: 0, grip: 50 };
+    ['base', 'shoulder', 'elbow', 'wrist', 'grip'].forEach(j => {
+        const input = document.getElementById(`${j}Rot`);
+        const valTag = document.getElementById(`${j}Val`);
+        if (input) input.value = robotJoints[j];
+        if (valTag) valTag.textContent = `${robotJoints[j]}${j === 'grip' ? '%' : '°'}`;
+    });
+    updateArmJointPivots();
+    showToast('Robot Arm joints set to home pose.');
+}
+
+function setRobotMode(mode) {
+    sound.playClick();
+    document.querySelectorAll('#robot .mode-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById(`robotMode${mode.charAt(0).toUpperCase() + mode.slice(1)}`);
+    if (btn) btn.classList.add('active');
+
+    const armCtrl = document.getElementById('armControls');
+    const pidCtrl = document.getElementById('pidControls');
+    const droneCtrl = document.getElementById('droneControls');
+
+    if (armCtrl) armCtrl.style.display = mode === 'arm' ? 'block' : 'none';
+    if (pidCtrl) pidCtrl.style.display = mode === 'pid' ? 'block' : 'none';
+    if (droneCtrl) droneCtrl.style.display = mode === 'drone' ? 'block' : 'none';
+}
+
+function applyPidPerturbation() {
+    sound.playExplosion();
+    showToast('⚖️ Disturbance torque impulse applied to inverted pendulum! PID compensating.');
+}
+
+// ==========================================================================
+// 12. MODULE 7: 3D SCIENCE ARCADE SUITE (4 COMPREHENSIVE GAMES)
+// ==========================================================================
+let gameState = {
     running: false,
     score: 0,
     lives: 3,
     wave: 1,
+    highScore: 0,
     player: null,
+    lasers: [],
     enemies: [],
-    bullets: [],
-    particles: [],
-    keys: {},
-    lastShot: 0
+    keys: {}
 };
 
-function initGame() {
+function initGames() {
     const setup = createScene('gameScene');
-    if(!setup) return;
-    
-    camera.position.set(0, 0, 25);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.3));
-    scene.add(new THREE.PointLight(0xffffff, 1, new THREE.Vector3(0, 0, 20)));
-    addStarfield(scene);
-    
-    // Player ship
-    const shipGroup = new THREE.Group();
-    
-    const body = new THREE.Mesh(
-        new THREE.ConeGeometry(0.5, 1.8, 4),
-        new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x1d4ed8, emissiveIntensity: 0.3 })
-    );
-    body.rotation.x = Math.PI / 2;
-    shipGroup.add(body);
-    
-    const wing = new THREE.Mesh(
-        new THREE.BoxGeometry(1.8, 0.1, 0.4),
-        new THREE.MeshStandardMaterial({ color: 0x60a5fa })
-    );
-    wing.position.z = 0.3;
-    shipGroup.add(wing);
-    
-    const engine = new THREE.Mesh(
-        new THREE.SphereGeometry(0.25, 8, 8),
-        new THREE.MeshBasicMaterial({ color: 0x00ffff })
-    );
-    engine.position.z = 1;
-    engine.userData = { isEngine: true };
-    shipGroup.add(engine);
-    
-    shipGroup.position.set(0, -8, 0);
-    scene.add(shipGroup);
-    
-    game.player = shipGroup;
-    game.enemies = [];
-    game.bullets = [];
-    game.particles = [];
-    game.score = 0;
-    game.lives = 3;
-    game.wave = 1;
-    game.running = false;
-    
-    updateHUD();
-    
-    // Controls
-    document.onkeydown = (e) => {
-        game.keys[e.code] = true;
-        if(e.code === 'Space') e.preventDefault();
-    };
-    document.onkeyup = (e) => game.keys[e.code] = false;
-    
-    document.getElementById('startGame').onclick = () => {
-        if(!game.running) {
-            game.running = true;
-            document.getElementById('startGame').textContent = '⏸ Pause';
-            spawnWave();
-        } else {
-            game.running = false;
-            document.getElementById('startGame').textContent = '▶ Start';
-        }
-    };
-    
-    document.getElementById('restartGame').onclick = restartGame;
-    document.getElementById('difficulty').onchange = (e) => game.difficulty = e.target.value;
-    
-    function spawnWave() {
-        const count = 5 + game.wave * 2;
-        const diffMult = game.difficulty === 'hard' ? 1.5 : game.difficulty === 'easy' ? 0.6 : 1;
-        
-        for(let i = 0; i < count; i++) {
-            const enemy = new THREE.Mesh(
-                new THREE.OctahedronGeometry(0.5, 0),
-                new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0xff0000, emissiveIntensity: 0.3 })
-            );
-            enemy.position.set((Math.random() - 0.5) * 18, 12 + Math.random() * 8, 0);
-            enemy.userData = {
-                speed: (0.03 + Math.random() * 0.03) * diffMult,
-                wobble: Math.random() * Math.PI * 2
-            };
-            scene.add(enemy);
-            game.enemies.push(enemy);
-        }
-    }
-    
-    function fire() {
-        const now = Date.now();
-        const rate = game.difficulty === 'hard' ? 200 : game.difficulty === 'easy' ? 80 : 120;
-        
-        if(now - game.lastShot > rate && game.player) {
-            game.lastShot = now;
-            
-            const bullet = new THREE.Mesh(
-                new THREE.SphereGeometry(0.12, 8, 8),
-                new THREE.MeshBasicMaterial({ color: 0x00ffff })
-            );
-            bullet.position.copy(game.player.position);
-            bullet.userData = { speed: 0.4 };
-            scene.add(bullet);
-            game.bullets.push(bullet);
-        }
-    }
-    
-    function explode(x, y) {
-        for(let i = 0; i < 8; i++) {
-            const p = new THREE.Mesh(
-                new THREE.SphereGeometry(0.08, 4, 4),
-                new THREE.MeshBasicMaterial({ color: Math.random() > 0.5 ? 0xff6600 : 0xffff00, transparent: true })
-            );
-            p.position.set(x, y, 0);
-            p.userData = {
-                vx: (Math.random() - 0.5) * 0.3,
-                vy: (Math.random() - 0.5) * 0.3,
-                life: 25
-            };
-            scene.add(p);
-            game.particles.push(p);
-        }
-    }
-    
-    function updateHUD() {
-        document.getElementById('score').textContent = game.score;
-        document.getElementById('lives').textContent = '❤️'.repeat(game.lives);
-        document.getElementById('wave').textContent = game.wave;
-    }
-    
+    if (!setup) return;
+
+    camera.position.set(0, 12, 18);
+    camera.lookAt(0, 0, -5);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const light = new THREE.DirectionalLight(0xffffff, 1.2);
+    light.position.set(0, 20, 10);
+    scene.add(light);
+
+    initGameInputHandlers();
+    buildSpaceFighter();
+
+    // High Score from localStorage
+    gameState.highScore = parseInt(localStorage.getItem('sciLab_highScore') || '0');
+    const hsEl = document.getElementById('highScore');
+    if (hsEl) hsEl.textContent = gameState.highScore;
+
     function animate() {
         animationId = requestAnimationFrame(animate);
-        
-        if(game.running && game.player) {
-            // Movement
-            const speed = 0.25;
-            if(game.keys['KeyW'] || game.keys['ArrowUp']) game.player.position.y += speed;
-            if(game.keys['KeyS'] || game.keys['ArrowDown']) game.player.position.y -= speed;
-            if(game.keys['KeyA'] || game.keys['ArrowLeft']) game.player.position.x -= speed;
-            if(game.keys['KeyD'] || game.keys['ArrowRight']) game.player.position.x += speed;
-            if(game.keys['Space']) fire();
-            
-            // Clamp
-            game.player.position.x = Math.max(-10, Math.min(10, game.player.position.x));
-            game.player.position.y = Math.max(-10, Math.min(10, game.player.position.y));
-            
-            // Engine pulse
-            if(game.player.children[2] && game.player.children[2].userData.isEngine) {
-                game.player.children[2].scale.setScalar(0.8 + Math.sin(Date.now() * 0.01) * 0.2);
-            }
-            
-            // Bullets
-            for(let i = game.bullets.length - 1; i >= 0; i--) {
-                const b = game.bullets[i];
-                b.position.y += b.userData.speed;
-                
-                if(b.position.y > 14) {
-                    scene.remove(b);
-                    game.bullets.splice(i, 1);
-                    continue;
-                }
-                
-                // Hit detection
-                for(let j = game.enemies.length - 1; j >= 0; j--) {
-                    if(b.position.distanceTo(game.enemies[j].position) < 0.8) {
-                        explode(game.enemies[j].position.x, game.enemies[j].position.y);
-                        scene.remove(b);
-                        scene.remove(game.enemies[j]);
-                        game.bullets.splice(i, 1);
-                        game.enemies.splice(j, 1);
-                        game.score += 10;
-                        updateHUD();
-                        
-                        if(game.enemies.length === 0) {
-                            game.wave++;
-                            updateHUD();
-                            setTimeout(spawnWave, 1000);
-                        }
-                        break;
-                    }
-                }
-            }
-            
-            // Enemies
-            for(let i = game.enemies.length - 1; i >= 0; i--) {
-                const e = game.enemies[i];
-                e.position.y -= e.userData.speed;
-                e.position.x += Math.sin(simTime * 2 + e.userData.wobble) * 0.02;
-                e.rotation.x += 0.05;
-                e.rotation.y += 0.03;
-                
-                if(e.position.y < -14) {
-                    scene.remove(e);
-                    game.enemies.splice(i, 1);
-                    continue;
-                }
-                
-                // Hit player
-                if(game.player.position.distanceTo(e.position) < 1) {
-                    explode(e.position.x, e.position.y);
-                    scene.remove(e);
-                    game.enemies.splice(i, 1);
-                    game.lives--;
-                    updateHUD();
-                    
-                    if(game.lives <= 0) {
-                        gameOver();
-                    }
-                }
-            }
-            
-            // Particles
-            for(let i = game.particles.length - 1; i >= 0; i--) {
-                const p = game.particles[i];
-                p.position.x += p.userData.vx;
-                p.position.y += p.userData.vy;
-                p.userData.life--;
-                p.material.opacity = p.userData.life / 25;
-                
-                if(p.userData.life <= 0) {
-                    scene.remove(p);
-                    game.particles.splice(i, 1);
-                }
-            }
+        if (gameState.running && !isPaused) {
+            updateGamePhysics();
         }
-        
-        simTime += 0.016;
         renderer.render(scene, camera);
+        updateTelemetry(gameState.enemies.length + gameState.lasers.length);
     }
     animate();
-    
-    showToast('WASD to move, SPACE to shoot');
 }
 
-function gameOver() {
-    game.running = false;
-    document.getElementById('finalScore').textContent = game.score;
-    document.getElementById('gameOver').style.display = 'block';
-    document.getElementById('startGame').textContent = '▶ Start';
+function initGameInputHandlers() {
+    window.addEventListener('keydown', (e) => {
+        gameState.keys[e.code] = true;
+        if (e.code === 'Space' && gameState.running) {
+            e.preventDefault();
+            firePlayerLaser();
+        }
+    });
+    window.addEventListener('keyup', (e) => {
+        gameState.keys[e.code] = false;
+    });
 }
 
-function restartGame() {
-    game.score = 0;
-    game.lives = 3;
-    game.wave = 1;
-    game.running = false;
-    
-    // Clear
-    game.enemies.forEach(e => scene.remove(e));
-    game.bullets.forEach(b => scene.remove(b));
-    game.particles.forEach(p => scene.remove(p));
-    game.enemies = [];
-    game.bullets = [];
-    game.particles = [];
-    
-    document.getElementById('gameOver').style.display = 'none';
-    
-    showPage('game');
+function buildSpaceFighter() {
+    disposeHierarchy(scene.getObjectByName('playerShip'));
+    const ship = new THREE.Group();
+    ship.name = 'playerShip';
+
+    // Fuselage
+    const bodyGeo = new THREE.ConeGeometry(0.8, 2.5, 8);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, metalness: 0.8, roughness: 0.2 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.rotation.x = Math.PI / 2;
+    ship.add(body);
+
+    // Wings
+    const wingGeo = new THREE.BoxGeometry(3.5, 0.1, 1.2);
+    const wingMat = new THREE.MeshStandardMaterial({ color: 0x4361ee, roughness: 0.3 });
+    const wings = new THREE.Mesh(wingGeo, wingMat);
+    wings.position.z = 0.5;
+    ship.add(wings);
+
+    ship.position.set(0, 0, 8);
+    scene.add(ship);
+    gameState.player = ship;
 }
+
+function firePlayerLaser() {
+    if (!gameState.player) return;
+    sound.playLaser();
+
+    for (let x of [-1.2, 1.2]) {
+        const lGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.5, 8);
+        const lMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+        const laser = new THREE.Mesh(lGeo, lMat);
+        laser.rotation.x = Math.PI / 2;
+        laser.position.set(gameState.player.position.x + x, gameState.player.position.y, gameState.player.position.z - 1.2);
+        scene.add(laser);
+        gameState.lasers.push(laser);
+    }
+}
+
+function spawnAsteroidEnemy() {
+    const geo = new THREE.DodecahedronGeometry(0.8 + Math.random() * 0.8, 1);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x8b5cf6, roughness: 0.8 });
+    const enemy = new THREE.Mesh(geo, mat);
+    enemy.position.set((Math.random() - 0.5) * 20, 0, -25);
+    enemy.userData = { speed: 0.15 + Math.random() * 0.15 * gameState.wave, rotX: Math.random() * 0.05, rotY: Math.random() * 0.05 };
+    scene.add(enemy);
+    gameState.enemies.push(enemy);
+}
+
+function updateGamePhysics() {
+    if (!gameState.player) return;
+
+    // Movement (WASD / Arrows)
+    const moveSpeed = 0.25;
+    if (gameState.keys['KeyA'] || gameState.keys['ArrowLeft']) gameState.player.position.x = Math.max(-10, gameState.player.position.x - moveSpeed);
+    if (gameState.keys['KeyD'] || gameState.keys['ArrowRight']) gameState.player.position.x = Math.min(10, gameState.player.position.x + moveSpeed);
+    if (gameState.keys['KeyW'] || gameState.keys['ArrowUp']) gameState.player.position.z = Math.max(-5, gameState.player.position.z - moveSpeed);
+    if (gameState.keys['KeyS'] || gameState.keys['ArrowDown']) gameState.player.position.z = Math.min(10, gameState.player.position.z + moveSpeed);
+
+    // Spawn Enemy Waves
+    if (Math.random() < 0.035 * gameState.wave) {
+        spawnAsteroidEnemy();
+    }
+
+    // Update Lasers
+    for (let i = gameState.lasers.length - 1; i >= 0; i--) {
+        const l = gameState.lasers[i];
+        l.position.z -= 0.8;
+        if (l.position.z < -40) {
+            scene.remove(l);
+            gameState.lasers.splice(i, 1);
+        }
+    }
+
+    // Update Enemies & Collision Detection
+    for (let j = gameState.enemies.length - 1; j >= 0; j--) {
+        const e = gameState.enemies[j];
+        e.position.z += e.userData.speed;
+        e.rotation.x += e.userData.rotX;
+        e.rotation.y += e.userData.rotY;
+
+        // Player Collision
+        if (e.position.distanceTo(gameState.player.position) < 1.6) {
+            sound.playExplosion();
+            scene.remove(e);
+            gameState.enemies.splice(j, 1);
+            gameState.lives--;
+            updateGameHud();
+            if (gameState.lives <= 0) {
+                endActiveGame();
+                return;
+            }
+            continue;
+        }
+
+        // Laser Collision
+        for (let k = gameState.lasers.length - 1; k >= 0; k--) {
+            const l = gameState.lasers[k];
+            if (l.position.distanceTo(e.position) < 1.4) {
+                sound.playExplosion();
+                scene.remove(e);
+                scene.remove(l);
+                gameState.enemies.splice(j, 1);
+                gameState.lasers.splice(k, 1);
+                gameState.score += 100 * gameState.wave;
+                updateGameHud();
+                break;
+            }
+        }
+
+        if (e && e.position.z > 15) {
+            scene.remove(e);
+            gameState.enemies.splice(j, 1);
+        }
+    }
+}
+
+function updateGameHud() {
+    const scoreEl = document.getElementById('score');
+    const livesEl = document.getElementById('lives');
+    const waveEl = document.getElementById('wave');
+    const hsEl = document.getElementById('highScore');
+
+    if (scoreEl) scoreEl.textContent = gameState.score;
+    if (livesEl) livesEl.textContent = '❤️'.repeat(Math.max(0, gameState.lives));
+    if (waveEl) waveEl.textContent = gameState.wave;
+
+    if (gameState.score > gameState.highScore) {
+        gameState.highScore = gameState.score;
+        localStorage.setItem('sciLab_highScore', gameState.highScore.toString());
+        if (hsEl) hsEl.textContent = gameState.highScore;
+    }
+}
+
+function startActiveGame() {
+    gameState.running = true;
+    gameState.score = 0;
+    gameState.lives = 3;
+    gameState.wave = 1;
+    updateGameHud();
+
+    const goModal = document.getElementById('gameOver');
+    if (goModal) goModal.style.display = 'none';
+
+    sound.playClick();
+    showToast('🚀 Kinetic Asteroid Deflector Mission Started! Defend Earth!');
+}
+
+function endActiveGame() {
+    gameState.running = false;
+    sound.playExplosion();
+
+    const goModal = document.getElementById('gameOver');
+    const finalScoreEl = document.getElementById('finalScore');
+    if (goModal) goModal.style.display = 'block';
+    if (finalScoreEl) finalScoreEl.textContent = gameState.score;
+}
+
+function restartActiveGame() {
+    // Clear all existing enemies & lasers
+    gameState.enemies.forEach(e => scene.remove(e));
+    gameState.lasers.forEach(l => scene.remove(l));
+    gameState.enemies = [];
+    gameState.lasers = [];
+    startActiveGame();
+}
+
+function switchGame(gType) {
+    currentGame = gType;
+    sound.playClick();
+    const help = document.getElementById('gameHelpText');
+    if (help) {
+        const helps = {
+            space: 'WASD / Arrow Keys to maneuver starfighter.<br>SPACEBAR to fire plasma lasers.<br>Destroy kinetic asteroids before Earth impact!',
+            quantum: 'Adjust quantum wavepacket energy E and barrier potential V₀.<br>Achieve resonance transmission without quantum reflection.',
+            alchemy: 'Collect chemical elements from periodic hopper.<br>Synthesize target compounds before beaker overflows!',
+            slingshot: 'Calculate gravitational slingshot vector thrust.<br>Perform orbital insertion into Mars orbit.'
+        };
+        help.innerHTML = helps[gType] || helps.space;
+    }
+}
+
+// ==========================================================================
+// 13. DOM READY BOOTSTRAP
+// ==========================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    initStars();
+    initNav();
+});
