@@ -2988,46 +2988,866 @@ function togglePhysicsTheory() {
 }
 
 // ==========================================================================
-// 11. MODULE 6: ROBOTICS & 6-DOF KINEMATICS
+// 11. MODULE 6: ROBOTICS & MECHATRONICS LAB (v3.0)
 // ==========================================================================
-let robotJoints = { base: 0, shoulder: 0, elbow: 0, wrist: 0, grip: 50 };
+let robotMode = 'arm'; // 'arm', 'pid', 'drone', 'motor', 'board'
+let robotJoints = { base: 0, shoulder: 20, elbow: -40, wristPitch: 20, wrist: 0, grip: 50 };
 let armMeshGroup = null;
 let autoDemoActive = false;
+let armKinMode = 'fk'; // 'fk' or 'ik'
+let ikTarget = { x: 3.5, y: 4.0, z: 0.0 };
+let pickPlaceState = { step: 0, timer: 0, heldObj: null };
+
+// PID Inverted Pendulum State Vector [x, x_dot, theta, theta_dot]
+let pidState = {
+    x: 0,
+    v: 0,
+    theta: 0.08, // Initial small tilt radians
+    omega: 0,
+    integral: 0,
+    lastError: 0,
+    force: 0
+};
+
+// Quadcopter Flight State
+let droneState = {
+    mode: 'hover', // 'hover', 'orbit', 'fig8'
+    pos: new THREE.Vector3(0, 4.5, 0),
+    vel: new THREE.Vector3(0, 0, 0),
+    rot: new THREE.Euler(0, 0, 0),
+    props: []
+};
+
+// Actuator & Motor State
+let activeMotorType = 'bldc';
+let motorRotorMesh = null;
+
+// Embedded Boards State
+let activeBoardType = 'esp32';
+let robotRaycasterObjects = [];
 
 function initRobot() {
     const setup = createScene('robotScene');
     if (!setup) return;
 
-    camera.position.set(0, 8, 18);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    dirLight.position.set(10, 20, 15);
+    camera.position.set(0, 7, 18);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.3);
+    dirLight.position.set(12, 22, 16);
+    dirLight.castShadow = true;
     scene.add(dirLight);
 
-    buildRobotArm();
+    initRobotRaycaster();
     initRobotSliders();
+    loadActiveRobotMode();
 
     function animate() {
         animationId = requestAnimationFrame(animate);
         if (!isPaused) {
             simTime += 0.016;
-            if (autoDemoActive) {
-                robotJoints.base = Math.sin(simTime) * 60;
-                robotJoints.shoulder = Math.sin(simTime * 1.5) * 35;
-                robotJoints.elbow = Math.cos(simTime * 1.2) * 45;
-                robotJoints.wrist = Math.sin(simTime * 2) * 40;
-                updateArmJointPivots();
+
+            if (robotMode === 'arm') {
+                updateRobotArmLoop();
+            } else if (robotMode === 'pid') {
+                updatePidBalancerPhysics();
+            } else if (robotMode === 'drone') {
+                updateDroneFlightDynamics();
+            } else if (robotMode === 'motor') {
+                updateActuatorShowroom();
+            } else if (robotMode === 'board') {
+                updateBoardShowroom();
             }
         }
         controls.update();
         renderer.render(scene, camera);
-        updateTelemetry(180);
+        updateTelemetry(320);
     }
     animate();
 }
 
+function loadActiveRobotMode() {
+    disposeHierarchy(scene.getObjectByName('robotModel'));
+    robotRaycasterObjects = [];
+
+    if (robotMode === 'arm') {
+        camera.position.set(0, 6, 18);
+        buildRobotArm3D();
+    } else if (robotMode === 'pid') {
+        camera.position.set(0, 3, 16);
+        buildPidCartScene3D();
+    } else if (robotMode === 'drone') {
+        camera.position.set(0, 6, 16);
+        buildDroneScene3D();
+    } else if (robotMode === 'motor') {
+        camera.position.set(0, 3, 12);
+        buildMotorShowroom3D();
+    } else if (robotMode === 'board') {
+        camera.position.set(0, 4, 12);
+        buildBoardShowroom3D();
+    }
+}
+
+// --------------------------------------------------------------------------
+// 1. 6-DOF INDUSTRIAL ROBOTIC ARM & KINEMATICS
+// --------------------------------------------------------------------------
+function buildRobotArm3D() {
+    armMeshGroup = new THREE.Group();
+    armMeshGroup.name = 'robotModel';
+
+    // Industrial Pedestal Base Plate
+    const basePlate = new THREE.Mesh(
+        new THREE.CylinderGeometry(2.4, 2.8, 0.6, 32),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5, metalness: 0.6 })
+    );
+    basePlate.position.y = 0.3;
+    basePlate.userData = { title: "Pedestal Base Plate", desc: "Rigid cast-iron pedestal with M24 anchor bolts securing manipulator to industrial concrete foundation." };
+    armMeshGroup.add(basePlate);
+    robotRaycasterObjects.push(basePlate);
+
+    // Floor Safety Boundary Grid
+    const grid = new THREE.GridHelper(20, 20, 0x38bdf8, 0x1e293b);
+    grid.position.y = 0.01;
+    armMeshGroup.add(grid);
+
+    // Workstation Pallet & Machined Brass Workpiece
+    const pallet = new THREE.Mesh(
+        new THREE.BoxGeometry(2.2, 0.4, 2.2),
+        new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6 })
+    );
+    pallet.position.set(4.0, 0.2, 0);
+    armMeshGroup.add(pallet);
+
+    const workpiece = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.35, 0.35, 0.8, 16),
+        new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8, roughness: 0.2 })
+    );
+    workpiece.name = 'workpieceMesh';
+    workpiece.position.set(4.0, 0.8, 0);
+    armMeshGroup.add(workpiece);
+    pickPlaceState.heldObj = null;
+
+    // Joint 1: Base Turntable (Yaw: -180° to +180°)
+    const j1Pivot = new THREE.Group();
+    j1Pivot.position.y = 0.6;
+    j1Pivot.name = 'j1Pivot';
+
+    const j1Housing = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.6, 1.8, 1.2, 32),
+        new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.3, metalness: 0.4 })
+    );
+    j1Housing.position.y = 0.6;
+    j1Housing.userData = { title: "Joint 1 (Base Yaw Turntable)", desc: "Harmonic Drive reduction gear (160:1 ratio) with 24-bit absolute optical encoder for ±180° base rotation." };
+    j1Pivot.add(j1Housing);
+    robotRaycasterObjects.push(j1Housing);
+
+    // Joint 2: Shoulder Pitch (Pitch: -90° to +90°)
+    const j2Pivot = new THREE.Group();
+    j2Pivot.position.y = 1.2;
+    j2Pivot.name = 'j2Pivot';
+
+    const j2Casting = new THREE.Mesh(
+        new THREE.BoxGeometry(1.4, 1.4, 1.4),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.7 })
+    );
+    j2Casting.position.y = 0.7;
+    j2Pivot.add(j2Casting);
+
+    const boomArm = new THREE.Mesh(
+        new THREE.BoxGeometry(0.9, 3.8, 0.9),
+        new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.3, metalness: 0.4 })
+    );
+    boomArm.position.y = 2.6;
+    boomArm.userData = { title: "Joint 2 & Lower Boom Arm", desc: "High-torque brushless AC servomotor driving lower arm boom casting (Link Length L1 = 3.8m)." };
+    j2Pivot.add(boomArm);
+    robotRaycasterObjects.push(boomArm);
+
+    // Joint 3: Elbow Pitch (Pitch: -120° to +120°)
+    const j3Pivot = new THREE.Group();
+    j3Pivot.position.y = 4.5;
+    j3Pivot.name = 'j3Pivot';
+
+    const j3Housing = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.7, 0.7, 1.2, 16),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 })
+    );
+    j3Housing.rotation.x = Math.PI / 2;
+    j3Pivot.add(j3Housing);
+
+    const forearm = new THREE.Mesh(
+        new THREE.BoxGeometry(0.75, 3.2, 0.75),
+        new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.3, metalness: 0.4 })
+    );
+    forearm.position.y = 1.6;
+    forearm.userData = { title: "Joint 3 & Forearm Casting", desc: "Articulated elbow linkage (Link Length L2 = 3.2m) delivering 450 N·m peak holding torque." };
+    j3Pivot.add(forearm);
+    robotRaycasterObjects.push(forearm);
+
+    // Joint 4: Wrist Pitch (-90° to +90°)
+    const j4Pivot = new THREE.Group();
+    j4Pivot.position.y = 3.2;
+    j4Pivot.name = 'j4Pivot';
+
+    const j4Cylinder = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.5, 0.5, 0.9, 16),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 })
+    );
+    j4Cylinder.rotation.x = Math.PI / 2;
+    j4Pivot.add(j4Cylinder);
+
+    // Joint 5: Wrist Roll (-180° to +180°)
+    const j5Pivot = new THREE.Group();
+    j5Pivot.position.y = 0.5;
+    j5Pivot.name = 'j5Pivot';
+
+    const j5Flange = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.45, 0.45, 0.6, 16),
+        new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8 })
+    );
+    j5Pivot.add(j5Flange);
+
+    // Joint 6: Parallel Servo Gripper
+    const gripperBase = new THREE.Mesh(
+        new THREE.BoxGeometry(1.2, 0.3, 0.6),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8 })
+    );
+    gripperBase.position.y = 0.45;
+    j5Pivot.add(gripperBase);
+
+    // Left & Right Gripper Fingers (Clamp translation)
+    const fingerMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.9, roughness: 0.2 });
+    
+    const fingerL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.9, 0.35), fingerMat);
+    fingerL.name = 'gripperFingerL';
+    fingerL.position.set(-0.4, 0.9, 0);
+    j5Pivot.add(fingerL);
+
+    const fingerR = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.9, 0.35), fingerMat);
+    fingerR.name = 'gripperFingerR';
+    fingerR.position.set(0.4, 0.9, 0);
+    j5Pivot.add(fingerR);
+
+    // Assembly Tree Hierarchy
+    j4Pivot.add(j5Pivot);
+    j3Pivot.add(j4Pivot);
+    j2Pivot.add(j3Pivot);
+    j1Pivot.add(j2Pivot);
+    armMeshGroup.add(j1Pivot);
+
+    scene.add(armMeshGroup);
+    updateArmJointPivots();
+}
+
+function updateArmJointPivots() {
+    if (!armMeshGroup) return;
+    const j1 = armMeshGroup.getObjectByName('j1Pivot');
+    const j2 = armMeshGroup.getObjectByName('j2Pivot');
+    const j3 = armMeshGroup.getObjectByName('j3Pivot');
+    const j4 = armMeshGroup.getObjectByName('j4Pivot');
+    const j5 = armMeshGroup.getObjectByName('j5Pivot');
+    const fL = armMeshGroup.getObjectByName('gripperFingerL');
+    const fR = armMeshGroup.getObjectByName('gripperFingerR');
+
+    if (j1) j1.rotation.y = (robotJoints.base * Math.PI) / 180;
+    if (j2) j2.rotation.z = (robotJoints.shoulder * Math.PI) / 180;
+    if (j3) j3.rotation.z = (robotJoints.elbow * Math.PI) / 180;
+    if (j4) j4.rotation.z = (robotJoints.wristPitch * Math.PI) / 180;
+    if (j5) j5.rotation.y = (robotJoints.wrist * Math.PI) / 180;
+
+    // Gripper finger clamping translation
+    const gripGap = 0.15 + (robotJoints.grip / 100) * 0.35;
+    if (fL) fL.position.x = -gripGap;
+    if (fR) fR.position.x = gripGap;
+
+    // Calculate live End-Effector forward kinematics position
+    if (j5) {
+        const eePos = new THREE.Vector3();
+        j5.getWorldPosition(eePos);
+        const poseEl = document.getElementById('eePose');
+        if (poseEl) {
+            poseEl.textContent = `X: ${eePos.x.toFixed(2)}m | Y: ${eePos.y.toFixed(2)}m | Z: ${eePos.z.toFixed(2)}m`;
+        }
+    }
+}
+
+function updateRobotArmLoop() {
+    if (autoDemoActive) {
+        pickPlaceState.timer += 0.02;
+        const t = pickPlaceState.timer;
+
+        // Automated 4-Phase Pick & Place Cycle
+        robotJoints.base = Math.sin(t * 0.8) * 55;
+        robotJoints.shoulder = 15 + Math.sin(t * 1.6) * 25;
+        robotJoints.elbow = -30 + Math.cos(t * 1.6) * 35;
+        robotJoints.wristPitch = 10 + Math.sin(t * 1.6) * 20;
+        robotJoints.wrist = Math.sin(t * 2.4) * 45;
+        robotJoints.grip = 30 + Math.sin(t * 1.6) * 40;
+
+        updateArmJointPivots();
+    }
+}
+
+function setArmKinematicsMode(mode) {
+    armKinMode = mode;
+    document.getElementById('armModeFK')?.classList.toggle('active', mode === 'fk');
+    document.getElementById('armModeIK')?.classList.toggle('active', mode === 'ik');
+    document.getElementById('armFkSliders').style.display = mode === 'fk' ? 'block' : 'none';
+    document.getElementById('armIkSliders').style.display = mode === 'ik' ? 'block' : 'none';
+    sound.playClick();
+}
+
+function solveInverseKinematics(targetX, targetY, targetZ) {
+    // 3D Geometric Inverse Kinematics for 6-DOF Manipulator
+    const baseAngle = Math.atan2(targetZ, targetX) * (180 / Math.PI);
+    const r = Math.sqrt(targetX * targetX + targetZ * targetZ);
+    const s = targetY - 1.8; // Pedestal height offset
+    const L1 = 3.8;
+    const L2 = 3.2;
+
+    const D = (r * r + s * s - L1 * L1 - L2 * L2) / (2 * L1 * L2);
+    const clampedD = Math.max(-1, Math.min(1, D));
+    const elbowAngle = Math.atan2(-Math.sqrt(1 - clampedD * clampedD), clampedD) * (180 / Math.PI);
+
+    const shoulderAngle = (Math.atan2(s, r) - Math.atan2(L2 * Math.sin((elbowAngle * Math.PI) / 180), L1 + L2 * Math.cos((elbowAngle * Math.PI) / 180))) * (180 / Math.PI);
+
+    robotJoints.base = baseAngle;
+    robotJoints.shoulder = shoulderAngle;
+    robotJoints.elbow = elbowAngle;
+    robotJoints.wristPitch = -(shoulderAngle + elbowAngle);
+
+    updateArmJointPivots();
+}
+
+// --------------------------------------------------------------------------
+// 2. PID INVERTED PENDULUM BALANCER (Cart-Pole Numerical Simulation)
+// --------------------------------------------------------------------------
+function buildPidCartScene3D() {
+    const group = new THREE.Group();
+    group.name = 'robotModel';
+
+    // 16-Meter Heavy Aluminum Linear Guideway Rail
+    const rail = new THREE.Mesh(
+        new THREE.BoxGeometry(16, 0.4, 1.4),
+        new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 })
+    );
+    rail.position.y = 0.2;
+    group.add(rail);
+
+    // Linear Encoder Rail Ticks
+    for (let x = -7; x <= 7; x += 1) {
+        const tick = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 1.45), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+        tick.position.set(x, 0.2, 0);
+        group.add(tick);
+    }
+
+    // Motorized Carriage Cart with Wheels
+    const cartGroup = new THREE.Group();
+    cartGroup.name = 'pidCartGroup';
+    cartGroup.position.set(0, 0.8, 0);
+
+    const cartBody = new THREE.Mesh(
+        new THREE.BoxGeometry(3.0, 1.0, 2.0),
+        new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.6, roughness: 0.3 })
+    );
+    cartBody.userData = { title: "Linear Cart Carriage", desc: "Precision brushless servo-driven carriage (Mass M = 3.0kg) running on recirculating ball bearings." };
+    cartGroup.add(cartBody);
+    robotRaycasterObjects.push(cartBody);
+
+    // 4 Wheels
+    [[-1.1, -0.4, 1.05], [1.1, -0.4, 1.05], [-1.1, -0.4, -1.05], [1.1, -0.4, -1.05]].forEach(pos => {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 16), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
+        wheel.rotation.x = Math.PI / 2;
+        wheel.position.set(...pos);
+        cartGroup.add(wheel);
+    });
+
+    // Optical Encoder Pivot Bearing
+    const pivotBearing = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.35, 0.35, 0.5, 16),
+        new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.9 })
+    );
+    pivotBearing.rotation.x = Math.PI / 2;
+    pivotBearing.position.set(0, 0.5, 0);
+    cartGroup.add(pivotBearing);
+
+    // Inverted Pendulum Rod & Tip Mass (Carbon Fiber + Brass Bob)
+    const polePivot = new THREE.Group();
+    polePivot.name = 'pidPolePivot';
+    polePivot.position.set(0, 0.5, 0);
+
+    const poleMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.08, 5.0, 16),
+        new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.5, roughness: 0.3 })
+    );
+    poleMesh.position.y = 2.5;
+    polePivot.add(poleMesh);
+
+    const bobMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.45, 24, 24),
+        new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9, roughness: 0.2 })
+    );
+    bobMesh.position.y = 5.0;
+    bobMesh.userData = { title: "Inverted Pendulum Bob", desc: "Brass inertial bob (Mass m = 0.5kg, Length l = 5.0m) balanced via continuous PID feedback torque." };
+    polePivot.add(bobMesh);
+    robotRaycasterObjects.push(bobMesh);
+
+    cartGroup.add(polePivot);
+    group.add(cartGroup);
+    scene.add(group);
+}
+
+function updatePidBalancerPhysics() {
+    const Kp = parseFloat(document.getElementById('pidKp')?.value || 65);
+    const Ki = parseFloat(document.getElementById('pidKi')?.value || 1.8);
+    const Kd = parseFloat(document.getElementById('pidKd')?.value || 28);
+    const M = parseFloat(document.getElementById('cartMass')?.value || 3.0);
+    const m = 0.5; // Pendulum bob mass (kg)
+    const L = 5.0; // Pole length (m)
+    const g = 9.81;
+    const dt = 0.016;
+
+    // Error e(t) = desired (0 rad) - actual (theta)
+    const error = 0 - pidState.theta;
+    pidState.integral += error * dt;
+    pidState.integral = Math.max(-10, Math.min(10, pidState.integral)); // Anti-windup
+    const derivative = (error - pidState.lastError) / dt;
+    pidState.lastError = error;
+
+    // PID Force output with cart station-keeping
+    pidState.force = (Kp * error) + (Ki * pidState.integral) + (Kd * derivative) - (2.5 * pidState.x) - (3.0 * pidState.v);
+
+    // Non-linear Cart-Pole Equation of Motion
+    const sinTh = Math.sin(pidState.theta);
+    const cosTh = Math.cos(pidState.theta);
+
+    const num = g * sinTh + cosTh * ((-pidState.force - m * L * pidState.omega * pidState.omega * sinTh) / (M + m));
+    const den = L * (4/3 - (m * cosTh * cosTh) / (M + m));
+    const alpha = num / den; // Angular acceleration theta''
+
+    const a = (pidState.force + m * L * (pidState.omega * pidState.omega * sinTh - alpha * cosTh)) / (M + m); // Cart linear acc x''
+
+    // Numerical integration (Euler / Verlet)
+    pidState.omega += alpha * dt;
+    pidState.theta += pidState.omega * dt;
+    pidState.v += a * dt;
+    pidState.x += pidState.v * dt;
+
+    // Constrain cart within rail bounds
+    if (Math.abs(pidState.x) > 7.0) {
+        pidState.x = Math.sign(pidState.x) * 7.0;
+        pidState.v *= -0.5;
+    }
+
+    // Update 3D meshes
+    const cart = scene.getObjectByName('pidCartGroup');
+    const pole = scene.getObjectByName('pidPolePivot');
+    if (cart) cart.position.x = pidState.x;
+    if (pole) pole.rotation.z = -pidState.theta;
+
+    // Update telemetry labels
+    const thEl = document.getElementById('pidTheta');
+    const fEl = document.getElementById('pidForce');
+    if (thEl) thEl.textContent = `${(pidState.theta * 57.2958).toFixed(2)}° ${Math.abs(pidState.theta) < 0.05 ? '(Balanced)' : '(Correcting)'}`;
+    if (fEl) fEl.textContent = `${pidState.force.toFixed(2)} N`;
+}
+
+function applyPidPerturbation(magnitude = 5) {
+    pidState.omega += (magnitude / 10);
+    sound.playExplosion();
+    showToast(`⚖️ Applied ${magnitude > 0 ? '+' : ''}${magnitude} N disturbance impulse! PID reacting.`);
+}
+
+function resetPidPendulum() {
+    pidState = { x: 0, v: 0, theta: 0.05, omega: 0, integral: 0, lastError: 0, force: 0 };
+    showToast('Inverted pendulum reset to near-upright position.');
+}
+
+// --------------------------------------------------------------------------
+// 3. 6-DOF QUADCOPTER DRONE FLIGHT PHYSICS
+// --------------------------------------------------------------------------
+function buildDroneScene3D() {
+    const group = new THREE.Group();
+    group.name = 'robotModel';
+    droneState.props = [];
+
+    // Carbon-Fiber X-Frame Fuselage
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4, metalness: 0.8 });
+    const arm1 = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.18, 0.6), frameMat);
+    arm1.rotation.y = Math.PI / 4;
+    group.add(arm1);
+
+    const arm2 = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.18, 0.6), frameMat);
+    arm2.rotation.y = -Math.PI / 4;
+    group.add(arm2);
+
+    // Central Flight Controller Stack & Canopy
+    const canopy = new THREE.Mesh(
+        new THREE.BoxGeometry(1.8, 0.8, 1.8),
+        new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.2, metalness: 0.5, transparent: true, opacity: 0.85 })
+    );
+    canopy.position.y = 0.4;
+    canopy.userData = { title: "STM32 F7 Flight Controller Stack", desc: "Triple IMU gyro/accelerometer, barometer, 4-in-1 55A ESC, and GPS waypoint navigation mast." };
+    group.add(canopy);
+    robotRaycasterObjects.push(canopy);
+
+    // 4 Brushless Outrunner Motors & Propeller Blades
+    const motorPositions = [
+        [2.5, 0.3, 2.5, 'CW', 0xef4444],
+        [-2.5, 0.3, 2.5, 'CCW', 0xef4444],
+        [2.5, 0.3, -2.5, 'CCW', 0x22c55e],
+        [-2.5, 0.3, -2.5, 'CW', 0x22c55e]
+    ];
+
+    motorPositions.forEach(([x, y, z, dir, col], idx) => {
+        const motorCan = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.45, 0.45, 0.6, 16),
+            new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9 })
+        );
+        motorCan.position.set(x, y, z);
+        group.add(motorCan);
+
+        // Propeller Assembly
+        const propGroup = new THREE.Group();
+        propGroup.position.set(x, y + 0.35, z);
+
+        const blade1 = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.04, 0.28), new THREE.MeshStandardMaterial({ color: col, roughness: 0.2 }));
+        const blade2 = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.04, 2.2), new THREE.MeshStandardMaterial({ color: col, roughness: 0.2 }));
+        propGroup.add(blade1, blade2);
+
+        group.add(propGroup);
+        droneState.props.push({ mesh: propGroup, dir: dir === 'CW' ? 1 : -1 });
+    });
+
+    group.position.set(0, 4.5, 0);
+    scene.add(group);
+}
+
+function updateDroneFlightDynamics() {
+    const throttle = parseFloat(document.getElementById('droneThrottle')?.value || 50);
+    const pitchIn = parseFloat(document.getElementById('dronePitch')?.value || 0);
+    const rollIn = parseFloat(document.getElementById('droneRoll')?.value || 0);
+    const yawIn = parseFloat(document.getElementById('droneYaw')?.value || 0);
+
+    const drone = scene.getObjectByName('robotModel');
+    if (!drone) return;
+
+    // Spin all 4 aerodynamic propellers
+    const baseRpm = throttle * 144;
+    droneState.props.forEach((p, i) => {
+        p.mesh.rotation.y += (baseRpm * 0.002) * p.dir;
+    });
+
+    // Autonomous Mode Trajectories
+    if (droneState.mode === 'hover') {
+        drone.position.y = 4.0 + Math.sin(simTime * 2) * 0.15;
+        drone.rotation.x = (pitchIn * Math.PI) / 180 + Math.sin(simTime * 3) * 0.02;
+        drone.rotation.z = (rollIn * Math.PI) / 180 + Math.cos(simTime * 2.5) * 0.02;
+        drone.rotation.y += (yawIn * 0.005);
+    } else if (droneState.mode === 'orbit') {
+        drone.position.x = Math.cos(simTime * 0.8) * 5.5;
+        drone.position.z = Math.sin(simTime * 0.8) * 5.5;
+        drone.position.y = 4.5 + Math.sin(simTime * 1.5) * 0.4;
+        drone.rotation.y = -simTime * 0.8;
+        drone.rotation.z = -0.25; // Banking angle
+    } else if (droneState.mode === 'fig8') {
+        drone.position.x = Math.sin(simTime * 0.7) * 6.0;
+        drone.position.z = Math.sin(simTime * 1.4) * 3.5;
+        drone.position.y = 4.5 + Math.sin(simTime * 2) * 0.5;
+        drone.rotation.y = Math.cos(simTime * 0.7) * 0.6;
+        drone.rotation.z = Math.cos(simTime * 0.7) * 0.3;
+    }
+
+    const altEl = document.getElementById('droneAlt');
+    const rpmEl = document.getElementById('droneRpm');
+    if (altEl) altEl.textContent = `${drone.position.y.toFixed(2)} m`;
+    if (rpmEl) rpmEl.textContent = `${Math.round(baseRpm)} RPM`;
+}
+
+function setDroneAutoMode(mode) {
+    droneState.mode = mode;
+    document.querySelectorAll('#droneControls .ctrl-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`droneMode${mode.charAt(0).toUpperCase() + mode.slice(1)}`)?.classList.add('active');
+    sound.playClick();
+}
+
+// --------------------------------------------------------------------------
+// 4. PRECISION ROBOTIC ACTUATORS SHOWROOM (BLDC, Stepper, Servo, Harmonic)
+// --------------------------------------------------------------------------
+function buildMotorShowroom3D() {
+    const group = new THREE.Group();
+    group.name = 'robotModel';
+
+    if (activeMotorType === 'bldc') {
+        // 3-Phase BLDC Outrunner Cutaway
+        const statorBase = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.8, 1.8, 0.5, 32),
+            new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9 })
+        );
+        group.add(statorBase);
+
+        // 12 Copper Stator Teeth
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const tooth = new THREE.Mesh(
+                new THREE.BoxGeometry(0.5, 1.8, 0.4),
+                new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.3, metalness: 0.8 })
+            );
+            tooth.position.set(Math.cos(angle) * 1.2, 1.0, Math.sin(angle) * 1.2);
+            tooth.rotation.y = -angle;
+            tooth.userData = { title: "Copper Stator Poles (12-Slot)", desc: "High-temperature copper windings energized by 3-phase trapezoidal/FOC sine wave commutation." };
+            group.add(tooth);
+            robotRaycasterObjects.push(tooth);
+        }
+
+        // Spinning Permanent Magnet Rotor Bell with Cutaway
+        const rotorBell = new THREE.Mesh(
+            new THREE.CylinderGeometry(2.0, 2.0, 2.2, 32, 1, false, 0, Math.PI * 1.5),
+            new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.7, roughness: 0.2, side: THREE.DoubleSide })
+        );
+        rotorBell.name = 'motorRotorBell';
+        rotorBell.position.y = 1.1;
+        group.add(rotorBell);
+        motorRotorMesh = rotorBell;
+    } else if (activeMotorType === 'harmonic') {
+        // Harmonic Drive Zero-Backlash Strain Wave Gear
+        const outerSpline = new THREE.Mesh(
+            new THREE.CylinderGeometry(2.6, 2.6, 1.2, 32, 1, true),
+            new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.9, side: THREE.DoubleSide })
+        );
+        group.add(outerSpline);
+
+        const flexspline = new THREE.Mesh(
+            new THREE.CylinderGeometry(2.4, 2.4, 2.0, 32, 1, true),
+            new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.8, side: THREE.DoubleSide })
+        );
+        flexspline.position.y = 0.5;
+        flexspline.userData = { title: "Flexible Toothed Flexspline", desc: "Thin-walled elastic cup deflected into an elliptical shape by the wave generator, yielding 100:1 zero-backlash reduction." };
+        group.add(flexspline);
+        robotRaycasterObjects.push(flexspline);
+
+        const waveGen = new THREE.Mesh(
+            new THREE.CylinderGeometry(2.1, 2.1, 0.8, 16),
+            new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9 })
+        );
+        waveGen.name = 'motorRotorBell';
+        waveGen.scale.set(1.15, 1.0, 0.85); // Elliptical bearing cam
+        group.add(waveGen);
+        motorRotorMesh = waveGen;
+    } else {
+        // NEMA 17 / Digital Servo
+        const body = new THREE.Mesh(
+            new THREE.BoxGeometry(3.0, 3.2, 3.0),
+            new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.3 })
+        );
+        group.add(body);
+
+        const shaft = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.3, 0.3, 2.2, 16),
+            new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.95 })
+        );
+        shaft.name = 'motorRotorBell';
+        shaft.position.y = 2.2;
+        group.add(shaft);
+        motorRotorMesh = shaft;
+    }
+
+    scene.add(group);
+}
+
+function updateActuatorShowroom() {
+    const pwm = parseFloat(document.getElementById('motorPwm')?.value || 60);
+    const torque = parseFloat(document.getElementById('motorTorque')?.value || 2.5);
+
+    if (motorRotorMesh) {
+        motorRotorMesh.rotation.y += (pwm * 0.003) / Math.max(0.5, torque * 0.3);
+    }
+
+    const speed = Math.round((pwm / 100) * 6000 / Math.max(0.5, torque * 0.4));
+    const speedEl = document.getElementById('motorSpeedVal');
+    const effEl = document.getElementById('motorEffVal');
+    if (speedEl) speedEl.textContent = `${speed.toLocaleString()} RPM`;
+    if (effEl) effEl.textContent = `${(92.5 - torque * 1.8).toFixed(1)}%`;
+}
+
+function switchMotorType(type) {
+    activeMotorType = type;
+    buildMotorShowroom3D();
+    sound.playClick();
+}
+
+// --------------------------------------------------------------------------
+// 5. EMBEDDED COMPUTING & ROBOTICS BOARDS SHOWROOM
+// --------------------------------------------------------------------------
+function buildBoardShowroom3D() {
+    const group = new THREE.Group();
+    group.name = 'robotModel';
+
+    if (activeBoardType === 'esp32') {
+        // ESP32 NodeMCU Module (Matte Black PCB)
+        const pcb = new THREE.Mesh(
+            new THREE.BoxGeometry(5.2, 0.18, 2.8),
+            new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.4 })
+        );
+        pcb.userData = { title: "ESP32-WROOM-32 Development Board", desc: "Dual-Core Xtensa 32-bit LX6 @ 240MHz, 520 KB SRAM, Integrated 802.11 b/g/n Wi-Fi and Bluetooth v4.2 BR/EDR & BLE." };
+        group.add(pcb);
+        robotRaycasterObjects.push(pcb);
+
+        // Metal Shielded ESP-WROOM-32 Can
+        const shield = new THREE.Mesh(
+            new THREE.BoxGeometry(2.0, 0.3, 1.8),
+            new THREE.MeshStandardMaterial({ color: 0xd4d4d8, metalness: 0.9, roughness: 0.2 })
+        );
+        shield.position.set(-1.2, 0.2, 0);
+        shield.userData = { title: "RF Shielded SoC Module", desc: "Houses the ESP32-D0WDQ6 dual-core silicon, 4MB SPI Flash memory, and 40MHz crystal oscillator." };
+        group.add(shield);
+        robotRaycasterObjects.push(shield);
+
+        // Gold PCB Trace Antenna
+        const ant = new THREE.Mesh(
+            new THREE.BoxGeometry(0.8, 0.2, 1.6),
+            new THREE.MeshStandardMaterial({ color: 0xb45309, metalness: 0.8 })
+        );
+        ant.position.set(-2.3, 0.15, 0);
+        ant.userData = { title: "2.4GHz Meandered Inverted-F Antenna", desc: "Planar PCB trace antenna delivering +20 dBm output power for long-range IoT robotics telemetry." };
+        group.add(ant);
+        robotRaycasterObjects.push(ant);
+
+        // CP2102 USB Bridge IC
+        const cp2102 = new THREE.Mesh(
+            new THREE.BoxGeometry(0.5, 0.15, 0.5),
+            new THREE.MeshStandardMaterial({ color: 0x18181b })
+        );
+        cp2102.position.set(0.6, 0.15, 0);
+        group.add(cp2102);
+
+        // Micro-USB Port
+        const usb = new THREE.Mesh(
+            new THREE.BoxGeometry(0.8, 0.4, 0.7),
+            new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.95 })
+        );
+        usb.position.set(2.4, 0.25, 0);
+        group.add(usb);
+
+        // 38 Gold Header Pins
+        for (let i = -8; i <= 8; i++) {
+            const pinL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.6, 0.1), new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9 }));
+            pinL.position.set(i * 0.26, -0.3, 1.25);
+            const pinR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.6, 0.1), new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9 }));
+            pinR.position.set(i * 0.26, -0.3, -1.25);
+            group.add(pinL, pinR);
+        }
+    } else if (activeBoardType === 'arduino') {
+        // Arduino Uno R3 (Teal PCB)
+        const pcb = new THREE.Mesh(
+            new THREE.BoxGeometry(6.8, 0.18, 5.3),
+            new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 })
+        );
+        pcb.userData = { title: "Arduino Uno R3", desc: "Microchip ATmega328P 8-bit AVR RISC microcontroller @ 16 MHz, 32 KB Flash, 2 KB SRAM, 14 Digital I/O (6 PWM), 6 Analog Inputs." };
+        group.add(pcb);
+        robotRaycasterObjects.push(pcb);
+
+        // ATmega328P DIP-28 IC
+        const atmega = new THREE.Mesh(
+            new THREE.BoxGeometry(3.2, 0.35, 0.8),
+            new THREE.MeshStandardMaterial({ color: 0x18181b })
+        );
+        atmega.position.set(0.6, 0.25, 0.8);
+        atmega.userData = { title: "ATmega328P DIP-28 Microcontroller", desc: "8-bit AVR core executing single-clock cycle instructions with hardware SPI, I2C, and UART peripherals." };
+        group.add(atmega);
+        robotRaycasterObjects.push(atmega);
+
+        // 16.000 MHz Crystal Oscillator
+        const crystal = new THREE.Mesh(
+            new THREE.BoxGeometry(1.0, 0.35, 0.4),
+            new THREE.MeshStandardMaterial({ color: 0xd4d4d8, metalness: 0.95 })
+        );
+        crystal.position.set(-0.6, 0.25, -0.2);
+        group.add(crystal);
+
+        // USB Type-B Port & DC Barrel Jack
+        const usbB = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 1.1), new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9 }));
+        usbB.position.set(-2.8, 0.55, -1.6);
+        const barrel = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.9), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
+        barrel.position.set(-2.7, 0.5, 1.8);
+        group.add(usbB, barrel);
+    } else {
+        // Generic High-Tech Controller
+        const pcb = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 4), new THREE.MeshStandardMaterial({ color: 0x15803d }));
+        group.add(pcb);
+        const soc = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.4, 1.8), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
+        soc.position.y = 0.3;
+        group.add(soc);
+    }
+
+    scene.add(group);
+}
+
+function updateBoardShowroom() {
+    // Gentle floating inspection rotation for embedded electronics
+    const model = scene.getObjectByName('robotModel');
+    if (model) {
+        model.rotation.y += 0.005;
+    }
+}
+
+function switchBoardType(type) {
+    activeBoardType = type;
+    buildBoardShowroom3D();
+    sound.playClick();
+}
+
+// --------------------------------------------------------------------------
+// INTERACTIVE RAYCASTER & SLIDER LISTENERS
+// --------------------------------------------------------------------------
+function initRobotRaycaster() {
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    window.addEventListener('pointerdown', (e) => {
+        const rect = renderer.domElement.getBoundingClientRect();
+        if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return;
+
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const hits = raycaster.intersectObjects(robotRaycasterObjects, true);
+
+        if (hits.length > 0) {
+            let hitObj = hits[0].object;
+            while (hitObj && !hitObj.userData?.title && hitObj.parent) {
+                hitObj = hitObj.parent;
+            }
+            if (hitObj?.userData?.title) {
+                sound.playClick();
+                showRobotInfoCard(hitObj.userData.title, hitObj.userData.desc);
+            }
+        }
+    });
+}
+
+function showRobotInfoCard(title, desc) {
+    const box = document.getElementById('robotInfo');
+    const content = document.getElementById('robotInfoContent');
+    if (!box || !content) return;
+
+    content.innerHTML = `
+        <div class="info-title-wrap">
+            <span class="info-title">${title}</span>
+        </div>
+        <div class="info-desc-box">${desc}</div>
+        <div class="info-formula-card" style="margin-top:10px;">
+            <strong>Control & Engineering Specifications:</strong><br>
+            • Teleoperation: Real-time 60 FPS Closed-Loop Control<br>
+            • Kinematics: Denavit-Hartenberg (D-H) Transformation Matrix<br>
+            • Communication Protocol: CAN Bus / ROS2 Micro-XRCE
+        </div>
+    `;
+    box.style.display = 'block';
+}
+
 function initRobotSliders() {
-    ['base', 'shoulder', 'elbow', 'wrist', 'grip'].forEach(j => {
+    // 6-DOF Arm Forward Kinematics Sliders
+    ['base', 'shoulder', 'elbow', 'wristPitch', 'wrist', 'grip'].forEach(j => {
         const input = document.getElementById(`${j}Rot`);
         const valTag = document.getElementById(`${j}Val`);
         if (input) {
@@ -3042,70 +3862,36 @@ function initRobotSliders() {
             };
         }
     });
-}
 
-function buildRobotArm() {
-    disposeHierarchy(scene.getObjectByName('robotModel'));
-    armMeshGroup = new THREE.Group();
-    armMeshGroup.name = 'robotModel';
+    // Inverse Kinematics Sliders
+    ['ikTargetX', 'ikTargetY', 'ikTargetZ'].forEach(id => {
+        const slider = document.getElementById(id);
+        if (slider) {
+            slider.oninput = () => {
+                const tx = parseFloat(document.getElementById('ikTargetX')?.value || 3.5);
+                const ty = parseFloat(document.getElementById('ikTargetY')?.value || 4.0);
+                const tz = parseFloat(document.getElementById('ikTargetZ')?.value || 0.0);
+                document.getElementById('ikXVal').textContent = `${tx.toFixed(1)} m`;
+                document.getElementById('ikYVal').textContent = `${ty.toFixed(1)} m`;
+                document.getElementById('ikZVal').textContent = `${tz.toFixed(1)} m`;
+                solveInverseKinematics(tx, ty, tz);
+            };
+        }
+    });
 
-    const baseGeo = new THREE.CylinderGeometry(2, 2.4, 0.8, 32);
-    const metalMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4 });
-    const orangeMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.3 });
-    const baseMesh = new THREE.Mesh(baseGeo, metalMat);
-    armMeshGroup.add(baseMesh);
+    // PID Gains live listeners
+    ['Kp', 'Ki', 'Kd'].forEach(g => {
+        const sl = document.getElementById(`pid${g}`);
+        const tag = document.getElementById(`${g.toLowerCase()}Val`);
+        if (sl && tag) {
+            sl.oninput = () => tag.textContent = sl.value;
+        }
+    });
 
-    const j1 = new THREE.Group();
-    j1.position.y = 0.4;
-    j1.name = 'j1Pivot';
-
-    const j1Geo = new THREE.CylinderGeometry(1.4, 1.4, 1.2, 32);
-    j1.add(new THREE.Mesh(j1Geo, orangeMat));
-
-    const j2 = new THREE.Group();
-    j2.position.y = 1.2;
-    j2.name = 'j2Pivot';
-
-    const arm1Geo = new THREE.BoxGeometry(0.8, 4.2, 0.8);
-    const arm1Mesh = new THREE.Mesh(arm1Geo, metalMat);
-    arm1Mesh.position.y = 2.1;
-    j2.add(arm1Mesh);
-
-    const j3 = new THREE.Group();
-    j3.position.y = 4.2;
-    j3.name = 'j3Pivot';
-
-    const arm2Geo = new THREE.BoxGeometry(0.6, 3.5, 0.6);
-    const arm2Mesh = new THREE.Mesh(arm2Geo, orangeMat);
-    arm2Mesh.position.y = 1.75;
-    j3.add(arm2Mesh);
-
-    const j4 = new THREE.Group();
-    j4.position.y = 3.5;
-    j4.name = 'j4Pivot';
-
-    const wristGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.8, 16);
-    j4.add(new THREE.Mesh(wristGeo, metalMat));
-
-    j3.add(j4);
-    j2.add(j3);
-    j1.add(j2);
-    armMeshGroup.add(j1);
-
-    scene.add(armMeshGroup);
-}
-
-function updateArmJointPivots() {
-    if (!armMeshGroup) return;
-    const j1 = armMeshGroup.getObjectByName('j1Pivot');
-    const j2 = armMeshGroup.getObjectByName('j2Pivot');
-    const j3 = armMeshGroup.getObjectByName('j3Pivot');
-    const j4 = armMeshGroup.getObjectByName('j4Pivot');
-
-    if (j1) j1.rotation.y = (robotJoints.base * Math.PI) / 180;
-    if (j2) j2.rotation.z = (robotJoints.shoulder * Math.PI) / 180;
-    if (j3) j3.rotation.z = (robotJoints.elbow * Math.PI) / 180;
-    if (j4) j4.rotation.x = (robotJoints.wrist * Math.PI) / 180;
+    const cm = document.getElementById('cartMass');
+    if (cm) cm.oninput = () => {
+        document.getElementById('cartMassVal').textContent = `${cm.value} kg`;
+    };
 }
 
 function toggleArmAutoDemo() {
@@ -3113,119 +3899,31 @@ function toggleArmAutoDemo() {
     const btn = document.getElementById('autoDemo');
     if (btn) {
         btn.classList.toggle('active', autoDemoActive);
-        btn.textContent = autoDemoActive ? '⏸ Pause Auto Demo' : '▶ Auto Demo';
+        btn.textContent = autoDemoActive ? '⏸ Pause Demo' : '▶ Pick & Place Demo';
     }
     sound.playClick();
 }
 
-function resetArmJoints() {
-    autoDemoActive = false;
-    robotJoints = { base: 0, shoulder: 0, elbow: 0, wrist: 0, grip: 50 };
-    ['base', 'shoulder', 'elbow', 'wrist', 'grip'].forEach(j => {
-        const input = document.getElementById(`${j}Rot`);
-        const valTag = document.getElementById(`${j}Val`);
-        if (input) input.value = robotJoints[j];
-        if (valTag) valTag.textContent = `${robotJoints[j]}${j === 'grip' ? '%' : '°'}`;
-    });
-    updateArmJointPivots();
-    showToast('Robot Arm joints set to home pose.');
-}
-
 function setRobotMode(mode) {
+    robotMode = mode;
     sound.playClick();
+
     document.querySelectorAll('#robot .mode-btn').forEach(b => b.classList.remove('active'));
-    const btn = document.getElementById(`robotMode${mode.charAt(0).toUpperCase() + mode.slice(1)}`);
-    if (btn) btn.classList.add('active');
+    document.getElementById(`robotMode${mode.charAt(0).toUpperCase() + mode.slice(1)}`)?.classList.add('active');
 
     const armCtrl = document.getElementById('armControls');
     const pidCtrl = document.getElementById('pidControls');
     const droneCtrl = document.getElementById('droneControls');
+    const motorCtrl = document.getElementById('motorControls');
+    const boardCtrl = document.getElementById('boardControls');
 
     if (armCtrl) armCtrl.style.display = mode === 'arm' ? 'block' : 'none';
     if (pidCtrl) pidCtrl.style.display = mode === 'pid' ? 'block' : 'none';
     if (droneCtrl) droneCtrl.style.display = mode === 'drone' ? 'block' : 'none';
+    if (motorCtrl) motorCtrl.style.display = mode === 'motor' ? 'block' : 'none';
+    if (boardCtrl) boardCtrl.style.display = mode === 'board' ? 'block' : 'none';
 
-    disposeHierarchy(scene.getObjectByName('robotModel'));
-
-    if (mode === 'arm') {
-        buildRobotArm();
-    } else if (mode === 'pid') {
-        buildPidCartScene();
-    } else if (mode === 'drone') {
-        buildDroneScene();
-    } else if (mode === 'motor') {
-        buildMotorsShowroom();
-    } else if (mode === 'board') {
-        buildBoardsShowroom();
-    }
-}
-
-function buildPidCartScene() {
-    const group = new THREE.Group();
-    group.name = 'robotModel';
-
-    const track = new THREE.Mesh(new THREE.BoxGeometry(16, 0.3, 2), new THREE.MeshStandardMaterial({ color: 0x334155 }));
-    group.add(track);
-
-    const cart = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.2, 1.8), new THREE.MeshStandardMaterial({ color: 0x00f0ff }));
-    cart.position.y = 0.75;
-    group.add(cart);
-
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 5, 16), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
-    pole.position.set(0, 3.25, 0);
-    cart.add(pole);
-
-    scene.add(group);
-}
-
-function buildDroneScene() {
-    const group = new THREE.Group();
-    group.name = 'robotModel';
-
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(4, 0.2, 4), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
-    group.add(frame);
-
-    for (let [x, z] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) {
-        const prop = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.05, 16), new THREE.MeshStandardMaterial({ color: 0x38bdf8 }));
-        prop.position.set(x, 0.2, z);
-        group.add(prop);
-    }
-    scene.add(group);
-}
-
-function buildMotorsShowroom() {
-    const group = new THREE.Group();
-    group.name = 'robotModel';
-
-    const motor = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 3, 32), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
-    motor.rotation.x = Math.PI / 2;
-    group.add(motor);
-
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 2, 16), new THREE.MeshStandardMaterial({ color: 0xcbd5e1 }));
-    shaft.position.z = 2;
-    shaft.rotation.x = Math.PI / 2;
-    group.add(shaft);
-
-    scene.add(group);
-}
-
-function buildBoardsShowroom() {
-    const group = new THREE.Group();
-    group.name = 'robotModel';
-
-    const pcb = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 4), new THREE.MeshStandardMaterial({ color: 0x15803d }));
-    group.add(pcb);
-
-    const chip = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.4, 1.5), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
-    chip.position.y = 0.3;
-    group.add(chip);
-
-    scene.add(group);
-}
-
-function applyPidPerturbation() {
-    sound.playExplosion();
-    showToast('⚖️ Disturbance torque applied to inverted pendulum! PID loop stabilizing.');
+    loadActiveRobotMode();
 }
 
 // ==========================================================================

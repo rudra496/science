@@ -626,56 +626,133 @@
                 <div class="scene" id="robotScene"></div>
             </div>
 
-            <div class="panel panel-left">
+            <div class="panel panel-left wide-panel">
                 <div class="panel-header">
                     <h3>🤖 Robotics & Cybernetics Lab</h3>
-                    <span class="panel-tag">KINEMATICS</span>
+                    <span class="panel-tag">MECHATRONICS</span>
                 </div>
 
                 <div class="panel-section">
-                    <h4>🤖 Kinematics Domain</h4>
+                    <h4>🤖 Robotics Domain</h4>
                     <div class="btn-group-grid">
-                        <button class="mode-btn active" id="robotModeArm" onclick="setRobotMode('arm')">6-DOF Robot Arm</button>
-                        <button class="mode-btn" id="robotModePid" onclick="setRobotMode('pid')">⚖️ PID Balance Bot</button>
+                        <button class="mode-btn active" id="robotModeArm" onclick="setRobotMode('arm')">🦾 6-DOF Arm</button>
+                        <button class="mode-btn" id="robotModePid" onclick="setRobotMode('pid')">⚖️ PID Balancer</button>
                         <button class="mode-btn" id="robotModeDrone" onclick="setRobotMode('drone')">🚁 Quadcopter</button>
-                        <button class="mode-btn" id="robotModeMotors" onclick="setRobotMode('motor')">⚡ Actuators & Motors</button>
-                        <button class="mode-btn" id="robotModeBoards" onclick="setRobotMode('board')">📟 Embedded Boards</button>
+                        <button class="mode-btn" id="robotModeMotor" onclick="setRobotMode('motor')">⚡ Actuators</button>
+                        <button class="mode-btn" id="robotModeBoard" onclick="setRobotMode('board')">📟 Embedded Boards</button>
                     </div>
                 </div>
 
-                <!-- 6-DOF Arm Joint Controls -->
+                <!-- 1. 6-DOF Arm Controls -->
                 <div class="panel-section" id="armControls">
-                    <h4>🦾 6-Axis Joint Teleoperation</h4>
-                    <label class="slider-label">J1 Base Yaw: <input type="range" id="baseRot" min="-180" max="180" value="0"><span id="baseVal" class="val-tag">0°</span></label>
-                    <label class="slider-label">J2 Shoulder Pitch: <input type="range" id="shoulderRot" min="-90" max="90" value="0"><span id="shoulderVal" class="val-tag">0°</span></label>
-                    <label class="slider-label">J3 Elbow Pitch: <input type="range" id="elbowRot" min="-120" max="120" value="0"><span id="elbowVal" class="val-tag">0°</span></label>
-                    <label class="slider-label">J4 Wrist Roll: <input type="range" id="wristRot" min="-90" max="90" value="0"><span id="wristVal" class="val-tag">0°</span></label>
-                    <label class="slider-label">J5 Gripper Clamp: <input type="range" id="gripRot" min="0" max="100" value="50"><span id="gripVal" class="val-tag">50%</span></label>
+                    <h4>🦾 6-Axis Industrial Arm Kinematics</h4>
                     
-                    <div class="btn-group-grid" style="margin-top:10px;">
-                        <button class="ctrl-btn active" id="autoDemo" onclick="toggleArmAutoDemo()">▶ Auto Pick & Place Demo</button>
-                        <button class="ctrl-btn" id="resetArm" onclick="resetArmJoints()">🔄 Home (0° Pose)</button>
+                    <div class="btn-group-grid" style="margin-bottom:10px;">
+                        <button class="ctrl-btn active" id="armModeFK" onclick="setArmKinematicsMode('fk')">Forward (Joints)</button>
+                        <button class="ctrl-btn" id="armModeIK" onclick="setArmKinematicsMode('ik')">Inverse (Target XYZ)</button>
+                        <button class="ctrl-btn" id="autoDemo" onclick="toggleArmAutoDemo()">▶ Pick & Place Demo</button>
+                    </div>
+
+                    <!-- Forward Kinematics Sliders -->
+                    <div id="armFkSliders">
+                        <label class="slider-label">J1 Base Yaw: <input type="range" id="baseRot" min="-180" max="180" value="0"><span id="baseVal" class="val-tag">0°</span></label>
+                        <label class="slider-label">J2 Shoulder Pitch: <input type="range" id="shoulderRot" min="-90" max="90" value="20"><span id="shoulderVal" class="val-tag">20°</span></label>
+                        <label class="slider-label">J3 Elbow Pitch: <input type="range" id="elbowRot" min="-120" max="120" value="-40"><span id="elbowVal" class="val-tag">-40°</span></label>
+                        <label class="slider-label">J4 Wrist Pitch: <input type="range" id="wristPitchRot" min="-90" max="90" value="20"><span id="wristPitchVal" class="val-tag">20°</span></label>
+                        <label class="slider-label">J5 Wrist Roll: <input type="range" id="wristRot" min="-180" max="180" value="0"><span id="wristVal" class="val-tag">0°</span></label>
+                        <label class="slider-label">J6 Gripper Clamp: <input type="range" id="gripRot" min="0" max="100" value="50"><span id="gripVal" class="val-tag">50%</span></label>
+                    </div>
+
+                    <!-- Inverse Kinematics Sliders -->
+                    <div id="armIkSliders" style="display:none;">
+                        <label class="slider-label">Target X (Lateral): <input type="range" id="ikTargetX" min="-8" max="8" step="0.1" value="3.5"><span id="ikXVal" class="val-tag">3.5 m</span></label>
+                        <label class="slider-label">Target Y (Altitude): <input type="range" id="ikTargetY" min="0.5" max="9" step="0.1" value="4.0"><span id="ikYVal" class="val-tag">4.0 m</span></label>
+                        <label class="slider-label">Target Z (Depth): <input type="range" id="ikTargetZ" min="-8" max="8" step="0.1" value="0"><span id="ikZVal" class="val-tag">0.0 m</span></label>
+                    </div>
+
+                    <div class="reaction-metric" style="margin-top:10px;">
+                        <div>End-Effector Pose: <span id="eePose" class="text-cyan font-mono">X: 3.5m | Y: 4.0m | Z: 0.0m</span></div>
+                        <div>Gripper Status: <span id="gripStatus" class="text-emerald">Holding Component</span></div>
                     </div>
                 </div>
 
-                <!-- PID Balancer Controls -->
+                <!-- 2. PID Balancer Controls -->
                 <div class="panel-section" id="pidControls" style="display:none;">
-                    <h4>⚖️ PID Inverted Pendulum Tuning</h4>
-                    <label class="slider-label">Proportional Gain (Kp): <input type="range" id="pidKp" min="0" max="100" value="45"><span id="kpVal" class="val-tag">45</span></label>
-                    <label class="slider-label">Integral Gain (Ki): <input type="range" id="pidKi" min="0" max="20" step="0.1" value="1.2"><span id="kiVal" class="val-tag">1.2</span></label>
-                    <label class="slider-label">Derivative Gain (Kd): <input type="range" id="pidKd" min="0" max="50" value="18"><span id="kdVal" class="val-tag">18</span></label>
-                    <button class="btn btn-primary" onclick="applyPidPerturbation()">💥 Apply Disturbance Force</button>
+                    <h4>⚖️ PID Inverted Pendulum Control Loop</h4>
+                    <p class="panel-note">Real-time numerical integration of non-linear cart-pole Hamiltonian dynamics.</p>
+                    
+                    <label class="slider-label">Proportional Gain (Kp): <input type="range" id="pidKp" min="0" max="150" value="65"><span id="kpVal" class="val-tag">65</span></label>
+                    <label class="slider-label">Integral Gain (Ki): <input type="range" id="pidKi" min="0" max="25" step="0.1" value="1.8"><span id="kiVal" class="val-tag">1.8</span></label>
+                    <label class="slider-label">Derivative Gain (Kd): <input type="range" id="pidKd" min="0" max="80" value="28"><span id="kdVal" class="val-tag">28</span></label>
+                    <label class="slider-label">Cart Mass (M): <input type="range" id="cartMass" min="1" max="10" step="0.5" value="3"><span id="cartMassVal" class="val-tag">3.0 kg</span></label>
+                    
+                    <div class="btn-group-grid" style="margin-top:8px;">
+                        <button class="btn btn-primary" onclick="applyPidPerturbation(5)">💥 +5 N Disturbance</button>
+                        <button class="btn btn-primary" onclick="applyPidPerturbation(-5)">💥 -5 N Disturbance</button>
+                        <button class="ctrl-btn" onclick="resetPidPendulum()">🔄 Upright Reset</button>
+                    </div>
+
+                    <div class="reaction-metric" style="margin-top:10px;">
+                        <div>Tilt Error (θ): <span id="pidTheta" class="text-cyan font-mono">0.00° (Balanced)</span></div>
+                        <div>Control Effort (F): <span id="pidForce" class="text-emerald font-mono">0.00 N</span></div>
+                    </div>
                 </div>
 
-                <!-- Quadcopter Controls -->
+                <!-- 3. Quadcopter Drone Controls -->
                 <div class="panel-section" id="droneControls" style="display:none;">
-                    <h4>🚁 Drone Flight Physics</h4>
-                    <label class="slider-label">Throttle Thrust: <input type="range" id="droneThrottle" min="0" max="100" value="50"></label>
-                    <label class="slider-label">Pitch Angle: <input type="range" id="dronePitch" min="-30" max="30" value="0"></label>
-                    <label class="slider-label">Roll Angle: <input type="range" id="droneRoll" min="-30" max="30" value="0"></label>
+                    <h4>🚁 6-DOF Quadcopter Aerodynamics</h4>
+                    
+                    <div class="btn-group-grid" style="margin-bottom:8px;">
+                        <button class="ctrl-btn active" id="droneModeHover" onclick="setDroneAutoMode('hover')">Hover Lock</button>
+                        <button class="ctrl-btn" id="droneModeOrbit" onclick="setDroneAutoMode('orbit')">Circle Orbit</button>
+                        <button class="ctrl-btn" id="droneModeFig8" onclick="setDroneAutoMode('fig8')">Figure-8 Path</button>
+                    </div>
+
+                    <label class="slider-label">Total Collective Thrust: <input type="range" id="droneThrottle" min="0" max="100" value="50"><span id="throttleVal" class="val-tag">50%</span></label>
+                    <label class="slider-label">Pitch Angle (Forward/Back): <input type="range" id="dronePitch" min="-30" max="30" value="0"><span id="pitchVal" class="val-tag">0°</span></label>
+                    <label class="slider-label">Roll Angle (Lateral Tilt): <input type="range" id="droneRoll" min="-30" max="30" value="0"><span id="rollVal" class="val-tag">0°</span></label>
+                    <label class="slider-label">Yaw Rate (Heading Heading): <input type="range" id="droneYaw" min="-60" max="60" value="0"><span id="yawVal" class="val-tag">0°/s</span></label>
+
+                    <div class="reaction-metric" style="margin-top:10px;">
+                        <div>Altitude: <span id="droneAlt" class="text-cyan font-mono">4.50 m</span></div>
+                        <div>Motors M1–M4 RPM: <span id="droneRpm" class="text-emerald font-mono">7,200 RPM</span></div>
+                    </div>
+                </div>
+
+                <!-- 4. Actuators Showroom Controls -->
+                <div class="panel-section" id="motorControls" style="display:none;">
+                    <h4>⚡ Precision Robotic Actuators</h4>
+                    <select id="motorTypeSelect" class="panel-select" onchange="switchMotorType(this.value)">
+                        <option value="bldc">1. 🌀 Brushless DC Motor (BLDC Outrunner, 3-Phase)</option>
+                        <option value="stepper">2. 📐 NEMA 17 Stepper Motor (Bipolar Microstepping)</option>
+                        <option value="servo">3. 🦾 Coreless Digital Metal-Gear Servo</option>
+                        <option value="harmonic">4. ⚙️ Harmonic Drive (Zero-Backlash Strain Wave Gear)</option>
+                    </select>
+
+                    <label class="slider-label">Operating Voltage / PWM: <input type="range" id="motorPwm" min="0" max="100" value="60"><span id="motorPwmVal" class="val-tag">60%</span></label>
+                    <label class="slider-label">Load Torque Resistance: <input type="range" id="motorTorque" min="0" max="10" step="0.5" value="2.5"><span id="motorTorqueVal" class="val-tag">2.5 N·m</span></label>
+                    
+                    <div class="reaction-metric" style="margin-top:10px;">
+                        <div>Output Speed: <span id="motorSpeedVal" class="text-cyan font-mono">3,600 RPM</span></div>
+                        <div>Mechanical Efficiency: <span id="motorEffVal" class="text-emerald font-mono">91.4%</span></div>
+                    </div>
+                </div>
+
+                <!-- 5. Embedded Boards Showroom Controls -->
+                <div class="panel-section" id="boardControls" style="display:none;">
+                    <h4>📟 Embedded Computing & Robotics Boards</h4>
+                    <select id="boardTypeSelect" class="panel-select" onchange="switchBoardType(this.value)">
+                        <option value="esp32">1. 📶 ESP32-WROOM-32 (Dual-Core 240MHz, WiFi/BLE, FreeRTOS)</option>
+                        <option value="arduino">2. 🟦 Arduino Uno R3 (ATmega328P, 16MHz, 5V Logic)</option>
+                        <option value="rpi">3. 🍓 Raspberry Pi 4B (Quad Cortex-A72 1.5GHz, Linux/ROS)</option>
+                        <option value="stm32">4. ⚡ STM32 Blue Pill (ARM Cortex-M3 72MHz, DMA/PWM)</option>
+                    </select>
+                    
+                    <p class="panel-note" style="margin-top:8px;">💡 <em>Tip: Click any IC chip, header, or crystal in 3D to view its architecture and pinout!</em></p>
                 </div>
             </div>
 
+            <!-- Robotics Detail Card -->
             <div class="info-box glass-card" id="robotInfo" style="display:none">
                 <button class="close-btn" onclick="closeInfo('robotInfo')">✕</button>
                 <div id="robotInfoContent"></div>
