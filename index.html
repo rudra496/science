@@ -56,7 +56,7 @@
                 <button class="nav-item" data-page="solar"><span class="icon">🪐</span> Astrophysics</button>
                 <button class="nav-item" data-page="dna"><span class="icon">🧬</span> Genetics</button>
                 <button class="nav-item" data-page="cell"><span class="icon">🔬</span> Cytology & Neuro</button>
-                <button class="nav-item" data-page="physics"><span class="icon">💡</span> Physics Lab <span class="badge-count">16+</span></button>
+
                 <button class="nav-item" data-page="robot"><span class="icon">🤖</span> Robotics</button>
                 <button class="nav-item" data-page="games"><span class="icon">🎮</span> Science Games <span class="badge-count">4</span></button>
             </nav>
@@ -82,7 +82,7 @@
             <button class="mobile-item" data-page="solar">🪐 Astrophysics & Orbits</button>
             <button class="mobile-item" data-page="dna">🧬 Genetics & CRISPR</button>
             <button class="mobile-item" data-page="cell">🔬 Cytology & Neuron Lab</button>
-            <button class="mobile-item" data-page="physics">💡 Physics Lab (16+ Simulations)</button>
+
             <button class="mobile-item" data-page="robot">🤖 Robotics & Kinematics</button>
             <button class="mobile-item" data-page="games">🎮 3D Science Arcade (4 Games)</button>
         </div>
@@ -104,10 +104,10 @@
             <div class="hero">
                 <div class="hero-badge">⚡ ADVANCED SCIENTIFIC SIMULATION ENGINE • WEBGL 3D</div>
                 <h1 class="hero-title">Discover the Universe in <span class="text-gradient">Interactive 3D</span></h1>
-                <p class="hero-desc">Explore 118 chemical elements, 16+ verified physics experiments, general relativity black holes, CRISPR-Cas9 genome surgery, neuron action potentials, 6-DOF robotics, and interactive science games.</p>
+                <p class="hero-desc">Explore 118 chemical elements, Keplerian astrophysics, CRISPR-Cas9 genome surgery, neuron action potentials, 6-DOF robotics, and interactive science games — all in real-time 3D.</p>
                 
                 <div class="hero-btns">
-                    <button class="btn btn-primary glow-btn" onclick="showPage('physics')">💡 Launch Physics Experiments (16+)</button>
+                    <button class="btn btn-primary glow-btn" onclick="showPage('solar')">🪐 Launch Astrophysics Lab</button>
                     <button class="btn btn-cyan" onclick="showPage('elements')">⚛️ 3D Periodic & Molecule Forge</button>
                     <button class="btn btn-secondary" onclick="showPage('games')">🎮 3D Science Arcade Games</button>
                 </div>
@@ -121,9 +121,9 @@
                     <span class="stat-label">Chemical Elements & Orbitals</span>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">💡</div>
-                    <span class="stat-num">16+</span>
-                    <span class="stat-label">Physics & Quantum Experiments</span>
+                    <div class="stat-icon">🤖</div>
+                    <span class="stat-num">6</span>
+                    <span class="stat-label">Robotics & Kinematics Domains</span>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">🪐</div>
@@ -155,14 +155,6 @@
                     <h3>Periodic Table & Molecule Forge</h3>
                     <p>All 118 elements in 3D, electron Bohr orbital shells, crystal lattices, 3D molecular builder, and exothermic chemical reactions.</p>
                     <span class="feat-link">Explore Elements →</span>
-                </div>
-
-                <div class="feature-card" onclick="showPage('physics')">
-                    <div class="feat-badge hot">QUANTUM & RELATIVITY</div>
-                    <div class="feat-icon">💡</div>
-                    <h3>Physics & Quantum Laboratory</h3>
-                    <p>16+ simulations: Black Hole Lensing, Double Slit Wave-Particle Duality, Chaotic Lorenz Attractor, Nuclear Fission, Photoelectric Effect, and Superconductivity.</p>
-                    <span class="feat-link">Launch Experiments →</span>
                 </div>
 
                 <div class="feature-card" onclick="showPage('solar')">
@@ -807,9 +799,9 @@
     <div class="toast" id="toast"></div>
 
     <!-- Application Script -->
-    <script src="script.js"></script>
-    <!-- Accurate Physics Experiment Overrides (loads after script.js) -->
-    <script src="physics_experiments.js"></script>
+    <script src="script.js?v=3"></script>
+    <!-- Physics Experiment Builders -->
+    <script src="physics_experiments.js?v=3"></script>
 </body>
 
 </html>
