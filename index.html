@@ -471,9 +471,9 @@
                 <div class="scene" id="cellScene"></div>
             </div>
 
-            <div class="panel panel-left">
+            <div class="panel panel-left wide-panel">
                 <div class="panel-header">
-                    <h3>🔬 Cytology & Neurobiology</h3>
+                    <h3>🔬 Cytology & Neurobiology Lab</h3>
                     <span class="panel-tag">CELL BIOLOGY</span>
                 </div>
 
@@ -490,26 +490,59 @@
 
                 <!-- Neuron Specific Controls -->
                 <div class="panel-section" id="cellNeuronControls" style="display:none;">
-                    <h4>⚡ Action Potential Trigger</h4>
-                    <p class="panel-note">Fire electrical depolarization wave through soma, axon, and synaptic terminal.</p>
+                    <h4>⚡ Action Potential Depolarization</h4>
+                    <p class="panel-note">Fire electrical impulse down the axon to trigger synaptic vesicle exocytosis.</p>
                     <button class="btn btn-primary" id="fireNeuronBtn" onclick="fireNeuronActionPotential()">⚡ Stimulate Action Potential</button>
                     <div class="reaction-metric">
-                        <div>Membrane Potential: <span id="membraneVoltage" class="text-cyan">-70 mV</span></div>
-                        <div>Neurotransmitter: <span id="synapseStatus" class="text-emerald">Dopamine / ACh</span></div>
+                        <div>Membrane Potential: <span id="membraneVoltage" class="text-cyan font-mono">-70 mV (Resting)</span></div>
+                        <div>Synapse State: <span id="synapseStatus" class="text-emerald">Ready for Discharge</span></div>
                     </div>
                 </div>
 
+                <!-- Mitochondria Specific Controls -->
+                <div class="panel-section" id="cellMitoControls" style="display:none;">
+                    <h4>⚡ F₀F₁ ATP Synthase Rotor</h4>
+                    <p class="panel-note">Protons (H⁺) drive the rotational turbine converting ADP + Pᵢ into cellular ATP.</p>
+                    <label class="slider-label">Proton Gradient (ΔpH): <input type="range" id="mitoProtons" min="1" max="5" value="3"><span id="mitoProtonVal" class="val-tag text-cyan">ΔpH 1.4</span></label>
+                    <div class="reaction-metric">
+                        <div>Turbine Speed: <span id="mitoRpm" class="text-cyan font-mono">6000 RPM</span></div>
+                        <div>ATP Yield: <span id="mitoAtpYield" class="text-emerald font-mono">36 ATP / Glucose</span></div>
+                    </div>
+                </div>
+
+                <!-- Bacteria Controls -->
+                <div class="panel-section" id="cellBacteriaControls" style="display:none;">
+                    <h4>🦠 Prokaryotic Locomotion</h4>
+                    <p class="panel-note">Rotary flagellar motor spins helical filament for chemotaxis propulsion.</p>
+                    <label class="slider-label">Flagellar Motor RPM: <input type="range" id="bacteriaMotor" min="0" max="100" value="70"></label>
+                </div>
+
+                <!-- Mitosis Cycle Controls -->
+                <div class="panel-section" id="cellMitosisControls" style="display:none;">
+                    <h4>🔄 Mitosis Stages (Cell Division)</h4>
+                    <div class="btn-group-grid">
+                        <button class="ctrl-btn active" id="mitosisStage1" onclick="setMitosisStage(1)">1. Interphase</button>
+                        <button class="ctrl-btn" id="mitosisStage2" onclick="setMitosisStage(2)">2. Prophase</button>
+                        <button class="ctrl-btn" id="mitosisStage3" onclick="setMitosisStage(3)">3. Metaphase</button>
+                        <button class="ctrl-btn" id="mitosisStage4" onclick="setMitosisStage(4)">4. Anaphase</button>
+                        <button class="ctrl-btn" id="mitosisStage5" onclick="setMitosisStage(5)">5. Telophase</button>
+                    </div>
+                    <p id="mitosisInfo" class="panel-note" style="margin-top:8px;color:#38bdf8;">Stage 1: Interphase — Chromatin and centrosomes replicate.</p>
+                </div>
+
                 <div class="panel-section">
-                    <h4>🎬 Structural View</h4>
+                    <h4>🎬 Structural View Mode</h4>
                     <div class="btn-group-grid">
                         <button class="ctrl-btn active" id="cellAnimRotate" onclick="setCellAnim('rotate')">Normal View</button>
                         <button class="ctrl-btn" id="cellAnimExplode" onclick="setCellAnim('explode')">💥 Exploded 3D</button>
                         <button class="ctrl-btn" id="cellAnimMitosis" onclick="setCellAnim('mitosis')">🔄 Mitosis Cycle</button>
                     </div>
                     <label class="slider-label">Rotation Rate: <input type="range" id="cellSpeed" min="0" max="2" step="0.1" value="0.5"></label>
+                    <p class="panel-note" style="margin-top:6px;">💡 <em>Tip: Click on any organelle in 3D to inspect its biological function!</em></p>
                 </div>
             </div>
 
+            <!-- Organelle Detail Card -->
             <div class="info-box glass-card" id="cellInfo" style="display:none">
                 <button class="close-btn" onclick="closeInfo('cellInfo')">✕</button>
                 <div id="cellInfoContent"></div>
