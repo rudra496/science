@@ -1291,52 +1291,94 @@ input[type="checkbox"] {
     transition: width 0.15s ease-out;
 }
 
-/* Touch / Mouse Arcade Virtual Controller */
-.arcade-touch-pad {
+/* Mobile Arcade Touch Controls */
+.mobile-arcade-controls {
     display: none;
     position: fixed;
-    bottom: 20px;
-    right: 20px;
-    gap: 10px;
-    z-index: 700;
+    bottom: 16px;
+    left: 0;
+    width: 100%;
+    padding: 0 16px;
+    box-sizing: border-box;
+    justify-content: space-between;
+    align-items: flex-end;
+    z-index: 850;
+    pointer-events: none;
 }
 
-.arcade-btn {
-    width: 50px;
-    height: 50px;
+.mobile-stick-cluster {
+    display: flex;
+    gap: 12px;
+    pointer-events: auto;
+}
+
+.mobile-action-cluster {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    pointer-events: auto;
+}
+
+.mobile-ctrl-btn {
+    width: 62px;
+    height: 62px;
     border-radius: 50%;
     background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--border-bright);
+    backdrop-filter: blur(16px);
+    border: 2px solid rgba(56, 189, 248, 0.4);
     color: #fff;
-    font-size: 18px;
-    font-weight: 700;
+    font-size: 22px;
+    font-weight: 800;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(0, 240, 255, 0.15);
     user-select: none;
-    transition: all 0.1s ease;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.08s ease, background 0.08s ease;
 }
 
-.arcade-btn:active {
+.mobile-ctrl-btn:active, .mobile-ctrl-btn.active {
     transform: scale(0.92);
-    background: rgba(56, 189, 248, 0.3);
-    border-color: var(--cyan);
+    background: rgba(56, 189, 248, 0.35);
+    border-color: #00f0ff;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
 }
 
-.arcade-btn.action-btn-fire {
+.mobile-ctrl-btn.action-fire {
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(185, 28, 28, 0.9));
+    border: 2px solid #f87171;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+.mobile-ctrl-btn.action-fire:active, .mobile-ctrl-btn.action-fire.active {
+    transform: scale(0.92);
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    box-shadow: 0 0 35px rgba(239, 68, 68, 0.8);
+}
+
+.mobile-ctrl-btn.action-emp {
     width: 58px;
     height: 58px;
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    border-color: #f87171;
-    font-size: 20px;
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.85), rgba(126, 34, 206, 0.85));
+    border: 2px solid #c084fc;
+    font-size: 13px;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+}
+
+.mobile-ctrl-btn.action-emp:active, .mobile-ctrl-btn.action-emp.active {
+    transform: scale(0.92);
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.8);
 }
 
 @media (max-width: 900px) {
-    .arcade-touch-pad {
+    .mobile-arcade-controls {
         display: flex;
     }
 }

@@ -58,7 +58,7 @@
                 <button class="nav-item" data-page="cell"><span class="icon">🔬</span> Cytology & Neuro</button>
 
                 <button class="nav-item" data-page="robot"><span class="icon">🤖</span> Robotics</button>
-                <button class="nav-item" data-page="games"><span class="icon">🎮</span> Science Games <span class="badge-count">4</span></button>
+                <button class="nav-item" data-page="games"><span class="icon">🚀</span> Galactic Defender</button>
             </nav>
 
             <div class="header-actions">
@@ -84,7 +84,7 @@
             <button class="mobile-item" data-page="cell">🔬 Cytology & Neuron Lab</button>
 
             <button class="mobile-item" data-page="robot">🤖 Robotics & Kinematics</button>
-            <button class="mobile-item" data-page="games">🎮 3D Science Arcade (4 Games)</button>
+            <button class="mobile-item" data-page="games">🚀 3D Galactic Defender (Combat)</button>
         </div>
     </div>
     <div class="overlay" id="overlay"></div>
@@ -109,7 +109,7 @@
                 <div class="hero-btns">
                     <button class="btn btn-primary glow-btn" onclick="showPage('solar')">🪐 Launch Astrophysics Lab</button>
                     <button class="btn btn-cyan" onclick="showPage('elements')">⚛️ 3D Periodic & Molecule Forge</button>
-                    <button class="btn btn-secondary" onclick="showPage('games')">🎮 3D Science Arcade Games</button>
+                    <button class="btn btn-secondary" onclick="showPage('games')">🚀 3D Galactic Defender</button>
                 </div>
             </div>
 
@@ -136,9 +136,9 @@
                     <span class="stat-label">Genetics & Viral Architectures</span>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">🎮</div>
-                    <span class="stat-num">4</span>
-                    <span class="stat-label">Interactive 3D Science Games</span>
+                    <div class="stat-icon">🚀</div>
+                    <span class="stat-num">3D</span>
+                    <span class="stat-label">Galactic Combat Simulator</span>
                 </div>
             </div>
 
@@ -190,11 +190,11 @@
                 </div>
 
                 <div class="feature-card special-card" onclick="showPage('games')">
-                    <div class="feat-badge game">ARCADE</div>
-                    <div class="feat-icon">🎮</div>
-                    <h3>3D Science Arcade (4 Games)</h3>
-                    <p>Play Orbital Asteroid Deflector, Quantum Tunneling Wave Sorter, Chemical Alchemy Compound Crafter, and Gravitational Slingshot!</p>
-                    <span class="feat-link">Play Games Now →</span>
+                    <div class="feat-badge game">COMBAT ARCADE</div>
+                    <div class="feat-icon">🚀</div>
+                    <h3>3D Galactic Defender</h3>
+                    <p>High-octane 3D space shooter! Defend Earth from kinetic asteroid swarms, alien hunter drones, and mothership bosses with smart EMPs and plasma cannons.</p>
+                    <span class="feat-link">Play Battle Now →</span>
                 </div>
             </div>
 
@@ -687,80 +687,97 @@
             <button class="back-btn" onclick="goHome()">← Command Hub</button>
         </section>
 
-        <!-- ======================= 8. 3D SCIENCE ARCADE (4 GAMES) ======================= -->
+        <!-- ======================= 8. 3D GALACTIC DEFENDER (SPACE COMBAT) ======================= -->
         <section class="page" id="games">
             <div class="scene-wrap">
                 <div class="scene" id="gameScene"></div>
             </div>
 
-            <!-- Arcade HUD Overlay -->
+            <!-- Combat HUD Overlay -->
             <div class="game-hud" id="gameHud">
                 <div class="hud-box"><span class="hud-title">SCORE</span><span id="score" class="hud-num">0</span></div>
-                <div class="hud-box"><span class="hud-title">SHIELD / LIVES</span><span id="lives" class="hud-num">❤️❤️❤️</span></div>
-                <div class="hud-box"><span class="hud-title">WAVE / LEVEL</span><span id="wave" class="hud-num">1</span></div>
+                <div class="hud-box"><span class="hud-title">SHIELD</span><span id="shieldText" class="hud-num" style="color:#00f0ff;">100%</span></div>
+                <div class="hud-box"><span class="hud-title">LIVES</span><span id="lives" class="hud-num">❤️❤️❤️</span></div>
+                <div class="hud-box"><span class="hud-title">WAVE</span><span id="wave" class="hud-num">1</span></div>
+                <div class="hud-box"><span class="hud-title">COMBO</span><span id="combo" class="hud-num" style="color:#facc15;">1x</span></div>
                 <div class="hud-box"><span class="hud-title">HIGH SCORE</span><span id="highScore" class="hud-num">0</span></div>
             </div>
 
             <div class="panel panel-left">
                 <div class="panel-header">
-                    <h3>🎮 3D Science Arcade</h3>
-                    <span class="panel-tag">4 GAMES</span>
-                </div>
-
-                <div class="panel-section">
-                    <h4>🕹️ Select Game</h4>
-                    <select id="gameSelect" class="panel-select" onchange="switchGame(this.value)">
-                        <option value="space">1. 🚀 Asteroid Kinetic Deflector (Space Combat)</option>
-                        <option value="quantum">2. ⚛️ Quantum Tunneling Barrier Sorter</option>
-                        <option value="alchemy">3. 🧪 Chemical Alchemy Molecule Crafter</option>
-                        <option value="slingshot">4. 🪐 Gravitational Slingshot Orbital Insertion</option>
-                    </select>
-                </div>
-
-                <div class="panel-section" id="gameInstructions">
-                    <h4>📖 Game Controls</h4>
-                    <p id="gameHelpText" class="panel-note">WASD / Arrow Keys to move starfighter.<br>SPACEBAR to fire plasma laser cannons.<br>Destroy incoming kinetic asteroids before they impact Earth!</p>
-                </div>
-
-                <!-- Dynamic Game Telemetry & Specific Gauges -->
-                <div class="panel-section" id="gameSubHudSection">
-                    <h4>📊 Mission Telemetry</h4>
-                    <div class="game-sub-hud" id="gameSubHud">
-                        <!-- Dynamically Injected per Game -->
-                    </div>
+                    <h3>🚀 3D Galactic Defender</h3>
+                    <span class="panel-tag">COMBAT ARCADE</span>
                 </div>
 
                 <div class="panel-section">
                     <h4>⚙️ Difficulty</h4>
-                    <select id="difficulty" class="panel-select">
+                    <select id="difficulty" class="panel-select" onchange="sound.playClick()">
                         <option value="easy">Cadet (Easy)</option>
-                        <option value="medium" selected>Scientist (Medium)</option>
-                        <option value="hard">Quantum Master (Hard)</option>
+                        <option value="medium" selected>Veteran (Challenging)</option>
+                        <option value="hard">Ace Pilot (Bullet Hell)</option>
                     </select>
+                </div>
+
+                <!-- Starfighter Live Telemetry -->
+                <div class="panel-section">
+                    <h4>📊 Starfighter Telemetry</h4>
+                    <div class="game-sub-hud">
+                        <div class="game-sub-item">
+                            <span class="game-sub-label">Shield Generator</span>
+                            <span class="game-sub-val" id="hudShieldVal">100%</span>
+                            <div class="game-progress-bar"><div class="game-progress-fill" id="hudShieldBar" style="width:100%;"></div></div>
+                        </div>
+                        <div class="game-sub-item">
+                            <span class="game-sub-label">Smart EMP Nova</span>
+                            <span class="game-sub-val" id="hudEmpVal" style="color:#a855f7;">100% (READY)</span>
+                            <div class="game-progress-bar"><div class="game-progress-fill" id="hudEmpBar" style="width:100%;background:#a855f7;"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h4>📖 Combat Flight Manual</h4>
+                    <p class="panel-note">
+                        <strong>Desktop Controls:</strong><br>
+                        • <code>A / D</code> or <code>← / →</code>: Strafe Left / Right<br>
+                        • <code>SPACEBAR</code> (Hold): Rapid-Fire Plasma Lasers<br>
+                        • <code>E</code> or <code>Shift</code>: Smart EMP Nova Bomb<br><br>
+                        <strong>Android / Touch Controls:</strong><br>
+                        • Hold ◀ / ▶ buttons to strafe smoothly<br>
+                        • Hold ⚡ to fire continuous laser barrage<br>
+                        • Tap 💣 for instant EMP Nova clear!
+                    </p>
                 </div>
 
                 <div class="panel-section">
                     <div class="btn-group-grid">
-                        <button class="btn btn-primary" id="startGame" onclick="startActiveGame()">▶ Start Game</button>
+                        <button class="btn btn-primary glow-btn" id="startGame" onclick="startActiveGame()">▶ Engage Battle</button>
                         <button class="ctrl-btn" id="restartGame" onclick="restartActiveGame()">🔄 Restart</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Virtual Arcade Touch Controls -->
-            <div class="arcade-touch-pad" id="arcadeTouchPad">
-                <button class="arcade-btn" id="btnLeft" onpointerdown="triggerGameKey('KeyA', true)" onpointerup="triggerGameKey('KeyA', false)">◀</button>
-                <button class="arcade-btn" id="btnUp" onpointerdown="triggerGameKey('KeyW', true)" onpointerup="triggerGameKey('KeyW', false)">▲</button>
-                <button class="arcade-btn" id="btnDown" onpointerdown="triggerGameKey('KeyS', true)" onpointerup="triggerGameKey('KeyS', false)">▼</button>
-                <button class="arcade-btn" id="btnRight" onpointerdown="triggerGameKey('KeyD', true)" onpointerup="triggerGameKey('KeyD', false)">▶</button>
-                <button class="arcade-btn action-btn-fire" id="btnAction" onclick="handleGameAction()">⚡</button>
+            <!-- Dedicated Mobile / Android Touch Controller Overlay -->
+            <div class="mobile-arcade-controls" id="mobileArcadeControls">
+                <div class="mobile-stick-cluster">
+                    <button class="mobile-ctrl-btn" id="mBtnLeft">◀</button>
+                    <button class="mobile-ctrl-btn" id="mBtnRight">▶</button>
+                </div>
+                <div class="mobile-action-cluster">
+                    <button class="mobile-ctrl-btn action-emp" id="mBtnEmp">💣 EMP</button>
+                    <button class="mobile-ctrl-btn action-fire" id="mBtnFire">⚡ FIRE</button>
+                </div>
             </div>
 
             <!-- Game Over / Victory Modal -->
             <div class="game-over glass-card" id="gameOver" style="display:none">
                 <h2 id="gameOverTitle">MISSION TERMINATED</h2>
                 <p id="gameOverMsg">Final Score: <span id="finalScore" class="text-cyan">0</span></p>
-                <button class="btn btn-primary glow-btn" onclick="restartActiveGame()">Play Again</button>
+                <div style="display:flex;justify-content:center;gap:24px;margin-bottom:20px;font-size:14px;color:#94a3b8;">
+                    <div>Wave: <span id="finalWave" class="text-cyan font-mono" style="font-weight:700;">1</span></div>
+                    <div>Max Combo: <span id="finalCombo" class="text-gold font-mono" style="font-weight:700;color:#facc15;">1x</span></div>
+                </div>
+                <button class="btn btn-primary glow-btn" onclick="restartActiveGame()">Deploy Again</button>
             </div>
 
             <button class="back-btn" onclick="goHome()">← Command Hub</button>
@@ -771,7 +788,7 @@
     <div class="toast" id="toast"></div>
 
     <!-- Application Script -->
-    <script src="script.js?v=5"></script>
+    <script src="script.js?v=6"></script>
 </body>
 
 </html>
