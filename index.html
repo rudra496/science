@@ -559,39 +559,18 @@
 
             <div class="panel panel-left wide-panel">
                 <div class="panel-header">
-                    <h3>💡 Advanced Physics Laboratory</h3>
-                    <span class="panel-tag">16+ SIMULATIONS</span>
+                    <h3>🔬 Physics Simulation Lab</h3>
+                    <span class="panel-tag">5 EXPERIMENTS</span>
                 </div>
 
                 <div class="panel-section">
                     <h4>⚗️ Select Experiment</h4>
                     <select id="physicsExpSelect" class="panel-select-lg" onchange="loadPhysicsExp(this.value)">
-                        <optgroup label="── 1. Quantum & Particle Physics ──">
-                            <option value="slit">1. Double Slit & Quantum Eraser (Wave-Particle Duality)</option>
-                            <option value="photoelectric">2. Photoelectric Effect & Work Function (Planck E=hν)</option>
-                            <option value="rutherford">3. Rutherford Alpha Scattering (Atomic Nucleus)</option>
-                            <option value="fission">4. Nuclear Fission Chain Reaction (U-235 Control Rods)</option>
-                            <option value="superconduct">5. Superconductivity & Meissner Effect (Quantum Levitation)</option>
-                            <option value="millikan">6. Millikan Oil Drop Experiment (Quantized Charge e)</option>
-                        </optgroup>
-                        <optgroup label="── 2. Relativity & Astrophysics ──">
-                            <option value="blackhole">7. Black Hole Gravitational Lensing & Accretion Disk (GR)</option>
-                            <option value="relativity">8. Special Relativity Time Dilation & Lorentz Contraction</option>
-                            <option value="gravity">9. Orbital Gravity & N-Body Satellite Insertion</option>
-                        </optgroup>
-                        <optgroup label="── 3. Electromagnetism & Optics ──">
-                            <option value="lorentz">10. Lorentz Force Magnetic Bottle & Cyclotron Helix</option>
-                            <option value="interferometer">11. Michelson-Morley Laser Interferometer (Fringes)</option>
-                            <option value="optics">12. Prism Chromatic Dispersion & Snell's Law</option>
-                            <option value="doppler">13. Doppler Effect & Supersonic Mach Shockwave Cone</option>
-                        </optgroup>
-                        <optgroup label="── 4. Classical Mechanics, Chaos & Fluids ──">
-                            <option value="double_pendulum">14. Chaotic Double Pendulum (Non-Linear Hamiltonian)</option>
-                            <option value="lorenz">15. Lorenz Strange Attractor (Butterfly Chaos Theory)</option>
-                            <option value="fluid">16. Fluid Dynamics & Kármán Vortex Shedding</option>
-                            <option value="thermo">17. Thermodynamics & Maxwell-Boltzmann Distribution</option>
-                            <option value="wave">18. Wave Motion, Standing Waves & Harmonics</option>
-                        </optgroup>
+                        <option value="pendulum">1. 🎢 Double Pendulum — Chaos & Energy</option>
+                        <option value="wave2d">2. 🌊 2D Wave Interference — Two Point Sources</option>
+                        <option value="projectile">3. 🔫 Projectile Motion — Cannon & Trajectory</option>
+                        <option value="magfield">4. 🧲 Bar Magnet — 3D Field Lines</option>
+                        <option value="springs">5. 📏 Spring & SHM — Mass on Spring</option>
                     </select>
                 </div>
 
@@ -829,5 +808,8 @@
 
     <!-- Application Script -->
     <script src="script.js"></script>
+    <!-- Accurate Physics Experiment Overrides (loads after script.js) -->
+    <script src="physics_experiments.js"></script>
 </body>
+
 </html>
