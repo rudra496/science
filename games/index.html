@@ -46,11 +46,9 @@
   }
   .card:hover { transform: translateY(-4px); border-color: var(--glow); box-shadow: 0 12px 40px -12px var(--glow); }
   .art {
-    height: 132px; display: flex; align-items: center; justify-content: center;
-    font-size: 54px; background:
-      linear-gradient(135deg, color-mix(in srgb, var(--glow) 26%, transparent), transparent 70%),
-      radial-gradient(circle at 70% 20%, color-mix(in srgb, var(--glow) 30%, transparent), transparent 60%);
-    border-bottom: 1px solid rgba(148,163,184,.12);
+    height: 180px; position: relative; overflow: hidden;
+    background: #020308;
+    border-bottom: 1px solid rgba(148,163,184,.15);
   }
   .badge {
     position: absolute; top: 10px; left: 10px; font-size: 9px; font-weight: 800;
@@ -85,10 +83,15 @@
     <div class="grid">
       <a class="card" style="--glow:#f472b6" href="./vice-city/index.html">
         <span class="badge">3D OPEN WORLD</span>
-        <div class="art">🌆🚗</div>
+        <div class="art">
+          <picture>
+            <source srcset="assets/vice-city-cover.webp" type="image/webp">
+            <img src="assets/vice-city-cover.jpg" alt="Vice City '86" style="width:100%;height:100%;object-fit:cover;display:block;">
+          </picture>
+        </div>
         <div class="pad">
           <h2>Vice City '86</h2>
-          <div class="tag">Drive · Fly · Explore</div>
+          <div class="tag">Drive · Fly · Explore · 16 Cheats</div>
           <p>Drive a neon 3D city, steal a tank, fly a helicopter or seaplane, shop for guns, switch the weather and type 16 secret cheat codes.</p>
           <span class="play">▶ Play now</span>
         </div>
@@ -96,10 +99,15 @@
 
       <a class="card" style="--glow:#22d3ee" href="./neon-strike/index.html">
         <span class="badge">SPACE SHOOTER</span>
-        <div class="art">🚀👾</div>
+        <div class="art">
+          <picture>
+            <source srcset="assets/neon-strike-cover.webp" type="image/webp">
+            <img src="assets/neon-strike-cover.jpg" alt="Neon Strike" style="width:100%;height:100%;object-fit:cover;display:block;">
+          </picture>
+        </div>
         <div class="pad">
           <h2>Neon Strike</h2>
-          <div class="tag">Blast · Survive · Score</div>
+          <div class="tag">Blast · Survive · Combos · High Score</div>
           <p>Retro arcade space combat with waves of enemies, combos, power-ups and a high-score board that saves right in your browser.</p>
           <span class="play">▶ Play now</span>
         </div>
@@ -107,10 +115,15 @@
 
       <a class="card" style="--glow:#a855f7" href="./turbo-run/index.html">
         <span class="badge">ENDLESS RUNNER</span>
-        <div class="art">🏃💨</div>
+        <div class="art">
+          <picture>
+            <source srcset="assets/turbo-run-cover.webp" type="image/webp">
+            <img src="assets/turbo-run-cover.jpg" alt="Turbo Run" style="width:100%;height:100%;object-fit:cover;display:block;">
+          </picture>
+        </div>
         <div class="pad">
           <h2>Turbo Run</h2>
-          <div class="tag">Dodge · Jump · Slide</div>
+          <div class="tag">Dodge · Jump · Slide · Hoverboard</div>
           <p>Subway-style endless runner in bright daylight. Collect coins, unlock a skateboard, level up and beat your best distance.</p>
           <span class="play">▶ Play now</span>
         </div>
