@@ -491,6 +491,10 @@ function initGlobalSearch() {
 }
 
 function showPage(page) {
+    if (page === 'games') {
+        window.location.href = 'games/';
+        return;
+    }
     if (animationId) {
         cancelAnimationFrame(animationId);
         animationId = null;
@@ -3973,40 +3977,9 @@ let gameState = {
 };
 
 function initGames() {
-    const setup = createScene('gameScene');
-    if (!setup) return;
-
-    camera.position.set(0, 15, 21);
-    camera.lookAt(0, 0, -4);
-    if (controls) {
-        controls.enableRotate = false;
-        controls.enablePan = false;
-        controls.enableZoom = false;
-    }
-
-    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-    const dLight = new THREE.DirectionalLight(0xffffff, 1.5);
-    dLight.position.set(10, 30, 20);
-    scene.add(dLight);
-
-    initGameInputHandlers();
-    buildGalacticCombatWorld();
-
-    gameState.highScore = parseInt(localStorage.getItem('sciLab_space_highScore') || '0');
-    const hsEl = document.getElementById('highScore');
-    if (hsEl) hsEl.textContent = gameState.highScore;
-
-    function animate() {
-        animationId = requestAnimationFrame(animate);
-        if (gameState.running && !isPaused) {
-            updateActiveGamePhysics();
-        }
-        updateWarpStarfield();
-        renderer.render(scene, camera);
-        updateTelemetry(gameState.enemies.length + gameState.lasers.length + gameState.particles.length);
-    }
-    animate();
+    window.location.href = 'games/';
 }
+
 
 function buildGalacticCombatWorld() {
     disposeHierarchy(scene.getObjectByName('gameWorldGroup'));
