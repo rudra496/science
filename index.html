@@ -60,7 +60,6 @@
                 <button class="nav-item" data-page="cell"><span class="icon">🔬</span> Cytology & Neuro</button>
 
                 <button class="nav-item" data-page="robot"><span class="icon">🤖</span> Robotics</button>
-                <button class="nav-item" data-page="games"><span class="icon">🚀</span> Galactic Defender</button>
                 <a href="games/" class="nav-item" style="text-decoration:none;color:#00f0ff;display:inline-flex;align-items:center;gap:6px;"><span class="icon">🕹️</span> Neon Arcade</a>
             </nav>
 
@@ -88,8 +87,7 @@
             <button class="mobile-item" data-page="cell">🔬 Cytology & Neuron Lab</button>
 
             <button class="mobile-item" data-page="robot">🤖 Robotics & Kinematics</button>
-            <button class="mobile-item" data-page="games">🚀 3D Galactic Defender (Combat)</button>
-        </div>
+            </div>
     </div>
     <div class="overlay" id="overlay"></div>
 
@@ -113,8 +111,8 @@
                 <div class="hero-btns">
                     <button class="btn btn-primary glow-btn" onclick="showPage('solar')">🪐 Launch Astrophysics Lab</button>
                     <button class="btn btn-cyan" onclick="showPage('elements')">⚛️ 3D Periodic & Molecule Forge</button>
-                    <button class="btn btn-secondary" onclick="showPage('games')">🚀 3D Galactic Defender</button>
-                    <a href="#arcade-arena" class="btn btn-secondary" style="border-color:rgba(247,37,133,0.5);color:#f472b6;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">🕹️ 3D Arcade Arena</a>
+                    <a href="games/" class="btn btn-primary glow-btn" style="background:linear-gradient(135deg,#f72585,#7209b7);border:1px solid #f72585;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">🕹️ Launch 3D Arcade (3 Games)</a>
+                    <a href="#arcade-arena" class="btn btn-secondary" style="border-color:#00f0ff;color:#00f0ff;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">🎮 View Game Cards</a>
                 </div>
             </div>
 
@@ -133,7 +131,7 @@
                         <p class="arcade-subtitle">Experience high-fidelity 3D open-world city driving, frantic bullet-hell arcade space combat, and high-speed rail running. High scores and game progress save automatically in your browser.</p>
                         <div class="arcade-hub-actions">
                             <a href="games/" class="arcade-hub-btn primary">🎮 Open Full Arcade Portal (3 Games Hub) →</a>
-                            <button class="arcade-hub-btn secondary" onclick="showPage('games')">🚀 Play 3D Galactic Defender</button>
+                            <a href="games/" class="arcade-hub-btn secondary">🕹️ Open Arcade Hub</a>
                         </div>
                     </div>
 
@@ -250,20 +248,6 @@
                             </div>
                         </a>
                     </div>
-
-                    <!-- 4TH INTEGRATED FEATURE: GALACTIC DEFENDER BANNER -->
-                    <div class="arcade-defense-banner">
-                        <div class="arcade-defense-info">
-                            <div class="arcade-defense-icon">🚀</div>
-                            <div class="arcade-defense-text">
-                                <h4>3D Galactic Defender (Built-in WebGL Flight Simulator)</h4>
-                                <p>Defend orbital research stations from kinetic asteroid swarms with reactive laser cannons and tactical EMP bombs.</p>
-                            </div>
-                        </div>
-                        <button class="arcade-defense-btn" onclick="showPage('games')">
-                            ▶ Play Flight Simulator →
-                        </button>
-                    </div>
                 </div>
             </section>
             <!-- ===== /MASSIVE FEATURED 3D ARCADE & RETRO GAMING ARENA ===== -->
@@ -285,10 +269,10 @@
                     <span class="stat-num">6</span>
                     <span class="stat-label">Genetics & Viral Architectures</span>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon">🚀</div>
-                    <span class="stat-num">3D</span>
-                    <span class="stat-label">Galactic Combat Simulator</span>
+                <div class="stat-card" style="border-color:rgba(0,240,255,0.4);background:rgba(0,240,255,0.08);">
+                    <div class="stat-icon">🕹️</div>
+                    <span class="stat-num" style="color:#00f0ff;">3</span>
+                    <span class="stat-label">3D &amp; Retro Arcade Games</span>
                 </div>
             </div>
 
@@ -339,12 +323,31 @@
                     <span class="feat-link">Operate Robotics →</span>
                 </div>
 
-                <div class="feature-card special-card" onclick="showPage('games')">
-                    <div class="feat-badge game">COMBAT ARCADE</div>
+                                <!-- GAME CARD 1: VICE CITY '86 -->
+                <div class="feature-card special-card" onclick="window.location.href='games/vice-city/'" style="border-color:rgba(244,114,182,0.45);background:linear-gradient(180deg,rgba(244,114,182,0.08),rgba(18,24,56,0.85));">
+                    <div class="feat-badge" style="background:rgba(244,114,182,0.2);border-color:rgba(244,114,182,0.5);color:#f472b6;">3D OPEN WORLD</div>
+                    <div class="feat-icon">🌆</div>
+                    <h3>Vice City '86 (3D)</h3>
+                    <p>Drive exotic supercars, fly police helicopters, commandeer heavy tanks, and roam a 1980s neon synthwave metropolis in WebGL 3D.</p>
+                    <span class="feat-link" style="color:#f472b6;">▶ Play 3D Vice City →</span>
+                </div>
+
+                <!-- GAME CARD 2: NEON STRIKE -->
+                <div class="feature-card special-card" onclick="window.location.href='games/neon-strike/'" style="border-color:rgba(0,240,255,0.45);background:linear-gradient(180deg,rgba(0,240,255,0.08),rgba(18,24,56,0.85));">
+                    <div class="feat-badge" style="background:rgba(0,240,255,0.2);border-color:rgba(0,240,255,0.5);color:#00f0ff;">SPACE SHOOTER</div>
                     <div class="feat-icon">🚀</div>
-                    <h3>3D Galactic Defender</h3>
-                    <p>High-octane 3D space shooter! Defend Earth from kinetic asteroid swarms, alien hunter drones, and mothership bosses with smart EMPs and plasma cannons.</p>
-                    <span class="feat-link">Play Battle Now →</span>
+                    <h3>Neon Strike (Arcade)</h3>
+                    <p>Retro arcade dogfighting with rechargeable shields, smart bombs, continuing credit system, alien swarms, and combos.</p>
+                    <span class="feat-link" style="color:#00f0ff;">▶ Launch Neon Strike →</span>
+                </div>
+
+                <!-- GAME CARD 3: TURBO RUN -->
+                <div class="feature-card special-card" onclick="window.location.href='games/turbo-run/'" style="border-color:rgba(168,85,247,0.45);background:linear-gradient(180deg,rgba(168,85,247,0.08),rgba(18,24,56,0.85));">
+                    <div class="feat-badge" style="background:rgba(168,85,247,0.2);border-color:rgba(168,85,247,0.5);color:#a855f7;">ENDLESS RUNNER</div>
+                    <div class="feat-icon">🏃</div>
+                    <h3>Turbo Run (3D)</h3>
+                    <p>High-octane 3D subway parkour runner! Dodge oncoming express trains, leap barriers, magnetize coins, and unlock hoverboards.</p>
+                    <span class="feat-link" style="color:#a855f7;">▶ Sprint Turbo Run →</span>
                 </div>
             </div>
 
