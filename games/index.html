@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#04040d">
+<title>NEON ARCADE — 3 Free Games</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: #04040d;
+    color: #e2e8f0;
+    background-image:
+      radial-gradient(ellipse 60% 40% at 20% 0%, rgba(168,85,247,.16), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 10%, rgba(34,211,238,.14), transparent),
+      radial-gradient(ellipse 80% 60% at 50% 110%, rgba(236,72,153,.10), transparent);
+    display: flex; flex-direction: column;
+    min-height: 100vh;
+  }
+  .wrap { width: 100%; max-width: 960px; margin: 0 auto; padding: 24px 16px 40px; flex: 1; }
+  header { text-align: center; padding: 18px 0 6px; }
+  .kicker {
+    display: inline-block; font-size: 10px; letter-spacing: .35em; color: #22d3ee;
+    border: 1px solid rgba(34,211,238,.35); border-radius: 999px; padding: 6px 14px;
+    text-transform: uppercase; margin-bottom: 14px; background: rgba(34,211,238,.06);
+  }
+  h1 {
+    font-size: clamp(26px, 6vw, 44px); line-height: 1.05; font-weight: 900;
+    letter-spacing: .04em;
+    background: linear-gradient(90deg, #22d3ee, #a855f7 55%, #ec4899);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-transform: uppercase;
+  }
+  .sub { color: #94a3b8; font-size: 13px; margin-top: 10px; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 18px; margin-top: 28px; }
+  @media (min-width: 720px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+  .card {
+    position: relative; display: block; text-decoration: none; color: inherit;
+    border: 1px solid rgba(148,163,184,.16); border-radius: 18px; overflow: hidden;
+    background: linear-gradient(180deg, rgba(15,23,42,.72), rgba(2,6,23,.9));
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+  .card:hover { transform: translateY(-4px); border-color: var(--glow); box-shadow: 0 12px 40px -12px var(--glow); }
+  .art {
+    height: 132px; display: flex; align-items: center; justify-content: center;
+    font-size: 54px; background:
+      linear-gradient(135deg, color-mix(in srgb, var(--glow) 26%, transparent), transparent 70%),
+      radial-gradient(circle at 70% 20%, color-mix(in srgb, var(--glow) 30%, transparent), transparent 60%);
+    border-bottom: 1px solid rgba(148,163,184,.12);
+  }
+  .badge {
+    position: absolute; top: 10px; left: 10px; font-size: 9px; font-weight: 800;
+    letter-spacing: .22em; padding: 4px 9px; border-radius: 999px;
+    background: var(--glow); color: #04040d;
+  }
+  .pad { padding: 16px; }
+  .card h2 { font-size: 17px; letter-spacing: .08em; text-transform: uppercase; color: #f1f5f9; }
+  .tag { font-size: 10px; letter-spacing: .25em; color: var(--glow); margin-top: 3px; text-transform: uppercase; }
+  .card p { font-size: 12.5px; color: #94a3b8; line-height: 1.55; margin-top: 10px; }
+  .play {
+    margin-top: 14px; display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase;
+    color: #04040d; background: var(--glow); padding: 10px 16px; border-radius: 10px;
+  }
+  .note {
+    margin-top: 26px; text-align: center; font-size: 11.5px; color: #64748b; line-height: 1.7;
+    border: 1px dashed rgba(148,163,184,.25); border-radius: 14px; padding: 14px 16px;
+  }
+  footer { text-align: center; padding: 18px 0 26px; font-size: 10px; letter-spacing: .3em; color: #475569; text-transform: uppercase; }
+  footer a { color: #22d3ee; text-decoration: none; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="kicker">Free · Works offline · Saves scores in your browser</span>
+      <h1>Neon Arcade</h1>
+      <p class="sub">Three complete games — pick one and press play.</p>
+    </header>
+
+    <div class="grid">
+      <a class="card" style="--glow:#f472b6" href="./vice-city/index.html">
+        <span class="badge">3D OPEN WORLD</span>
+        <div class="art">🌆🚗</div>
+        <div class="pad">
+          <h2>Vice City '86</h2>
+          <div class="tag">Drive · Fly · Explore</div>
+          <p>Drive a neon 3D city, steal a tank, fly a helicopter or seaplane, shop for guns, switch the weather and type 16 secret cheat codes.</p>
+          <span class="play">▶ Play now</span>
+        </div>
+      </a>
+
+      <a class="card" style="--glow:#22d3ee" href="./neon-strike/index.html">
+        <span class="badge">SPACE SHOOTER</span>
+        <div class="art">🚀👾</div>
+        <div class="pad">
+          <h2>Neon Strike</h2>
+          <div class="tag">Blast · Survive · Score</div>
+          <p>Retro arcade space combat with waves of enemies, combos, power-ups and a high-score board that saves right in your browser.</p>
+          <span class="play">▶ Play now</span>
+        </div>
+      </a>
+
+      <a class="card" style="--glow:#a855f7" href="./turbo-run/index.html">
+        <span class="badge">ENDLESS RUNNER</span>
+        <div class="art">🏃💨</div>
+        <div class="pad">
+          <h2>Turbo Run</h2>
+          <div class="tag">Dodge · Jump · Slide</div>
+          <p>Subway-style endless runner in bright daylight. Collect coins, unlock a skateboard, level up and beat your best distance.</p>
+          <span class="play">▶ Play now</span>
+        </div>
+      </a>
+    </div>
+
+    <div class="note">
+      💡 Tip: scores are saved locally on this device (no account needed).<br>
+      Works on phone and desktop · Add it to your home screen for full-screen play.
+    </div>
+  </div>
+  <footer><a href="../">← Back to Science Lab 3D</a></footer>
+</body>
+</html>
