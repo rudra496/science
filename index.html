@@ -61,6 +61,7 @@
 
                 <button class="nav-item" data-page="robot"><span class="icon">🤖</span> Robotics</button>
                 <button class="nav-item" data-page="games"><span class="icon">🚀</span> Galactic Defender</button>
+                <a href="games/" class="nav-item" style="text-decoration:none;color:#00f0ff;display:inline-flex;align-items:center;gap:6px;"><span class="icon">🕹️</span> Neon Arcade</a>
             </nav>
 
             <div class="header-actions">
@@ -113,6 +114,7 @@
                     <button class="btn btn-primary glow-btn" onclick="showPage('solar')">🪐 Launch Astrophysics Lab</button>
                     <button class="btn btn-cyan" onclick="showPage('elements')">⚛️ 3D Periodic & Molecule Forge</button>
                     <button class="btn btn-secondary" onclick="showPage('games')">🚀 3D Galactic Defender</button>
+                    <a href="#arcade-arena" class="btn btn-secondary" style="border-color:rgba(247,37,133,0.5);color:#f472b6;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">🕹️ 3D Arcade Arena</a>
                 </div>
             </div>
 
@@ -202,41 +204,119 @@
             </div>
 
             
-            <!-- ===== NEON ARCADE SHOWCASE SECTION ===== -->
-            <div id="neon-arcade" style="max-width:1100px;margin:40px auto;padding:28px 24px;border-radius:18px;border:1px solid rgba(148,163,184,.25);background:linear-gradient(180deg,rgba(15,23,42,0.9),rgba(2,6,23,0.95));box-shadow:0 10px 30px rgba(0,0,0,0.5);font-family:system-ui,-apple-system,sans-serif;color:#e2e8f0;">
-              <div style="text-align:center;">
-                <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:.3em;color:#22d3ee;border:1px solid rgba(34,211,238,.4);background:rgba(34,211,238,.1);border-radius:999px;padding:6px 14px;">FREE RETRO &amp; 3D ARCADE</span>
-                <h2 style="margin:14px 0 8px;font-size:32px;font-weight:900;letter-spacing:.04em;background:linear-gradient(90deg,#22d3ee,#a855f7,#ec4899);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;">🕹️ NEON ARCADE HUB</h2>
-                <p style="color:#94a3b8;font-size:14px;max-width:620px;margin:0 auto;">Three complete standalone games — play on desktop &amp; mobile, scores automatically save in your browser.</p>
-                <div style="margin-top:14px;">
-                  <a href="games/" style="display:inline-block;padding:10px 22px;border-radius:10px;background:rgba(168,85,247,0.2);border:1px solid rgba(168,85,247,0.5);color:#c084fc;font-weight:700;font-size:13px;text-decoration:none;">🎮 Launch Arcade Portal →</a>
+            <!-- ===== 🎮 EXPANDED ARCADE & RETRO 3D GAMING ARENA ===== -->
+            <section class="arcade-showcase-section" id="arcade-arena">
+                <div class="arcade-hero-banner">
+                    <div class="arcade-header-content">
+                        <div class="arcade-badge-tag">⚡ BROWSER GAMING ARENA • 100% FREE • ZERO INSTALL</div>
+                        <h2 class="arcade-main-title">3D &amp; Retro Arcade Gaming Zone</h2>
+                        <p class="arcade-subtitle">Immerse yourself in rich WebGL 3D open worlds, fast-paced arcade space shooters, and high-speed rail runners. High scores and progress save instantly in your browser.</p>
+                        <div class="arcade-hub-actions">
+                            <a href="games/" class="arcade-hub-btn primary">🎮 Launch Full Arcade Portal →</a>
+                            <button class="arcade-hub-btn secondary" onclick="showPage('games')">🚀 Play Galactic Defender</button>
+                        </div>
+                    </div>
+
+                    <!-- 3 BIG EXPANDED GAME CARDS -->
+                    <div class="arcade-cards-grid">
+                        <!-- CARD 1: VICE CITY '86 -->
+                        <a href="games/vice-city/" class="arcade-game-card" style="--theme-color:#f472b6; --theme-glow:rgba(244,114,182,0.45); --theme-soft:rgba(244,114,182,0.22);">
+                            <div class="arcade-card-visual">
+                                <span class="arcade-visual-badge">3D OPEN WORLD</span>
+                                <span class="arcade-visual-status">⚡ THREE.JS 3D</span>
+                                <div class="arcade-card-icon">🌆🚗</div>
+                            </div>
+                            <div class="arcade-card-content">
+                                <div class="arcade-game-title">
+                                    <span>VICE CITY '86</span>
+                                    <span style="font-size:18px;">🌴</span>
+                                </div>
+                                <div class="arcade-game-tagline">Drive, Fly, Steal &amp; Dominate Neon Streets</div>
+                                <p class="arcade-game-desc">Cruise through a vibrant 1980s neon synthwave metropolis in 3D. Hijack exotic supercars, pilot police helicopters, command armored tanks, and trigger 16 classic cheat codes.</p>
+                                <div class="arcade-pills-list">
+                                    <span class="arcade-pill">🏎️ Exotic Supercars</span>
+                                    <span class="arcade-pill">🚁 Attack Helicopters</span>
+                                    <span class="arcade-pill">💥 Tank Cannon</span>
+                                    <span class="arcade-pill">📻 16 Cheats</span>
+                                    <span class="arcade-pill">⛅ Live Weather</span>
+                                </div>
+                                <div class="arcade-play-btn">
+                                    ▶ PLAY VICE CITY '86 (3D)
+                                </div>
+                            </div>
+                        </a>
+
+                        <!-- CARD 2: NEON STRIKE -->
+                        <a href="games/neon-strike/" class="arcade-game-card" style="--theme-color:#00f0ff; --theme-glow:rgba(0,240,255,0.45); --theme-soft:rgba(0,240,255,0.22);">
+                            <div class="arcade-card-visual">
+                                <span class="arcade-visual-badge">SPACE SHOOTER</span>
+                                <span class="arcade-visual-status">⚡ RETRO BULLET HELL</span>
+                                <div class="arcade-card-icon">🚀👾</div>
+                            </div>
+                            <div class="arcade-card-content">
+                                <div class="arcade-game-title">
+                                    <span>NEON STRIKE</span>
+                                    <span style="font-size:18px;">🌌</span>
+                                </div>
+                                <div class="arcade-game-tagline">Relentless Arcade Space Combat</div>
+                                <p class="arcade-game-desc">Classic arcade dogfighting rebuilt with neon particle explosions! Battle through escalating enemy waves, unleash plasma spread-cannons, build 10x combo streaks, and break high scores.</p>
+                                <div class="arcade-pills-list">
+                                    <span class="arcade-pill">👾 Alien Swarms</span>
+                                    <span class="arcade-pill">⚡ Plasma Blasters</span>
+                                    <span class="arcade-pill">🛡️ EMP Shields</span>
+                                    <span class="arcade-pill">🔥 Combo Overdrive</span>
+                                    <span class="arcade-pill">🏆 Local Leaderboard</span>
+                                </div>
+                                <div class="arcade-play-btn">
+                                    ▶ LAUNCH NEON STRIKE
+                                </div>
+                            </div>
+                        </a>
+
+                        <!-- CARD 3: TURBO RUN -->
+                        <a href="games/turbo-run/" class="arcade-game-card" style="--theme-color:#a855f7; --theme-glow:rgba(168,85,247,0.45); --theme-soft:rgba(168,85,247,0.22);">
+                            <div class="arcade-card-visual">
+                                <span class="arcade-visual-badge">ENDLESS RUNNER</span>
+                                <span class="arcade-visual-status">⚡ 3D RAIL RUNNER</span>
+                                <div class="arcade-card-icon">🏃💨</div>
+                            </div>
+                            <div class="arcade-card-content">
+                                <div class="arcade-game-title">
+                                    <span>TURBO RUN</span>
+                                    <span style="font-size:18px;">⚡</span>
+                                </div>
+                                <div class="arcade-game-tagline">3D Parkour &amp; Rail Surfing Rush</div>
+                                <p class="arcade-game-desc">High-speed endless subway-style runner set in daylight. Sprint down railway lines, dodge oncoming express trains, grab magnetic coin multipliers, and unlock high-tier hoverboards.</p>
+                                <div class="arcade-pills-list">
+                                    <span class="arcade-pill">🚄 High-Speed Rails</span>
+                                    <span class="arcade-pill">🛹 Hoverboard Surfing</span>
+                                    <span class="arcade-pill">🪙 Coin Magnet</span>
+                                    <span class="arcade-pill">⚡ Speed Boosts</span>
+                                    <span class="arcade-pill">🎯 Distance Records</span>
+                                </div>
+                                <div class="arcade-play-btn">
+                                    ▶ SPRINT TURBO RUN (3D)
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- 4TH FEATURE: GALACTIC DEFENDER BANNER -->
+                    <div class="arcade-defense-banner">
+                        <div class="arcade-defense-info">
+                            <div class="arcade-defense-icon">🚀</div>
+                            <div class="arcade-defense-text">
+                                <h4>3D Galactic Defender (Built-in WebGL Combat)</h4>
+                                <p>Defend orbital platforms against kinetic asteroid swarms with reactive laser cannons and tactical EMP bombs directly in this suite.</p>
+                            </div>
+                        </div>
+                        <button class="arcade-defense-btn" onclick="showPage('games')">
+                            ▶ Play Flight Simulator →
+                        </button>
+                    </div>
                 </div>
-              </div>
-              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:26px;">
-                <a href="games/vice-city/" style="display:block;padding:22px;border-radius:14px;text-decoration:none;color:#e2e8f0;border:1px solid rgba(244,114,182,.35);background:rgba(244,114,182,.07);">
-                  <div style="font-size:36px;">🌆🚗</div>
-                  <div style="font-weight:800;font-size:18px;margin-top:10px;">VICE CITY '86</div>
-                  <div style="font-size:11px;letter-spacing:.2em;color:#f472b6;font-weight:700;">3D OPEN WORLD</div>
-                  <p style="font-size:13px;color:#94a3b8;margin-top:8px;line-height:1.4;">Drive supercars, fly helicopters, steal tanks, and explore with 16 retro cheat codes.</p>
-                  <span style="display:inline-block;margin-top:12px;font-size:12px;color:#f472b6;font-weight:600;">Play 3D Vice City →</span>
-                </a>
-                <a href="games/neon-strike/" style="display:block;padding:22px;border-radius:14px;text-decoration:none;color:#e2e8f0;border:1px solid rgba(34,211,238,.35);background:rgba(34,211,238,.07);">
-                  <div style="font-size:36px;">🚀👾</div>
-                  <div style="font-weight:800;font-size:18px;margin-top:10px;">NEON STRIKE</div>
-                  <div style="font-size:11px;letter-spacing:.2em;color:#22d3ee;font-weight:700;">SPACE SHOOTER</div>
-                  <p style="font-size:13px;color:#94a3b8;margin-top:8px;line-height:1.4;">Classic arcade waves, bullet hell combos, plasma power-ups, and browser high scores.</p>
-                  <span style="display:inline-block;margin-top:12px;font-size:12px;color:#22d3ee;font-weight:600;">Play Neon Strike →</span>
-                </a>
-                <a href="games/turbo-run/" style="display:block;padding:22px;border-radius:14px;text-decoration:none;color:#e2e8f0;border:1px solid rgba(168,85,247,.35);background:rgba(168,85,247,.07);">
-                  <div style="font-size:36px;">🏃💨</div>
-                  <div style="font-weight:800;font-size:18px;margin-top:10px;">TURBO RUN</div>
-                  <div style="font-size:11px;letter-spacing:.2em;color:#a855f7;font-weight:700;">ENDLESS RUNNER</div>
-                  <p style="font-size:13px;color:#94a3b8;margin-top:8px;line-height:1.4;">High-speed 3D parkour runner! Dodge trains, collect coins, and unlock hoverboards.</p>
-                  <span style="display:inline-block;margin-top:12px;font-size:12px;color:#a855f7;font-weight:600;">Play Turbo Run →</span>
-                </a>
-              </div>
-            </div>
-            <!-- ===== /NEON ARCADE SHOWCASE SECTION ===== -->
+            </section>
+            <!-- ===== /EXPANDED ARCADE & RETRO 3D GAMING ARENA ===== -->
 
             <!-- Footer -->
             <footer class="footer">
